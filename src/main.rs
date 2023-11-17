@@ -25,7 +25,7 @@ fn rocket() -> _ {
         .attach(Template::fairing())
         .mount("/css", rocket::fs::FileServer::from("static/css"))
         .mount("/js", rocket::fs::FileServer::from("static/js"))
-        .mount("/", routes![dashboard::project_overview::show_project_overview, session::login::login_page, session::login::process_login])
+        .mount("/", routes![dashboard::project_overview::show_project_overview, session::login::login_page, session::login::process_login, session::logout::logout_page])
         .manage(SessionStorage::new())
         .manage(Settings::new().unwrap())
 }

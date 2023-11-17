@@ -15,7 +15,6 @@ use argon2::{
 };
 use crate::db::login_attempts::remove_login_attempts;
 use crate::db::users::{set_temp_lock_until_null, temp_lock_user_until};
-use crate::schema::login_attempts::dsl::login_attempts;
 use crate::session::session_storage::SessionStorage;
 
 /// Show login page

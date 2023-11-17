@@ -20,6 +20,11 @@ impl SessionStorage{
             sessions: Default::default(),
         }
     }
+
+    pub fn remove_session(&self, id: String){
+        self.sessions.write().unwrap().remove(&id);
+    }
+
     pub fn get_session(&self, id: String, refresh_valid_until: bool) -> Option<Session>{
         if self.sessions.read().unwrap().contains_key(&id){
             let session = self.sessions.read().unwrap().get(&id).unwrap().clone();
