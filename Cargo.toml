@@ -9,12 +9,13 @@ license = "MIT"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rocket = { version = "=0.5.0-rc.4", features = ["secrets"] }
-diesel = { version = "2.1.0", features = ["mysql"] }
+rocket = { version = "=0.5.0", features = ["secrets"] }
+sqlx = {version = "0.7", features=["postgres", "runtime-tokio", "macros", "json", "uuid"]}
 dotenvy = "0.15"
 config = "0.13.1"
 serde = "1.0.192"
 serde_derive = "1.0.192"
 rand = "0.8.5"
-rocket_dyn_templates = { version = "=0.1.0-rc.4", features = ["handlebars"] }
+rocket_dyn_templates = { version = "=0.1.0", features = ["handlebars"] }
 argon2 = "0.5.2"
+uuid = { version = "1.5.0", features = ["serde"] }

@@ -1,4 +1,4 @@
-use rocket::{Request, request, State};
+use rocket::{Request, State};
 use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome};
 use serde_derive::{Deserialize, Serialize};
@@ -9,7 +9,7 @@ use crate::session::session_storage::SessionStorage;
 pub struct Session{
     pub id: String,
     pub valid_until: std::time::SystemTime,
-    pub user_id: u64,
+    pub user_id: uuid::Uuid,
     pub user_email: String,
 }
 

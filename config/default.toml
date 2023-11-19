@@ -1,2 +1,3 @@
 database_string = ""
 app_title = "Verfassungsbooks"
+max_db_connections = 32

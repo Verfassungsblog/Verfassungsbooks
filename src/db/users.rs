@@ -1,54 +1,28 @@
-use diesel::prelude::*;
-use rocket::State;
-use crate::settings::Settings;
-
-#[derive(Queryable, Selectable)]
-#[diesel(table_name = crate::schema::users)]
-pub struct User {
-    pub id: u64,
+use sqlx::PgPool;
+use sqlx::postgres::PgQueryResult;
+use uuid::Uuid;
+pub struct User{
+    pub user_id: Uuid,
+    pub name: String,
     pub email: String,
     pub password_hash: Option<String>,
-    pub temp_locked_until: Option<i32>,
+    pub temp_locked_until: Option<i64>
 }
 
-pub fn get_user_by_email(input_email: &str, settings: &State<Settings>) -> Option<User> {
-    use crate::schema::users::dsl::*;
-    let mut connection = crate::db::establish_connection(settings.database_string.clone());
-
-    match users.filter(email.eq(input_email)).first::<User>(&mut connection).optional() {
-        Ok(user) => user,
-        Err(e) =>
-            {
-                println!("Error retrieving user: {}", e);
-                None
-            }
-    }
+pub async fn get_user_by_email(db_pool: &PgPool, email: &str) -> Result<Option<User>, sqlx::Error> {
+    sqlx::query_as!(User, "SELECT * FROM users WHERE email = $1", email)
+        .fetch_optional(db_pool)
+        .await
 }
 
-pub fn temp_lock_user_until(user_id: u64, timestamp: i32, settings: &State<Settings>) -> bool {
-    use crate::schema::users::dsl::*;
-    let mut connection = crate::db::establish_connection(settings.database_string.clone());
-
-    match diesel::update(users.filter(id.eq(user_id))).set(temp_locked_until.eq(timestamp)).execute(&mut connection) {
-        Ok(_) => true,
-        Err(e) =>
-            {
-                println!("Error locking user: {}", e);
-                false
-            }
-    }
+pub async fn set_temp_locked_until_null(db_pool: &PgPool,user_id: Uuid) -> Result<PgQueryResult, sqlx::Error> {
+    sqlx::query!("UPDATE users SET temp_locked_until = NULL WHERE user_id = $1", user_id)
+        .execute(db_pool)
+        .await
 }
 
-pub fn set_temp_lock_until_null(user_id: u64, settings: &State<Settings>) -> bool {
-    use crate::schema::users::dsl::*;
-    let mut connection = crate::db::establish_connection(settings.database_string.clone());
-
-    match diesel::update(users.filter(id.eq(user_id))).set(temp_locked_until.eq::<Option<i32>>(None)).execute(&mut connection) {
-        Ok(_) => true,
-        Err(e) =>
-            {
-                println!("Error unlocking user: {}", e);
-                false
-            }
-    }
+pub async fn temp_lock_user_until(db_pool: &PgPool, user_id: Uuid, timestamp: i64) -> Result<PgQueryResult, sqlx::Error> {
+    sqlx::query!("UPDATE users SET temp_locked_until = $1 WHERE user_id = $2", timestamp, user_id)
+        .execute(db_pool)
+        .await
 }

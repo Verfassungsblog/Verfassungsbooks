@@ -43,7 +43,7 @@ impl SessionStorage{
             None
         }
     }
-    pub fn generate_session(&self, user_id: u64, user_email: String) -> Session{
+    pub fn generate_session(&self, user_id: uuid::Uuid, user_email: String) -> Session{
         let mut session_id = String::new();
 
         while session_id.is_empty(){

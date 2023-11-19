@@ -1,27 +1,19 @@
-use std::time::{SystemTime, UNIX_EPOCH};
-use diesel::RunQueryDsl;
-use diesel::QueryDsl;
-use rocket::State;
-use crate::db::establish_connection;
-use crate::schema::login_attempts::dsl::*;
-use diesel::ExpressionMethods;
-use crate::settings::Settings;
+use sqlx::{Error, PgPool, Row};
+use sqlx::postgres::PgQueryResult;
+use uuid::Uuid;
 
-/// Add login attempt for a given email address to the database
-///
-/// Should be called after every failed login attempt
-pub fn add_login_attempt(input_email: String, settings: &State<Settings>) -> Result<usize, diesel::result::Error>{
-    diesel::insert_into(login_attempts).values((email.eq(input_email.to_lowercase()))).execute(&mut establish_connection(settings.database_string.clone()))
+pub async fn get_num_of_login_attempts_in_last_hour(db_pool: &PgPool, user_id: &Uuid) -> Result<i64, sqlx::Error> {
+    sqlx::query("SELECT COUNT(*) as count FROM login_attempts WHERE user_id = $1 AND timestamp >= (now() - interval '1 hour')")
+        .bind(user_id)
+        .fetch_one(db_pool)
+        .await?
+        .try_get("count")
 }
 
-/// Get number of failed login attempts for a given email address in the last hour
-pub fn get_login_attempts(input_email: String, settings: &State<Settings>) -> Result<i64, diesel::result::Error>{
-    let timestamp_hour_ago: i32 = (SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() - 3600) as i32;
-    let res = login_attempts.filter(email.eq(input_email.to_lowercase())).filter(timestamp.ge(timestamp_hour_ago)).count().get_result::<i64>(&mut establish_connection(settings.database_string.clone()));
-    res
+pub async fn remove_login_attempts_for_user(db_pool: &PgPool, user_id: &Uuid) -> Result<PgQueryResult, Error> {
+    sqlx::query!("DELETE FROM login_attempts WHERE user_id = $1", user_id).execute(db_pool).await
 }
 
-/// Remove all login attempts for a given email address
-pub fn remove_login_attempts(input_email: String, settings: &State<Settings>) -> Result<usize, diesel::result::Error>{
-    diesel::delete(login_attempts.filter(email.eq(input_email.to_lowercase()))).execute(&mut establish_connection(settings.database_string.clone()))
+pub async fn add_login_attempt(db_pool: &PgPool, user_id: &Uuid) -> Result<PgQueryResult, Error> {
+    sqlx::query!("INSERT INTO login_attempts (user_id) VALUES ($1)", user_id).execute(db_pool).await
 }
