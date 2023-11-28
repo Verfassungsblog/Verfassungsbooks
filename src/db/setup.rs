@@ -1,5 +1,3 @@
-//! Provides code to check if database is already set-up and to set it up if not.
-
 use sqlx::Row;
 use sqlx::PgPool;
 

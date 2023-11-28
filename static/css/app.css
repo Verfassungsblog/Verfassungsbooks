@@ -1,13 +1,73 @@
-body{
-    font-family: serif;
+:root {
+    --dark-blue: #1b1b30;
+    --red: #d62839ff;
+    --light-blue: #8ae1fcff;
+    --green: #81f495ff;
+    --silver: #bfafa6ff;
+    --light-gray: #f5f5f5ff;
+    --white: #ffffffff;
 }
-.login_box{
+
+body {
+    font-family: 'Nunito', sans-serif;
+    background-color: var(--light-gray);
+}
+
+.login_box {
     @media (max-width: 767.98px) {
         width: 90%;
     }
     margin-top: 10%;
     width: 50%;
 }
-h1{
+
+h1 {
     font-size: 2rem;
+}
+
+.project_list_row {
+    height: 40px;
+    border-bottom: 1px solid lightgrey;
+}
+
+.project_list_row a {
+    text-decoration: none;
+}
+
+.project_list {
+    padding: 10px 20px;
+    background-color: white;
+    border-radius: 5px;
+}
+
+.navbar {
+    background-color: var(--dark-blue);
+    color: white;
+}
+
+.navbar-brand {
+    color: white !important;
+}
+
+.nav-link {
+    color: white !important;
+}
+
+.editor-sidebar {
+    background-color: white;
+    height: calc(100vh - 56px);
+    padding: 10px;
+    border-right: var(--silver) 1px solid;
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: column;
+}
+
+.editor-sidebar-title {
+    margin-top: 20px;
+    font-size: 1.2rem;
+}
+
+.editor-sidebar-structure {
+    flex-grow: 1;
 }

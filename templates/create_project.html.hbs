@@ -8,9 +8,9 @@
     <title>Verfassungsbooks - Projekt erstellen</title>
 </head>
 <body>
-<nav class="navbar navbar-expand-lg navbar-light bg-light">
+<nav class="navbar navbar-expand-lg">
     <div class="container-fluid">
-        <a class="navbar-brand" href="#">Verfassungsbooks</a>
+        <a class="navbar-brand" href="/">Verfassungsbooks</a>
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 <li class="nav-item">
@@ -31,10 +31,38 @@
 <div class="container-fluid mt-3">
     <div class="row">
         <div class="col-12 d-flex align-content-center">
-            <h1>Create Project</h1>
-
+            <h1>Create New Project</h1>
         </div>
     </div>
+    <form method="post" class="mt-4">
+        <div class="row">
+            <label for="project_name" class="col-sm-1 col-form-label">Name</label>
+            <div class="col-sm-11">
+                <input type="text" class="form-control" id="project_name" name="project_name" required>
+            </div>
+        </div>
+        <div class="row mt-1">
+            <label for="project_description" class="col-sm-1 col-form-label">Description (optional)</label>
+            <div class="col-sm-11">
+                <textarea class="form-control" id="project_description" name="project_description" rows="3"></textarea>
+            </div>
+        </div>
+        <div class="row mt-1">
+            <label for="template_id" class="col-sm-1 col-form-label">Template</label>
+            <div class="col-sm-11">
+                <select class="form-select" required id="template_id" name="template_id">
+                    {{#each templates}}
+                        <option value="{{template_id}}" title="{{description}}">{{name}}</option>
+                    {{/each}}
+                </select>
+            </div>
+        </div>
+        <div class="row mt-4">
+            <div class="col">
+                <button type="submit" class="btn btn-success col-sm-12 float-end" style="width: auto;">Create Project</button>
+            </div>
+        </div>
+    </form>
 </div>
 </body>
 </html>

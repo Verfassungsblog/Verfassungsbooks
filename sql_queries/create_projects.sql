@@ -8,5 +8,6 @@ create table if not exists public.projects
     template_id uuid                           not null
         constraint projects_templates_template_id_fk
         references public.templates,
-    contents    jsonb
+    contents jsonb,
+    last_modified timestamp default now()
 );

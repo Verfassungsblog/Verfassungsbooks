@@ -8,7 +8,7 @@
     <title>Verfassungsbooks</title>
 </head>
 <body>
-<nav class="navbar navbar-expand-lg navbar-light bg-light">
+<nav class="navbar navbar-expand-lg">
     <div class="container-fluid">
         <a class="navbar-brand" href="#">Verfassungsbooks</a>
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
@@ -29,10 +29,30 @@
 </nav>
 
 <div class="container-fluid mt-3">
-    <div class="row">
+    <div class="row mb-1">
         <div class="col-12 d-flex align-content-center">
             <h1 class="d-inline">Projects</h1><a href="/projects/create" class="btn d-flex align-content-center btn-outline-success align-self-center ms-2" style="flex-wrap: wrap; height: 80%;">+</a>
         </div>
+    </div>
+    <div class="project_list">
+        <div class="row project_list_row">
+            <div class="col-sm-3 d-flex align-content-center flex-wrap">
+                <b>Name</b>
+            </div>
+            <div class="col-sm-9 d-flex align-content-center flex-wrap">
+                <b>Description</b>
+            </div>
+        </div>
+        {{#each projects}}
+        <div class="row project_list_row">
+            <div class="col-sm-3 d-flex align-content-center flex-wrap">
+                <a href="/projects/{{this.project_id}}">{{this.name}}</a>
+            </div>
+            <div class="col-sm-9 d-flex align-content-center flex-wrap">
+                <a href="/projects/{{this.project_id}}">{{this.description}}</a>
+            </div>
+        </div>
+        {{/each}}
     </div>
 </div>
 </body>

@@ -2,6 +2,11 @@ use sqlx::{Error, PgPool, Row};
 use sqlx::postgres::PgQueryResult;
 use uuid::Uuid;
 
+/// Returns the number of failed login attempts in the last hour for a given user
+///
+/// Arguments:
+/// * `db_pool`: A connection pool ([PgPool]) to the database
+/// * `user_id`: The id of the user to check
 pub async fn get_num_of_login_attempts_in_last_hour(db_pool: &PgPool, user_id: &Uuid) -> Result<i64, sqlx::Error> {
     sqlx::query("SELECT COUNT(*) as count FROM login_attempts WHERE user_id = $1 AND timestamp >= (now() - interval '1 hour')")
         .bind(user_id)
