@@ -32,7 +32,7 @@ fn main() {
     println!("Compiling typescript to javascript with tsc...");
     // Compile typescript to javascript with tsc
     let res = std::process::Command::new("tsc")
-        .args(&["--module", "system", "--outFile", "static/js/editor.js", "typescript/Editor.ts"])
+        .args(&["--module", "system", "--lib", "es2015,dom,dom.Iterable", "--target", "es6", "--outFile", "static/js/editor.js", "typescript/Editor.ts"])
         .output()
         .expect("Failed to compile typescript to javascript with tsc");
 

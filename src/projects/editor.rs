@@ -5,7 +5,7 @@ use sqlx::PgPool;
 use crate::session::session_guard::Session;
 
 #[get("/projects/<project_id>")]
-pub async fn get_project(project_id: String, db_pool: &State<PgPool>, _session: Session) -> Result<Template, Status> {
+pub async fn show_editor(project_id: String, db_pool: &State<PgPool>, _session: Session) -> Result<Template, Status> {
     let project_id = match uuid::Uuid::parse_str(&project_id) {
         Ok(project_id) => project_id,
         Err(e) => {

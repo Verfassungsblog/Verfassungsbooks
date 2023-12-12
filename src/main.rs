@@ -21,6 +21,7 @@ mod settings;
 pub mod db;
 pub mod session;
 pub mod projects;
+pub mod api;
 
 #[macro_use] extern crate rocket;
 
@@ -60,7 +61,7 @@ async fn rocket() -> _ {
         .attach(Template::fairing())
         .mount("/css", rocket::fs::FileServer::from("static/css"))
         .mount("/js", rocket::fs::FileServer::from("static/js"))
-        .mount("/", routes![dashboard::project_overview::show_project_overview, session::logout::logout_page, session::login::login_page, session::login::process_login, projects::create::show_create_project, projects::create::process_create_project, projects::editor::get_project])
+        .mount("/", routes![dashboard::project_overview::show_project_overview, session::logout::logout_page, session::login::login_page, session::login::process_login, projects::create::show_create_project, projects::create::process_create_project, projects::editor::show_editor, api::projects::get_project, api::projects::get_project_settings])
         .manage(SessionStorage::new())
         .manage(Settings::new().unwrap())
         .manage(db_pool)

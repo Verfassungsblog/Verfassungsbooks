@@ -1,5 +1,5 @@
-use sqlx::PgPool;
-use crate::projects::{Project, ProjectOverviewEntry};
+use sqlx::{Error, PgPool};
+use crate::projects::{Project, ProjectMetadata, ProjectOverviewEntry, ProjectSettings};
 
 /// Add new project to database
 ///
@@ -82,13 +82,59 @@ pub async fn add_project_member(project_id: uuid::Uuid, user_id: uuid::Uuid, db_
 /// * `Err([sqlx::Error])` - If project couldn't be found or has invalid data
 pub async fn get_project(project_id: uuid::Uuid, db_pool: &PgPool) -> Result<Project, sqlx::Error>{
     match sqlx::query_as::<_, Project>(
-        "SELECT * FROM projects WHERE project_id = $1")
+        "SELECT project_id,name,description,template_id,last_modified FROM projects WHERE project_id = $1")
         .bind(project_id)
         .fetch_one(db_pool).await{
         Ok(res) => Ok(res),
         Err(e) => {
             eprintln!("Couldn't get project: {}", e);
             Err(e)
+        },
+    }
+}
+
+/// Get project settings from database
+pub async fn get_project_settings(project_id: uuid::Uuid, db_pool: &PgPool) -> Result<Option<ProjectSettings>, sqlx::Error>{
+    match sqlx::query_as::<_, ProjectSettings>(
+        "SELECT contents->'settings' FROM projects WHERE project_id = $1")
+        .bind(project_id)
+        .fetch_optional(db_pool).await{
+        Ok(res) => Ok(res),
+        Err(e) => {
+            match e{
+                sqlx::Error::ColumnNotFound(test) => {
+                    println!("Project settings doesn't exist yet: {}", test);
+                    Ok(None)
+                },
+                _ => {
+                    eprintln!("Couldn't get project settings: {} {}", e, e.as_database_error().unwrap().code().unwrap().to_string());
+                    Err(e)
+                }
+            }
+
+        },
+    }
+}
+
+/// Get project metadata from database
+pub async fn get_project_metadata(project_id: uuid::Uuid, db_pool: &PgPool) -> Result<Option<ProjectMetadata>, sqlx::Error>{
+    match sqlx::query_as::<_, ProjectMetadata>(
+        "SELECT contents->'metadata' FROM projects WHERE project_id = $1")
+        .bind(project_id)
+        .fetch_optional(db_pool).await{
+        Ok(res) => Ok(res),
+        Err(e) => {
+            match e{
+                sqlx::Error::ColumnNotFound(test) => {
+                    println!("Project metadata doesn't exist yet: {}", test);
+                    Ok(None)
+                },
+                _ => {
+                    eprintln!("Couldn't get project settings: {} {}", e, e.as_database_error().unwrap().code().unwrap().to_string());
+                    Err(e)
+                }
+            }
+
         },
     }
 }

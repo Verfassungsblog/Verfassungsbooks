@@ -51,6 +51,7 @@ pub async fn setup_database(db_pool: &PgPool) -> Result<(), sqlx::Error> {
     sqlx::query_file!("sql_queries/create_projects.sql").execute(db_pool).await?;
     sqlx::query_file!("sql_queries/create_projects_users.sql").execute(db_pool).await?;
     sqlx::query_file!("sql_queries/create_schema_changes.sql").execute(db_pool).await?;
+    sqlx::query_file!("sql_queries/create_persons.sql").execute(db_pool).await?;
     set_db_scheme_version(db_pool, 1).await?;
     Ok(())
 }
