@@ -95,7 +95,7 @@ async fn rocket() -> _ {
         .attach(Template::fairing())
         .mount("/css", rocket::fs::FileServer::from("static/css"))
         .mount("/js", rocket::fs::FileServer::from("static/js"))
-        .mount("/", routes![session::logout::logout_page, session::login::login_page, session::login::process_login_form, projects::create::show_create_project, projects::create::process_create_project, projects::list::list_projects, projects::editor::show_editor])
+        .mount("/", routes![session::logout::logout_page, session::login::login_page, session::login::process_login_form, projects::create::show_create_project, projects::create::process_create_project, projects::list::list_projects, projects::editor::show_editor, projects::api::get_project_metadata, projects::api::get_project_settings, projects::api::set_project_metadata, projects::api::set_project_settings])
         .manage(SessionStorage::new())
         .manage(settings)
         .manage(data_storage)

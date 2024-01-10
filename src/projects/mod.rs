@@ -84,6 +84,9 @@ pub enum License{
 /// Struct holds all data for a section (e.g. chapter, part, ...)
 #[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub struct Section{
+    /// Unique id of the section
+    #[bincode(with_serde)]
+    pub id: uuid::Uuid,
     /// Level of the section (e.g. chapter, part)
     pub level: SectionLevel,
     /// Holds all contents of the section (either another section or a content block)
