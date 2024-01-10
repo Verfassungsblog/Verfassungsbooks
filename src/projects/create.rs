@@ -1,21 +1,20 @@
 use std::collections::BTreeMap;
+use crate::data_storage::{ProjectData, ProjectTemplate};
+use std::sync::Arc;
 use rocket::http::Status;
 use rocket::response::Redirect;
-use rocket::State;
+use rocket::{Data, State};
 use rocket_dyn_templates::Template;
-use sqlx::PgPool;
-use crate::db::templates::get_project_templates;
+use crate::data_storage::{DataStorage, ProjectStorage};
 use crate::session::session_guard::Session;
+use crate::settings::Settings;
 
 /// Show create project form
 #[get("/projects/create")]
-pub async fn show_create_project(db_pool: &State<PgPool>, session: Session) -> Result<Template, Status> {
-    let templates = match get_project_templates(&db_pool).await {
-        Ok(templates) => templates,
-        Err(_) => {
-            return Err(Status::InternalServerError);
-        }
-    };
+pub async fn show_create_project(_session: Session, data_storage: &State<Arc<DataStorage>>) -> Result<Template, Status> {
+    // Get list of all templates
+    let templates : Vec<ProjectTemplate> = data_storage.data.read().unwrap().templates.iter().map(|(_id, entry) | entry.clone().read().unwrap().clone()).collect();
+
     let mut data = BTreeMap::new();
     data.insert("templates", templates);
     Ok(Template::render("create_project", data))
@@ -29,7 +28,7 @@ pub struct CreateProjectForm{
 
 /// Process create project form
 #[post("/projects/create", data = "<data>")]
-pub async fn process_create_project(db_pool: &State<PgPool>, session: Session, data: rocket::form::Form<CreateProjectForm>) -> Result<Redirect, Status> {
+pub async fn process_create_project(_session: Session, data: rocket::form::Form<CreateProjectForm>, data_storage: &State<Arc<DataStorage>>, project_storage: &State<Arc<ProjectStorage>>, settings: &State<Settings>) -> Result<Redirect, Status> {
     let template_id = match uuid::Uuid::try_parse(&data.template_id){
         Ok(template_id) => template_id,
         Err(e) => {
@@ -38,13 +37,27 @@ pub async fn process_create_project(db_pool: &State<PgPool>, session: Session, d
         }
     };
 
-    match crate::db::projects::add_project(data.project_name.clone(), data.project_description.clone(), template_id, &db_pool).await{
-        Ok(_) => {
-            // TODO: Grant current user access to new project
+    //Check if template exists
+    if !data_storage.data.read().unwrap().templates.contains_key(&template_id){
+        return Err(Status::BadRequest)
+    }
+
+    let project_data = ProjectData{
+        name: data.project_name.clone(),
+        description: data.project_description.clone(),
+        template_id,
+        last_edited: 0,
+        metadata: None,
+        settings: None,
+        sections: vec![],
+    };
+
+    match project_storage.insert_project(project_data, settings).await{
+        Ok(id) => {
+            println!("Successfully created new project with id {}", id);
             Ok(Redirect::to("/"))
         },
-        Err(e) => {
-            eprintln!("Couldn't add project: {}", e);
+        Err(_) => {
             Err(Status::InternalServerError)
         }
     }

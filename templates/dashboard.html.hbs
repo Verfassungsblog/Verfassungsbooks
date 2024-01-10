@@ -36,20 +36,14 @@
     </div>
     <div class="project_list">
         <div class="row project_list_row">
-            <div class="col-sm-3 d-flex align-content-center flex-wrap">
+            <div class="col d-flex align-content-center flex-wrap">
                 <b>Name</b>
-            </div>
-            <div class="col-sm-9 d-flex align-content-center flex-wrap">
-                <b>Description</b>
             </div>
         </div>
         {{#each projects}}
         <div class="row project_list_row">
-            <div class="col-sm-3 d-flex align-content-center flex-wrap">
-                <a href="/projects/{{this.project_id}}">{{this.name}}</a>
-            </div>
-            <div class="col-sm-9 d-flex align-content-center flex-wrap">
-                <a href="/projects/{{this.project_id}}">{{this.description}}</a>
+            <div class="col d-flex align-content-center flex-wrap">
+                <a href="/projects/{{this.id}}">{{this.name}}</a>
             </div>
         </div>
         {{/each}}

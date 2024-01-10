@@ -1,5 +1,5 @@
-use sqlx::PgPool;
 use std::collections::BTreeMap;
+use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use rocket::form::Form;
 use rocket::response::Redirect;
@@ -9,6 +9,7 @@ use rocket::http::CookieJar;
 use argon2::{password_hash::{
     PasswordHash, PasswordVerifier
 }, Argon2};
+use crate::data_storage::DataStorage;
 use crate::session::session_storage::SessionStorage;
 
 /// Show login page
@@ -16,7 +17,6 @@ use crate::session::session_storage::SessionStorage;
 #[get("/login?<error>")]
 pub fn login_page(error: Option<String>) -> Template {
     let mut context: BTreeMap<String, bool> = BTreeMap::new();
-
 
     if let Some(error) = error{
         if error == "invalid"{
@@ -30,90 +30,52 @@ pub fn login_page(error: Option<String>) -> Template {
     Template::render("login", context)
 }
 
+/// Process login request
+#[post("/login", data = "<form>")]
+pub fn process_login_form(form: Form<LoginForm>, data_storage: &State<Arc<DataStorage>>, session_storage: &State<SessionStorage>, cookies: &CookieJar) -> Redirect {
+    let form = form.into_inner();
+
+    match data_storage.get_user(&form.email){
+        Ok(user) => {
+            let user = user.read().unwrap().clone();
+
+            if let Some(locked_until) = user.locked_until{
+                if locked_until > SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(){
+                    return Redirect::to("/login?error=too-many-attempts");
+                }
+            }
+
+            let parsed_hash = PasswordHash::new(&user.password_hash).unwrap();
+            match Argon2::default().verify_password(form.password.as_bytes(), &parsed_hash){
+                Ok(_) => {
+                    let session = session_storage.generate_session(user.email.clone());
+                    cookies.add_private(("session", session.id.clone()));
+                    return Redirect::to("/");
+                }
+                Err(_) => {
+                    data_storage.get_user(&form.email).unwrap().write().unwrap().login_attempts.push(SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs());
+                    if data_storage.get_user(&form.email).unwrap().read().unwrap().login_attempts.len() >= 5{
+                        //More than 5 login attempts, lock account for 15 minutes
+                        data_storage.get_user(&form.email).unwrap().write().unwrap().locked_until = Some(SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() + 900);
+                        return Redirect::to("/login?error=too-many-attempts");
+                    }
+                    Redirect::to("/login?error=invalid")
+                }
+            }
+        },
+        Err(_) => {
+            Redirect::to("/login?error=invalid")
+        }
+    }
+
+}
+
 #[derive(FromForm)]
 pub struct LoginForm {
     pub email: String,
     pub password: String,
 }
 
-/// Process login form
-/// If user exists and password is correct, generate session and redirect to dashboard
-/// If user exists and password is incorrect, redirect to login page with error message
-/// If user does not exist, redirect to login page with error message
-///
-/// Method: POST
-/// Route: /login
-/// Form params:
-/// * email: String
-/// * password: String
-#[post("/login", data = "<login_form>")]
-pub async fn process_login(login_form: Form<LoginForm>, db_pool: &State<PgPool>, session_storage: &State<SessionStorage>, cookies: &CookieJar<'_>) -> Redirect{
-    //Check if user exists, if get password hash and compare with login_form.password
-    let user = match crate::db::users::get_user_by_email(db_pool, &login_form.email).await {
-        Ok(user) => user,
-        Err(e) => {
-            eprintln!("Error while getting user by email: {}", e);
-            return Redirect::to("/login?error=contact-admin");
-        }
-    };
-    match user{
-        Some(user) => {
-            let hash = match user.password_hash{
-                Some(hash) => hash,
-                None => {
-                    return Redirect::to("/login?error=contact-admin");
-                }
-            };
-
-
-            //Check if user is temporarily locked
-            if let Some(temp_locked_until) = user.temp_locked_until{
-                if temp_locked_until > (SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64){
-                    return Redirect::to("/login?error=too-many-attempts");
-                }else{
-                    //Remove expired temp log and old login attempts
-                    crate::db::users::set_temp_locked_until_null(db_pool, user.user_id).await.unwrap();
-                    crate::db::login_attempts::remove_login_attempts_for_user(db_pool, &user.user_id).await.unwrap();
-                }
-            }
-
-            //Check number of password attempts in the last hour
-            let attempts = crate::db::login_attempts::get_num_of_login_attempts_in_last_hour(db_pool, &user.user_id).await.unwrap();
-
-            if attempts >= 5 {
-                crate::db::users::temp_lock_user_until(db_pool, user.user_id, (SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() + 900) as i64).await.unwrap();
-            }
-
-            //Verify password
-            let hash = match PasswordHash::new(&hash){
-                Ok(hash) => hash,
-                Err(e) => {
-                    eprintln!("Error: user {} has invalid password hash: {}", user.email, e);
-                    return Redirect::to("/login?error=contact-admin");
-                }
-            };
-            let argon2 = Argon2::default();
-
-            if argon2.verify_password(login_form.password.as_bytes(), &hash).is_ok() {
-                println!("Correct password");
-                //Generate session and redirect to dashboard
-                let session = session_storage.generate_session(user.user_id, user.email);
-                //Set cookie
-                cookies.add_private(rocket::http::Cookie::new("session", session.id.clone()));
-                Redirect::to("/")
-            }else{
-                println!("Incorrect password");
-                crate::db::login_attempts::add_login_attempt(db_pool, &user.user_id).await.unwrap();
-                //Redirect to login page with error message
-                Redirect::to("/login?error=invalid")
-            }
-        },
-        None => {
-            //Redirect to login page with error message
-            Redirect::to("/login?error=invalid")
-        }
-    }
-}
 
 #[test]
 pub fn generate_hash(){

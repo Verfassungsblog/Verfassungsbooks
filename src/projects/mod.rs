@@ -1,69 +1,40 @@
 use serde_derive::{Deserialize, Serialize};
-use sqlx::types::Json;
 use chrono::NaiveDateTime;
-use sqlx::FromRow;
-use schemars::{schema_for, JsonSchema};
-use sqlx::postgres::PgRow;
-
-/// Main struct for all project data
-#[derive(Deserialize, Serialize, sqlx::FromRow, Debug)]
-pub struct Project{
-    pub project_id: uuid::Uuid,
-    pub name: String,
-    pub description: Option<String>,
-    pub template_id: uuid::Uuid,
-    pub last_modified: Option<NaiveDateTime>,
-}
-
-/// Same as [`Project`], but without contents & template_id
-///
-/// Is used to list all projects
-#[derive(Deserialize, Serialize, FromRow, Debug, JsonSchema)]
-pub struct ProjectOverviewEntry{
-    pub project_id: uuid::Uuid,
-    pub name: String,
-    pub description: Option<String>,
-    pub last_modified: Option<NaiveDateTime>,
-}
-
-/// Struct holds all contents, settings and metadata of a project, gets stored as JSON in the database
-#[derive(Deserialize, Serialize, FromRow, Debug, JsonSchema)]
-pub struct ProjectContent{
-    pub sections: Vec<SectionOrToc>,
-    pub settings: Option<ProjectSettings>,
-    pub metadata: Option<ProjectMetadata>,
-}
+use bincode::{Encode, Decode};
 
 /// Enum to differentiate between real sections and the position of the table of contents
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub enum SectionOrToc{
     Section(Section),
     Toc,
 }
 
 /// Struct holds all project-level settings
-#[derive(Deserialize, Serialize, Debug, FromRow, JsonSchema)]
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub struct ProjectSettings{
     pub toc_enabled: bool
 }
 
 
 /// Struct holds all project-level metadata
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub struct ProjectMetadata{
-    /// Book Title (not the title of the project which is stored in [`Project`])
+    /// Book Title
     pub title: String,
     /// Subtitle of the book
     pub subtitle: Option<String>,
     /// List of ids of authors of the book
+    #[bincode(with_serde)]
     pub authors: Option<Vec<uuid::Uuid>>,
     /// List of ids of editors of the book
+    #[bincode(with_serde)]
     pub editors: Option<Vec<uuid::Uuid>>,
     /// URL to a web version of the book or reference
     pub web_url: Option<String>,
     /// List of identifiers of the book (e.g. ISBNs)
     pub identifiers: Option<Vec<Identifier>>,
     /// Date of publication
+    #[bincode(with_serde)]
     pub published: Option<NaiveDateTime>,
     /// Languages of the book
     pub languages: Option<Vec<Language>>,
@@ -89,21 +60,15 @@ pub struct ProjectMetadata{
     pub publisher: Option<String>,
 }
 
-impl FromRow<'_, PgRow> for ProjectMetadata{
-    fn from_row(row: &PgRow) -> Result<Self, sqlx::Error> {
-        println!("ROW: {}", row);
-    }
-}
-
 /// Represents a Keyword, optionally with a GND ID
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub struct Keyword{
     pub title: String,
     pub gnd: Option<Identifier>,
 }
 
 /// Holds all different (CC) licenses or a custom license
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub enum License{
     CC0,
     CC_BY_4,
@@ -117,7 +82,7 @@ pub enum License{
 
 
 /// Struct holds all data for a section (e.g. chapter, part, ...)
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub struct Section{
     /// Level of the section (e.g. chapter, part)
     pub level: SectionLevel,
@@ -130,14 +95,14 @@ pub struct Section{
 }
 
 /// Enum to differentiate between real content blocks and another nested section
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub enum SectionContent{
     Section(Section),
     ContentBlock(ContentBlock),
 }
 
 /// Enum to differentiate between different content blocks
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub enum ContentBlock{
     Paragraph(Paragraph),
     Image, //TODO: implement
@@ -150,7 +115,7 @@ pub enum ContentBlock{
 }
 
 /// Headline Content Block, contains the level and the contents
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub struct Headline{
     /// Level of the headline (e.g. h1, h2, ...)
     pub level: u8,
@@ -159,8 +124,10 @@ pub struct Headline{
 }
 
 /// Paragraph Content Block holding TextElements
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub struct Paragraph{
+    #[bincode(with_serde)]
+    revision_id: uuid::Uuid,
     /// Contents of the paragraph
     pub contents: Vec<TextElement>,
     /// Optional block-level alignment of the paragraph
@@ -168,7 +135,7 @@ pub struct Paragraph{
 }
 
 /// Alignment of a paragraph
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub enum Alignment {
     Left,
     Center,
@@ -177,7 +144,7 @@ pub enum Alignment {
 }
 
 /// Enum to differentiate between different text elements
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub enum TextElement{
     /// Simple text
     String(String),
@@ -194,14 +161,14 @@ pub enum TextElement{
 /// Weblink to url with optional link text
 ///
 /// If no link text is given, the url is used as link text
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub struct Link{
     pub url: String,
     pub text: Option<Vec<TextElement>>,
 }
 
 /// Footnote or Endnote
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub struct Note{
     /// Type of the note (footnote or endnote)
     pub note_type: NoteType,
@@ -210,7 +177,7 @@ pub struct Note{
 }
 
 /// Enum to differentiate between footnote and endnote
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub enum NoteType{
     Footnote,
     Endnote,
@@ -219,14 +186,14 @@ pub enum NoteType{
 /// Container to hold text elements and set the format of these text elements
 ///
 /// You may capsule other FormattedText elements to create nested formatting
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub struct FormattedText{
     pub contents: Vec<TextElement>,
     pub format: TextFormat,
 }
 
 /// Enum to differentiate between different text formats
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub enum TextFormat{
     Bold,
     Italic,
@@ -238,7 +205,7 @@ pub enum TextFormat{
 }
 
 /// Enum to differentiate between different section levels
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub enum SectionLevel{
     Part,
     Chapter,
@@ -246,28 +213,32 @@ pub enum SectionLevel{
 }
 
 /// Struct holds all metadata of a section
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub struct SectionMetadata{
     pub title: String,
     pub description: Option<String>,
+    #[bincode(with_serde)]
     pub authors: Option<Vec<uuid::Uuid>>,
+    #[bincode(with_serde)]
     pub editors: Option<Vec<uuid::Uuid>>,
     pub web_url: Option<String>,
     pub identifiers: Option<Vec<Identifier>>,
+    #[bincode(with_serde)]
     pub published: Option<NaiveDateTime>,
+    #[bincode(with_serde)]
     pub last_changed: Option<NaiveDateTime>,
     pub lang: Option<Language>,
 }
 
 /// Enum to differentiate between all supported languages
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub enum Language{
     DE,
     EN
 }
 
 /// Struct holds all data for a person (e.g. author or editor)
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub struct Person {
     pub first_names: Option<String>,
     pub last_names: String,
@@ -278,14 +249,14 @@ pub struct Person {
 }
 
 /// Struct holds a biography in a specified language for a person
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub struct Biography {
     pub content: String,
     pub lang: Option<Language>,
 }
 
 /// Represents an identifier (e.g. DOI, ISBN, ISSN, URL, URN, ORCID, ROR, ...)
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub struct Identifier{
     pub name: String,
     pub value: String,
@@ -327,7 +298,7 @@ impl Identifier{
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub enum IdentifierType{
     DOI,
     ISBN,
@@ -340,16 +311,8 @@ pub enum IdentifierType{
     Other(String),
 }
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn generate_json_schema() {
-        use schemars::schema_for;
-
-        let schema = schema_for!(super::ProjectContent);
-        println!("{}", serde_json::to_string_pretty(&schema).unwrap());
-    }
-}
-
 pub mod create;
 pub mod editor;
+pub mod list;
+
+pub mod api;

@@ -3,15 +3,18 @@ use serde_derive::Deserialize;
 use std::env;
 
 /// Stores settings read from config files.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[allow(unused)]
 pub struct Settings{
-    /// Full database connection String
-    pub database_string: String,
     /// Full app title shown in navbar
     pub app_title: String,
-    /// Maximum number of concurrent database connections
-    pub max_db_connections: u32,
+    /// How long should a project be kept in memory after it was last accessed in seconds
+    pub project_cache_time: u64,
+    /// Where should the app store the data
+    pub data_path: String,
+    /// How long should the app wait for a file lock in ms
+    pub file_lock_timeout: u64,
+    pub backup_to_file_interval: u64,
 }
 
 impl Settings{

@@ -43,7 +43,7 @@ impl SessionStorage{
             None
         }
     }
-    pub fn generate_session(&self, user_id: uuid::Uuid, user_email: String) -> Session{
+    pub fn generate_session(&self, user_email: String) -> Session{
         let mut session_id = String::new();
 
         while session_id.is_empty(){
@@ -56,7 +56,6 @@ impl SessionStorage{
         let session = Session{
             id: session_id.clone(),
             valid_until: SystemTime::now().add(Duration::new(1800, 0)),
-            user_id,
             user_email,
         };
 
