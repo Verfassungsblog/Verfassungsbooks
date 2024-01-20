@@ -1,0 +1,57 @@
+<h2>Edit Person</h2>
+<hr>
+<input type="hidden" id="person_id" value="{{id}}">
+<div class="row">
+    <label for="person_first_names" class="col-sm-3 col-form-label">First Names</label>
+    <div class="col-sm-9">
+        <input type="text" class="form-control persons_edit_field" id="person_first_names" name="person_first_names" value="{{first_names}}">
+    </div>
+</div>
+<div class="row mt-1">
+    <label for="person_last_names" class="col-sm-3 col-form-label">Last Names</label>
+    <div class="col-sm-9">
+        <input class="form-control persons_edit_field" id="person_last_names" name="person_last_names" value="{{last_names}}">
+    </div>
+</div>
+<div class="row mt-1">
+    <label for="person_orcid" class="col-sm-3 col-form-label">ORCID</label>
+    <div class="col-sm-9">
+        <input class="form-control persons_edit_field" id="person_orcid" name="person_orcid" value="{{orcid.value}}">
+    </div>
+</div>
+<div class="row mt-1">
+    <label for="person_gnd" class="col-sm-3 col-form-label">GND</label>
+    <div class="col-sm-9">
+        <input class="form-control persons_edit_field" id="person_gnd" name="person_gnd" value="{{gnd.value}}">
+    </div>
+</div>
+<div class="row mt-1">
+    <label for="person_ror" class="col-sm-3 col-form-label">ROR</label>
+    <div class="col-sm-9">
+        <input class="form-control persons_edit_field" id="person_ror" name="person_ror" value="{{ror.value}}">
+    </div>
+</div>
+<div class="row mt-1">
+    <b>Biographies</b>
+    <div id="biographies" class="col">
+        {{#each bios}}
+            <div class="row">
+                <label class="col-sm-1 col-form-label">{{lang}}</label>
+                <div class="col-sm-11">
+                    <textarea class="form-control person_biography persons_edit_field" data-language="{{lang}}" id="person_biography_{{language}}" name="person_biography_{{lang}}" rows="3">{{content}}</textarea>
+                </div>
+            </div>
+        {{/each}}
+    </div>
+</div>
+<div class="row mt-1">
+    <label class="col-sm-3 col-form-label">Add Biography</label>
+    <div class="col-9 d-flex">
+        <select class="form-select" id="add_biography_lang" style="width: 200px;" aria-label="Language">
+            <option value="none" disabled selected>Select Language</option>
+            <option value="DE" id="add_biography_lang_DE">German</option>
+            <option value="EN" id="add_biography_lang_EN">English</option>
+        </select>
+        <button class="btn btn-secondary ms-1" type="button" id="add_bio_btn">Add</button>
+    </div>
+</div>

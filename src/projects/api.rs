@@ -3,7 +3,7 @@ use std::sync::Arc;
 use rocket::State;
 use serde_derive::{Deserialize, Serialize};
 use crate::data_storage::ProjectStorage;
-use crate::projects::{ProjectMetadata, ProjectSettings};
+use crate::projects::{Keyword, ProjectMetadata, ProjectSettings};
 use crate::session::session_guard::Session;
 use crate::settings::Settings;
 
@@ -29,6 +29,7 @@ pub struct ApiResult<T> {
 #[derive(Serialize, Deserialize)]
 pub enum ApiError{
     NotFound,
+    BadRequest(String),
     Unauthorized,
     Other(String),
 }
@@ -149,6 +150,279 @@ pub async fn set_project_settings(project_id: String, _session: Session, setting
     let mut project = project_entry.write().unwrap();
 
     project.settings = Some(project_settings.into_inner());
+
+    ApiResult::new_data(())
+}
+
+/// PUT /api/projects/<project_id>/metadata/authors/<author_id>
+/// Add person as author to project
+#[put("/api/projects/<project_id>/metadata/authors/<author_id>")]
+pub async fn add_author_to_project(project_id: String, author_id: String, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<()>> {
+    let project_id = match uuid::Uuid::parse_str(&project_id) {
+        Ok(project_id) => project_id,
+        Err(e) => {
+            eprintln!("Couldn't parse project id: {}", e);
+            return ApiResult::new_error(ApiError::BadRequest("Couldn't parse project id".to_string()));
+        },
+    };
+
+    let author_id = match uuid::Uuid::parse_str(&author_id) {
+        Ok(author_id) => author_id,
+        Err(e) => {
+            eprintln!("Couldn't parse author id: {}", e);
+            return ApiResult::new_error(ApiError::BadRequest("Couldn't parse author id".to_string()));
+        },
+    };
+
+    let project_storage = Arc::clone(project_storage);
+
+    let project_entry = match project_storage.get_project(&project_id, settings).await{
+        Ok(project_entry) => project_entry.clone(),
+        Err(_) => {
+            eprintln!("Couldn't get project with id {}", project_id);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let mut project = project_entry.write().unwrap();
+
+    if let None = project.metadata{
+        let new_metadata: ProjectMetadata = Default::default();
+        project.metadata = Some(new_metadata);
+    }
+
+    if let None = project.metadata.as_ref().unwrap().authors{
+        project.metadata.as_mut().unwrap().authors = Some(Vec::new());
+    }
+
+    if !project.metadata.as_ref().unwrap().authors.as_ref().unwrap().contains(&author_id){
+        project.metadata.as_mut().unwrap().authors.as_mut().unwrap().push(author_id);
+    }
+
+    ApiResult::new_data(())
+}
+
+/// PUT /api/projects/<project_id>/metadata/editors/<editor_id>
+/// Add person as editor to project
+#[put("/api/projects/<project_id>/metadata/editors/<editor_id>")]
+pub async fn add_editor_to_project(project_id: String, editor_id: String, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<()>> {
+    let project_id = match uuid::Uuid::parse_str(&project_id) {
+        Ok(project_id) => project_id,
+        Err(e) => {
+            eprintln!("Couldn't parse project id: {}", e);
+            return ApiResult::new_error(ApiError::BadRequest("Couldn't parse project id".to_string()));
+        },
+    };
+
+    let editor_id = match uuid::Uuid::parse_str(&editor_id) {
+        Ok(editor_id) => editor_id,
+        Err(e) => {
+            eprintln!("Couldn't parse editor id: {}", e);
+            return ApiResult::new_error(ApiError::BadRequest("Couldn't parse editor id".to_string()));
+        },
+    };
+
+    let project_storage = Arc::clone(project_storage);
+
+    let project_entry = match project_storage.get_project(&project_id, settings).await{
+        Ok(project_entry) => project_entry.clone(),
+        Err(_) => {
+            eprintln!("Couldn't get project with id {}", project_id);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let mut project = project_entry.write().unwrap();
+
+    if let None = project.metadata{
+        let new_metadata: ProjectMetadata = Default::default();
+        project.metadata = Some(new_metadata);
+    }
+
+    if let None = project.metadata.as_ref().unwrap().editors{
+        project.metadata.as_mut().unwrap().editors = Some(Vec::new());
+    }
+
+    if !project.metadata.as_ref().unwrap().editors.as_ref().unwrap().contains(&editor_id){
+        project.metadata.as_mut().unwrap().editors.as_mut().unwrap().push(editor_id);
+    }
+
+    ApiResult::new_data(())
+}
+
+/// DELETE /api/projects/<project_id>/metadata/authors/<author_id>
+/// Remove person from project as author
+#[delete("/api/projects/<project_id>/metadata/authors/<author_id>")]
+pub async fn remove_author_from_project(project_id: String, author_id: String, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<()>> {
+    let project_id = match uuid::Uuid::parse_str(&project_id) {
+        Ok(project_id) => project_id,
+        Err(e) => {
+            eprintln!("Couldn't parse project id: {}", e);
+            return ApiResult::new_error(ApiError::BadRequest("Couldn't parse project id".to_string()));
+        },
+    };
+
+    let author_id = match uuid::Uuid::parse_str(&author_id) {
+        Ok(author_id) => author_id,
+        Err(e) => {
+            eprintln!("Couldn't parse author id: {}", e);
+            return ApiResult::new_error(ApiError::BadRequest("Couldn't parse author id".to_string()));
+        },
+    };
+
+    let project_storage = Arc::clone(project_storage);
+
+    let project_entry = match project_storage.get_project(&project_id, settings).await{
+        Ok(project_entry) => project_entry.clone(),
+        Err(_) => {
+            eprintln!("Couldn't get project with id {}", project_id);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let mut project = project_entry.write().unwrap();
+
+    if let None = project.metadata{
+        return ApiResult::new_error(ApiError::NotFound);
+    }
+
+    if let None = project.metadata.as_ref().unwrap().authors{
+        return ApiResult::new_error(ApiError::NotFound);
+    }
+
+    if let Some(index) = project.metadata.as_ref().unwrap().authors.as_ref().unwrap().iter().position(|x| *x == author_id){
+        project.metadata.as_mut().unwrap().authors.as_mut().unwrap().remove(index);
+    }
+
+    ApiResult::new_data(())
+}
+
+/// DELETE /api/projects/<project_id>/metadata/editors/<editor_id>
+/// Remove person from project as editor
+#[delete("/api/projects/<project_id>/metadata/editors/<editor_id>")]
+pub async fn remove_editor_from_project(project_id: String, editor_id: String, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<()>> {
+    let project_id = match uuid::Uuid::parse_str(&project_id) {
+        Ok(project_id) => project_id,
+        Err(e) => {
+            eprintln!("Couldn't parse project id: {}", e);
+            return ApiResult::new_error(ApiError::BadRequest("Couldn't parse project id".to_string()));
+        },
+    };
+
+    let editor_id = match uuid::Uuid::parse_str(&editor_id) {
+        Ok(editor_id) => editor_id,
+        Err(e) => {
+            eprintln!("Couldn't parse author id: {}", e);
+            return ApiResult::new_error(ApiError::BadRequest("Couldn't parse editor id".to_string()));
+        },
+    };
+
+    let project_storage = Arc::clone(project_storage);
+
+    let project_entry = match project_storage.get_project(&project_id, settings).await{
+        Ok(project_entry) => project_entry.clone(),
+        Err(_) => {
+            eprintln!("Couldn't get project with id {}", project_id);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let mut project = project_entry.write().unwrap();
+
+    if let None = project.metadata{
+        return ApiResult::new_error(ApiError::NotFound);
+    }
+
+    if let None = project.metadata.as_ref().unwrap().editors{
+        return ApiResult::new_error(ApiError::NotFound);
+    }
+
+    if let Some(index) = project.metadata.as_ref().unwrap().editors.as_ref().unwrap().iter().position(|x| *x == editor_id){
+        project.metadata.as_mut().unwrap().editors.as_mut().unwrap().remove(index);
+    }else{
+        return ApiResult::new_error(ApiError::NotFound);
+    }
+
+    ApiResult::new_data(())
+}
+
+/// PUT /api/projects/<project_id>/metadata/keywords
+/// Add keyword to project
+#[put("/api/projects/<project_id>/metadata/keywords", data = "<keyword>")]
+pub async fn add_keyword_to_project(project_id: String, keyword: Json<Keyword>, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<()>> {
+    let project_id = match uuid::Uuid::parse_str(&project_id) {
+        Ok(project_id) => project_id,
+        Err(e) => {
+            eprintln!("Couldn't parse project id: {}", e);
+            return ApiResult::new_error(ApiError::BadRequest("Couldn't parse project id".to_string()));
+        },
+    };
+
+    let project_storage = Arc::clone(project_storage);
+
+    let project_entry = match project_storage.get_project(&project_id, settings).await{
+        Ok(project_entry) => project_entry,
+        Err(_) => {
+            eprintln!("Couldn't get project with id {}", project_id);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let mut project = project_entry.write().unwrap();
+
+    if let None = project.metadata{
+        let new_metadata: ProjectMetadata = Default::default();
+        project.metadata = Some(new_metadata);
+    }
+
+    if let None = project.metadata.as_ref().unwrap().keywords{
+        project.metadata.as_mut().unwrap().keywords = Some(Vec::new());
+    }
+
+    if !project.metadata.as_ref().unwrap().keywords.as_ref().unwrap().contains(&keyword){
+        project.metadata.as_mut().unwrap().keywords.as_mut().unwrap().push(keyword.into_inner());
+    }
+
+    ApiResult::new_data(())
+}
+
+/// DELETE /api/projects/<project_id>/metadata/keywords/<keyword>
+/// Remove keyword from project
+#[delete("/api/projects/<project_id>/metadata/keywords/<keyword>")]
+pub async fn remove_keyword_from_project(project_id: String, keyword: String, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<()>> {
+    let project_id = match uuid::Uuid::parse_str(&project_id) {
+        Ok(project_id) => project_id,
+        Err(e) => {
+            eprintln!("Couldn't parse project id: {}", e);
+            return ApiResult::new_error(ApiError::BadRequest("Couldn't parse project id".to_string()));
+        },
+    };
+
+    let project_storage = Arc::clone(project_storage);
+
+    let project_entry = match project_storage.get_project(&project_id, settings).await{
+        Ok(project_entry) => project_entry,
+        Err(_) => {
+            eprintln!("Couldn't get project with id {}", project_id);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let mut project = project_entry.write().unwrap();
+
+    if let None = project.metadata{
+        return ApiResult::new_error(ApiError::NotFound);
+    }
+
+    if let None = project.metadata.as_ref().unwrap().keywords{
+        return ApiResult::new_error(ApiError::NotFound);
+    }
+
+    if let Some(index) = project.metadata.as_ref().unwrap().keywords.as_ref().unwrap().iter().position(|x| *x.title == keyword){
+        project.metadata.as_mut().unwrap().keywords.as_mut().unwrap().remove(index);
+    }else{
+        return ApiResult::new_error(ApiError::NotFound);
+    }
 
     ApiResult::new_data(())
 }

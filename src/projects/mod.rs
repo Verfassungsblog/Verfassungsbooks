@@ -17,7 +17,7 @@ pub struct ProjectSettings{
 
 
 /// Struct holds all project-level metadata
-#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq, Default)]
 pub struct ProjectMetadata{
     /// Book Title
     pub title: String,
@@ -40,10 +40,10 @@ pub struct ProjectMetadata{
     pub languages: Option<Vec<Language>>,
     /// Number of pages of the book (should be automatically calculated)
     pub number_of_pages: Option<u32>,
-    /// Short abstracts of the book
-    pub short_abstracts: Option<String>,
-    /// Long abstracts of the book
-    pub long_abstracts: Option<String>,
+    /// Short abstract of the book
+    pub short_abstract: Option<String>,
+    /// Long abstract of the book
+    pub long_abstract: Option<String>,
     /// Keywords of the book
     pub keywords: Option<Vec<Keyword>>,
     /// Dewey Decimal Classification (DDC) classes (subject groups)
@@ -234,7 +234,7 @@ pub struct SectionMetadata{
 }
 
 /// Enum to differentiate between all supported languages
-#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq, FromFormField)]
 pub enum Language{
     DE,
     EN
@@ -243,6 +243,8 @@ pub enum Language{
 /// Struct holds all data for a person (e.g. author or editor)
 #[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub struct Person {
+    #[bincode(with_serde)]
+    pub id: Option<uuid::Uuid>,
     pub first_names: Option<String>,
     pub last_names: String,
     pub orcid: Option<Identifier>,

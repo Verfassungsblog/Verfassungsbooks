@@ -22,7 +22,7 @@ pub struct InnerDataStorage{
     #[bincode(with_serde)]
     pub login_data: HashMap<String, Arc<RwLock<User>>>,
     #[bincode(with_serde)]
-    pub persons:HashMap<uuid::Uuid, Arc<RwLock<Person>>>,
+    pub persons: HashMap<uuid::Uuid, Arc<RwLock<Person>>>,
     #[bincode(with_serde)]
     pub templates: HashMap<uuid::Uuid, Arc<RwLock<ProjectTemplate>>>
 }

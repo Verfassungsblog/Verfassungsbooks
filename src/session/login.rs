@@ -41,13 +41,20 @@ pub fn process_login_form(form: Form<LoginForm>, data_storage: &State<Arc<DataSt
 
             if let Some(locked_until) = user.locked_until{
                 if locked_until > SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(){
+                    println!("User {} tried to login while locked. Still locked until {}", user.email, locked_until);
                     return Redirect::to("/login?error=too-many-attempts");
+                }else{
+                    // Remove old login attempts & unlock account
+                    data_storage.get_user(&form.email).unwrap().write().unwrap().login_attempts = Vec::new();
+                    data_storage.get_user(&form.email).unwrap().write().unwrap().locked_until = None;
                 }
             }
 
             let parsed_hash = PasswordHash::new(&user.password_hash).unwrap();
             match Argon2::default().verify_password(form.password.as_bytes(), &parsed_hash){
                 Ok(_) => {
+                    // Login successful, remove old login attempts and generate session
+                    data_storage.get_user(&form.email).unwrap().write().unwrap().login_attempts = Vec::new();
                     let session = session_storage.generate_session(user.email.clone());
                     cookies.add_private(("session", session.id.clone()));
                     return Redirect::to("/");

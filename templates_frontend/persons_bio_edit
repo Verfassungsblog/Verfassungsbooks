@@ -1,0 +1,6 @@
+<div class="row">
+    <label class="col-sm-1 col-form-label">{{language_code}}</label>
+    <div class="col-sm-11">
+        <textarea class="form-control person_biography persons_edit_field" data-language="{{language_code}}" id="person_biography_{{language_code}}" name="person_biography_{{language_code}}" rows="3"></textarea>
+    </div>
+</div>
