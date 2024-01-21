@@ -613,7 +613,7 @@ pub async fn remove_keyword_from_project(project_id: String, keyword: String, _s
 /// POST /api/projects/<project_id>/metadata/identifiers/
 /// Add identifier to project
 #[post("/api/projects/<project_id>/metadata/identifiers", data = "<identifier>")]
-pub async fn add_identifier_to_project(project_id: String, mut identifier: Json<Identifier>, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<()>> {
+pub async fn add_identifier_to_project(project_id: String, mut identifier: Json<Identifier>, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<Identifier>> {
     let project_id = match uuid::Uuid::parse_str(&project_id) {
         Ok(project_id) => project_id,
         Err(e) => {
@@ -650,10 +650,10 @@ pub async fn add_identifier_to_project(project_id: String, mut identifier: Json<
     }
 
     if !project.metadata.as_ref().unwrap().identifiers.as_ref().unwrap().contains(&identifier){
-        project.metadata.as_mut().unwrap().identifiers.as_mut().unwrap().push(identifier.into_inner());
+        project.metadata.as_mut().unwrap().identifiers.as_mut().unwrap().push(identifier.clone().into_inner());
     }
 
-    ApiResult::new_data(())
+    ApiResult::new_data(identifier.into_inner())
 }
 
 /// DELETE /api/projects/<project_id>/metadata/identifiers/<identifier_ic>

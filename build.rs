@@ -10,6 +10,17 @@ fn main() {
         args.push(String::from(file.unwrap().path().to_str().unwrap()));
     }
 
+    let mut args_partials = args.clone();
+
+    // Precompile handlebars partials
+    args_partials.push("-p".to_string());
+    args_partials.push("-f".to_string());
+    args_partials.push("static/js/precompiled_partials.js".to_string());
+
+    let res_partials = std::process::Command::new("handlebars")
+        .args(args_partials)
+        .output();
+
     args.push("-f".to_string());
     args.push("static/js/precompiled_templates.js".to_string());
 
@@ -17,6 +28,7 @@ fn main() {
     let res = std::process::Command::new("handlebars")
         .args(args)
         .output();
+
 
     match res{
         Ok(res) => {
@@ -26,6 +38,17 @@ fn main() {
         },
         Err(e) => {
             panic!("Failed to precompile handlebars frontend templates: {}", e);
+        },
+    }
+
+    match res_partials{
+        Ok(res) => {
+            if !res.status.success() {
+                panic!("Failed to precompile handlebars frontend partials: {} {}", String::from_utf8_lossy(&res.stdout), String::from_utf8_lossy(&res.stderr));
+            }
+        },
+        Err(e) => {
+            panic!("Failed to precompile handlebars frontend partials: {}", e);
         },
     }
 

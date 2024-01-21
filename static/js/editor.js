@@ -107,6 +107,11 @@ var Editor;
                     document.getElementById("project_metadata_keyword_search").addEventListener("click", search_gnd_keyword);
                     // Add listener to add identifier button
                     document.getElementById("project_metadata_identifiers_add").addEventListener("click", add_identifier_btn_handler);
+                    // Add listeners to all remove identifier buttons
+                    // @ts-ignore
+                    for (let button of document.getElementsByClassName("project_metadata_identifier_remove_btn")) {
+                        button.addEventListener("click", remove_identifier_btn_handler);
+                    }
                 });
             }, function (error) {
                 // @ts-ignore
@@ -116,6 +121,26 @@ var Editor;
             });
         }
         ProjectOverview.show_overview = show_overview;
+        // @ts-ignore
+        function remove_identifier_btn_handler(e) {
+            return __awaiter(this, void 0, void 0, function* () {
+                let target = e.target;
+                let li = target.closest(".project_metadata_identifier_row");
+                let identifier_id = li.getAttribute("data-identifier-id");
+                Tools.start_loading_spinner();
+                try {
+                    yield send_remove_identifier_request(identifier_id);
+                    Tools.stop_loading_spinner();
+                    li.remove();
+                    Tools.show_alert("Identifier removed.", "success");
+                }
+                catch (e) {
+                    Tools.stop_loading_spinner();
+                    Tools.show_alert("Failed to remove identifier.", "danger");
+                    console.error(e);
+                }
+            });
+        }
         // @ts-ignore
         function add_identifier_btn_handler() {
             return __awaiter(this, void 0, void 0, function* () {
@@ -133,17 +158,20 @@ var Editor;
                     Tools.stop_loading_spinner();
                     Tools.show_alert("Identifier added.", "success");
                     // @ts-ignore
-                    //document.getElementById("project_metadata_identifiers").innerHTML += Handlebars.templates.editor_identifier_li(response);
+                    document.getElementById("project_metadata_identifiers_list").innerHTML += Handlebars.templates.editor_add_identifier_row(response.data);
                     //Add remove handler:
                     // @ts-ignore
-                    //for(let button of document.getElementsByClassName("project_metadata_identifiers_remove")){
-                    //    button.addEventListener("click", remove_identifier_btn_handler);
-                    //}
+                    for (let button of document.getElementsByClassName("project_metadata_identifier_remove_btn")) {
+                        button.addEventListener("click", remove_identifier_btn_handler);
+                    }
+                    // Clear input fields
+                    document.getElementById("project_metadata_identifiers_value").value = "";
+                    document.getElementById("project_metadata_identifiers_name").value = "";
                 }
                 catch (e) {
                     Tools.stop_loading_spinner();
                     Tools.show_alert("Failed to add identifier.", "danger");
-                    console.log(e);
+                    console.error(e);
                 }
             });
         }
@@ -216,7 +244,7 @@ var Editor;
                 catch (e) {
                     Tools.stop_loading_spinner();
                     Tools.show_alert("Failed to add keyword.", "danger");
-                    console.log(e);
+                    console.error(e);
                 }
             });
         }
@@ -235,7 +263,6 @@ var Editor;
                     let result_ul = document.getElementById("project_metadata_keyword_search_result");
                     result_ul.innerHTML = "";
                     result_ul.classList.remove("hide");
-                    console.log(response);
                     let hide_results = function (e) {
                         let target = e.target;
                         if (target !== result_ul && target !== document.getElementById("project_metadata_keyword_search")) {
@@ -291,7 +318,7 @@ var Editor;
                                 catch (e) {
                                     Tools.stop_loading_spinner();
                                     Tools.show_alert("Failed to add keyword.", "danger");
-                                    console.log(e);
+                                    console.error(e);
                                 }
                             });
                         });
@@ -300,10 +327,11 @@ var Editor;
                 catch (e) {
                     Tools.stop_loading_spinner();
                     Tools.show_alert("Failed to search for keyword. Check your network connection", "danger");
-                    console.log(e);
+                    console.error(e);
                 }
             });
         }
+        // @ts-ignore
         function remove_keyword_btn_handler(e) {
             return __awaiter(this, void 0, void 0, function* () {
                 let target = e.target;
@@ -319,6 +347,7 @@ var Editor;
                 catch (e) {
                     Tools.stop_loading_spinner();
                     Tools.show_alert("Failed to remove keyword.", "danger");
+                    console.error(e);
                 }
             });
         }
@@ -437,6 +466,7 @@ var Editor;
                 }
             });
         }
+        // @ts-ignore
         function remove_editor_btn_handler(e) {
             return __awaiter(this, void 0, void 0, function* () {
                 let target = e.target;
@@ -702,10 +732,8 @@ var Editor;
                 data["web_url"] = document.getElementById("project_metadata_web_url").value || null;
                 data["published"] = null;
                 data["languages"] = null;
-                data["number_of_pages"] = null;
                 data["short_abstract"] = document.getElementById("project_metadata_short_abstract").value || null;
                 data["long_abstract"] = document.getElementById("project_metadata_long_abstract").value || null;
-                data["keywords"] = null;
                 data["license"] = null;
                 data["series"] = document.getElementById("project_metadata_series").value || null;
                 data["volume"] = document.getElementById("project_metadata_volume").value || null;

@@ -30,10 +30,7 @@
         <label>Keywords</label>
         <div id="project_metadata_keywords">
             {{#each metadata.keywords}}
-            <div class="project_metadata_keywords_entry_wrapper" data-keyword="{{title}}">
-                <div class="project_metadata_keywords_entry">{{title}}{{#if gnd}}<sup><a target="_blank" href="https://lobid.org/gnd/{{gnd.value}}">GND</a></sup>{{/if}}</div>
-                <button class="img-btn project_metadata_keywords_remove"><svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20" fill="white"><path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/></svg></button>
-            </div>
+            {{> editor_keyword_li}}
             {{/each}}
         </div>
         <div class="d-flex mt-1">
@@ -48,20 +45,11 @@
         <input type="url" class="form-control form-control-sm project_metadata_field" id="project_metadata_web_url" value="{{metadata.web_url}}">
     </div>
     <label for="project_metadata_identifiers">Identifiers</label>
+    <div id="project_metadata_identifiers_list">
     {{#each metadata.identifiers}}
-        <div class="row mb-1">
-            <div class="col col-8 pe-1">
-                <div class="input-group project_metadata_identifiers">
-                    <span style="line-height: 31px; width: 60px;" class="me-4">{{identifier_type}}</span>
-                    <input type="text" class="form-control form-control-sm project_metadata_identifier_name" placeholder="Unique Name (e.g. ebook ISBN)" value="{{name}}">
-                    <input type="text" class="form-control form-control-sm project_metadata_identifier_value" placeholder="Value (e.g. 10.123456/...)" value="{{value}}">
-                </div>
-            </div>
-            <div class="col col-2 ps-0">
-                <button class="btn btn-sm btn-danger"><svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20" fill="white"><path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/></svg></button>
-            </div>
-        </div>
+        {{> editor_add_identifier_row}}
     {{/each}}
+    </div>
     <div class="row mt-4">
         <div class="col col-8 pe-1">
             <div class="input-group" id="project_metadata_identifiers">
@@ -83,8 +71,7 @@
         <label>Authors</label>
         <ul id="project_metadata_authors_ul">
             {{#each metadata.authors}}
-                <li data-id="{{id}}">{{first_names}} {{last_names}} <button class="img-btn project_metadata_authors_remove"><svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20" fill="red"><path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/></svg></button>
-                </li>
+                {{> editor_add_authors_li}}
             {{/each}}
         </ul>
         <div class="m-0 align-items-baseline">
@@ -97,8 +84,7 @@
         <label>Editors</label>
         <ul id="project_metadata_editors_ul">
             {{#each metadata.editors}}
-            <li data-id="{{id}}">{{first_names}} {{last_names}} <button class="img-btn project_metadata_editors_remove"><svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20" fill="red"><path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/></svg></button>
-            </li>
+            {{> editor_add_editors_li}}
             {{/each}}
         </ul>
         <div class="m-0 align-items-baseline">
@@ -109,9 +95,13 @@
     </div>
     <div class="form-group">
         <label for="project_metadata_language">Language</label>
+        {{#each metadata.languages}}
+
+        {{/each}}
         <select class="form-select form-select-sm" id="project_metadata_language">
-            <option value="de">German</option>
-            <option value="en">English</option>
+            <option value="unsest">Unset</option>
+            <option value="DE">German</option>
+            <option value="EN">English</option>
         </select>
     </div>
     <label for="project_metadata_ddc">DDC Classifications</label>

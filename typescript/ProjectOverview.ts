@@ -111,12 +111,37 @@ namespace Editor{
 
                 // Add listener to add identifier button
                 document.getElementById("project_metadata_identifiers_add").addEventListener("click", add_identifier_btn_handler);
+
+                // Add listeners to all remove identifier buttons
+                // @ts-ignore
+                for(let button of document.getElementsByClassName("project_metadata_identifier_remove_btn")){
+                    button.addEventListener("click", remove_identifier_btn_handler);
+                }
             }, function(error){
                 // @ts-ignore
                 Tools.stop_loading_spinner();
                 alert("Failed to load project");
                 console.log(error);
             });
+        }
+
+        // @ts-ignore
+        async function remove_identifier_btn_handler(e){
+            let target = e.target as HTMLElement;
+            let li = target.closest(".project_metadata_identifier_row");
+            let identifier_id = li.getAttribute("data-identifier-id");
+
+            Tools.start_loading_spinner();
+            try{
+                await send_remove_identifier_request(identifier_id);
+                Tools.stop_loading_spinner();
+                li.remove();
+                Tools.show_alert("Identifier removed.", "success");
+            }catch(e){
+                Tools.stop_loading_spinner();
+                Tools.show_alert("Failed to remove identifier.", "danger");
+                console.error(e);
+            }
         }
 
         // @ts-ignore
@@ -139,17 +164,21 @@ namespace Editor{
                 Tools.show_alert("Identifier added.", "success");
 
                 // @ts-ignore
-                //document.getElementById("project_metadata_identifiers").innerHTML += Handlebars.templates.editor_identifier_li(response);
+                document.getElementById("project_metadata_identifiers_list").innerHTML += Handlebars.templates.editor_add_identifier_row(response.data);
 
                 //Add remove handler:
                 // @ts-ignore
-                //for(let button of document.getElementsByClassName("project_metadata_identifiers_remove")){
-                //    button.addEventListener("click", remove_identifier_btn_handler);
-                //}
+                for(let button of document.getElementsByClassName("project_metadata_identifier_remove_btn")){
+                    button.addEventListener("click", remove_identifier_btn_handler);
+                }
+
+                // Clear input fields
+                (<HTMLInputElement>document.getElementById("project_metadata_identifiers_value")).value = "";
+                (<HTMLInputElement>document.getElementById("project_metadata_identifiers_name")).value = "";
             }catch (e) {
                 Tools.stop_loading_spinner();
                 Tools.show_alert("Failed to add identifier.", "danger");
-                console.log(e);
+                console.error(e);
             }
 
         }
@@ -219,7 +248,7 @@ namespace Editor{
             }catch(e){
                 Tools.stop_loading_spinner();
                 Tools.show_alert("Failed to add keyword.", "danger");
-                console.log(e);
+                console.error(e);
             }
         }
 
@@ -238,8 +267,6 @@ namespace Editor{
                 let result_ul = document.getElementById("project_metadata_keyword_search_result");
                 result_ul.innerHTML = "";
                 result_ul.classList.remove("hide");
-
-                console.log(response);
 
                 let hide_results = function(e){
                     let target = e.target as HTMLElement;
@@ -301,17 +328,18 @@ namespace Editor{
                         }catch(e){
                             Tools.stop_loading_spinner();
                             Tools.show_alert("Failed to add keyword.", "danger");
-                            console.log(e);
+                            console.error(e);
                         }
                     });
                 }
             }catch(e) {
                 Tools.stop_loading_spinner();
                 Tools.show_alert("Failed to search for keyword. Check your network connection", "danger");
-                console.log(e);
+                console.error(e);
             }
         }
 
+        // @ts-ignore
         async function remove_keyword_btn_handler(e){
             let target = e.target as HTMLElement;
             let div = target.closest(".project_metadata_keywords_entry_wrapper");
@@ -326,6 +354,7 @@ namespace Editor{
             }catch(e){
                 Tools.stop_loading_spinner();
                 Tools.show_alert("Failed to remove keyword.", "danger");
+                console.error(e);
             }
         }
 
@@ -434,6 +463,7 @@ namespace Editor{
             }
         }
 
+        // @ts-ignore
         async function remove_editor_btn_handler(e){
             let target = e.target as HTMLElement;
             let li = target.closest("li");
@@ -704,10 +734,8 @@ namespace Editor{
             data["web_url"] = (<HTMLInputElement>document.getElementById("project_metadata_web_url")).value || null;
             data["published"] = null;
             data["languages"] = null;
-            data["number_of_pages"] = null;
             data["short_abstract"] = (<HTMLInputElement>document.getElementById("project_metadata_short_abstract")).value || null;
             data["long_abstract"] = (<HTMLInputElement>document.getElementById("project_metadata_long_abstract")).value || null;
-            data["keywords"] = null;
             data["license"] = null;
             data["series"] = (<HTMLInputElement>document.getElementById("project_metadata_series")).value || null;
             data["volume"] = (<HTMLInputElement>document.getElementById("project_metadata_volume")).value || null;
