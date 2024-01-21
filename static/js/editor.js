@@ -29,7 +29,7 @@ var Editor;
                     // @ts-ignore
                     data["settings"] = values[1].data || null;
                     // Retrieve details for authors and editors
-                    if (data["metadata"]["authors"] != null) {
+                    if (data["metadata"] != null && data["metadata"]["authors"] != null) {
                         let promises = [];
                         for (let author of data["metadata"]["authors"]) {
                             promises.push(send_get_person_request(author));
@@ -54,7 +54,7 @@ var Editor;
                             Tools.show_alert("Failed to load all authors", "danger");
                         }
                     }
-                    if (data["metadata"]["editors"] != null) {
+                    if (data["metadata"] != null && data["metadata"]["editors"] != null) {
                         let promises = [];
                         for (let editor of data["metadata"]["editors"]) {
                             promises.push(send_get_person_request(editor));
@@ -105,6 +105,8 @@ var Editor;
                     //Add listener to keyword search
                     document.getElementById("project_metadata_keyword_search").addEventListener("input", search_gnd_keyword);
                     document.getElementById("project_metadata_keyword_search").addEventListener("click", search_gnd_keyword);
+                    // Add listener to add identifier button
+                    document.getElementById("project_metadata_identifiers_add").addEventListener("click", add_identifier_btn_handler);
                 });
             }, function (error) {
                 // @ts-ignore
@@ -114,6 +116,82 @@ var Editor;
             });
         }
         ProjectOverview.show_overview = show_overview;
+        // @ts-ignore
+        function add_identifier_btn_handler() {
+            return __awaiter(this, void 0, void 0, function* () {
+                let identifier = {};
+                identifier["identifier_type"] = document.getElementById("project_metadata_identifiers_type").value || null;
+                identifier["value"] = document.getElementById("project_metadata_identifiers_value").value || null;
+                identifier["name"] = document.getElementById("project_metadata_identifiers_name").value || null;
+                if (!identifier["identifier_type"] || !identifier["value"] || !identifier["name"]) {
+                    Tools.show_alert("Couldn't add Identifier: Please fill out all fields.", "danger");
+                    return;
+                }
+                try {
+                    Tools.start_loading_spinner();
+                    let response = yield send_add_identifier_request(identifier);
+                    Tools.stop_loading_spinner();
+                    Tools.show_alert("Identifier added.", "success");
+                    // @ts-ignore
+                    //document.getElementById("project_metadata_identifiers").innerHTML += Handlebars.templates.editor_identifier_li(response);
+                    //Add remove handler:
+                    // @ts-ignore
+                    //for(let button of document.getElementsByClassName("project_metadata_identifiers_remove")){
+                    //    button.addEventListener("click", remove_identifier_btn_handler);
+                    //}
+                }
+                catch (e) {
+                    Tools.stop_loading_spinner();
+                    Tools.show_alert("Failed to add identifier.", "danger");
+                    console.log(e);
+                }
+            });
+        }
+        function send_remove_identifier_request(identifier_id) {
+            return __awaiter(this, void 0, void 0, function* () {
+                const response = yield fetch(`/api/projects/${globalThis.project_id}/metadata/identifiers/${identifier_id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                });
+                if (!response.ok) {
+                    throw new Error(`Failed to send remove identifier request`);
+                }
+                else {
+                    let response_data = yield response.json();
+                    if (response_data.hasOwnProperty("error")) {
+                        throw new Error(`Failed to remove identifier: ${response_data["error"]}`);
+                    }
+                    else {
+                        return response_data;
+                    }
+                }
+            });
+        }
+        function send_add_identifier_request(identifier) {
+            return __awaiter(this, void 0, void 0, function* () {
+                const response = yield fetch(`/api/projects/${globalThis.project_id}/metadata/identifiers/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(identifier)
+                });
+                if (!response.ok) {
+                    throw new Error(`Failed to send add identifier request`);
+                }
+                else {
+                    let response_data = yield response.json();
+                    if (response_data.hasOwnProperty("error")) {
+                        throw new Error(`Failed to remove keyword: ${response_data["error"]}`);
+                    }
+                    else {
+                        return response_data;
+                    }
+                }
+            });
+        }
         // @ts-ignore
         function add_keyword_without_gnd_handler() {
             return __awaiter(this, void 0, void 0, function* () {
@@ -319,6 +397,7 @@ var Editor;
                 button.addEventListener("click", remove_editor_btn_handler);
             }
         }
+        // @ts-ignore
         function remove_author_btn_handler(e) {
             return __awaiter(this, void 0, void 0, function* () {
                 let target = e.target;
@@ -620,10 +699,7 @@ var Editor;
                 let data = {};
                 data["title"] = document.getElementById("project_metadata_title").value || null;
                 data["subtitle"] = document.getElementById("project_metadata_subtitle").value || null;
-                data["authors"] = null;
-                data["editors"] = null;
                 data["web_url"] = document.getElementById("project_metadata_web_url").value || null;
-                data["identifiers"] = null;
                 data["published"] = null;
                 data["languages"] = null;
                 data["number_of_pages"] = null;
@@ -639,7 +715,7 @@ var Editor;
                 try {
                     Tools.start_loading_spinner();
                     const response = yield fetch(`/api/projects/${globalThis.project_id}/metadata`, {
-                        method: 'POST',
+                        method: 'PATCH',
                         body: JSON.stringify(data),
                         headers: {
                             'Content-Type': 'application/json'

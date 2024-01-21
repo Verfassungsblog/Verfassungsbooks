@@ -263,6 +263,8 @@ pub struct Biography {
 /// Represents an identifier (e.g. DOI, ISBN, ISSN, URL, URN, ORCID, ROR, ...)
 #[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub struct Identifier{
+    #[bincode(with_serde)]
+    pub id: Option<uuid::Uuid>,
     pub name: String,
     pub value: String,
     pub identifier_type: IdentifierType,
@@ -296,6 +298,7 @@ impl Identifier{
             },
         };
         Self{
+            id: Some(uuid::Uuid::new_v4()),
             name,
             value,
             identifier_type,

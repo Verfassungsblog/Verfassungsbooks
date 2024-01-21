@@ -25,6 +25,33 @@ pub fn create_person(_session: Session, settings: &State<Settings>, data_storage
         },
     }
 
+    if let Some(ref mut gnd) = person.gnd{
+        if let None = gnd.id{
+            gnd.id = Some(uuid::Uuid::new_v4());
+        }else{
+            eprintln!("Persons gnd already has a id");
+            return ApiResult::new_error(ApiError::BadRequest("GND is not supposed to have an id".to_string()));
+        }
+    };
+
+    if let Some(ref mut orcid) = person.orcid{
+        if let None = orcid.id{
+            orcid.id = Some(uuid::Uuid::new_v4());
+        }else{
+            eprintln!("Persons orcid already has a id");
+            return ApiResult::new_error(ApiError::BadRequest("ORCID is not supposed to have an id".to_string()));
+        }
+    };
+
+    if let Some(ref mut ror) = person.ror{
+        if let None = ror.id{
+            ror.id = Some(uuid::Uuid::new_v4());
+        }else{
+            eprintln!("Persons ror already has a id");
+            return ApiResult::new_error(ApiError::BadRequest("ROR is not supposed to have an id".to_string()));
+        }
+    };
+
     // Insert into data storage
     data_storage.data.write().unwrap().persons.insert(person.id.unwrap(), Arc::new(RwLock::new(person.clone())));
 

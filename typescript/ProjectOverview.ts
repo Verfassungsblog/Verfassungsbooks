@@ -20,7 +20,7 @@ namespace Editor{
                 data["settings"] = values[1].data || null;
 
                 // Retrieve details for authors and editors
-                if (data["metadata"]["authors"] != null) {
+                if (data["metadata"] != null && data["metadata"]["authors"] != null) {
                     let promises = [];
 
                     for (let author of data["metadata"]["authors"]) {
@@ -47,7 +47,7 @@ namespace Editor{
                         Tools.show_alert("Failed to load all authors", "danger");
                     }
                 }
-                if (data["metadata"]["editors"] != null) {
+                if (data["metadata"] != null && data["metadata"]["editors"] != null) {
                     let promises = [];
 
                     for (let editor of data["metadata"]["editors"]) {
@@ -109,12 +109,88 @@ namespace Editor{
                 document.getElementById("project_metadata_keyword_search").addEventListener("input", search_gnd_keyword);
                 document.getElementById("project_metadata_keyword_search").addEventListener("click", search_gnd_keyword);
 
+                // Add listener to add identifier button
+                document.getElementById("project_metadata_identifiers_add").addEventListener("click", add_identifier_btn_handler);
             }, function(error){
                 // @ts-ignore
                 Tools.stop_loading_spinner();
                 alert("Failed to load project");
                 console.log(error);
             });
+        }
+
+        // @ts-ignore
+        async function add_identifier_btn_handler(){
+            let identifier = {};
+            identifier["identifier_type"] = (<HTMLInputElement>document.getElementById("project_metadata_identifiers_type")).value || null;
+            identifier["value"] = (<HTMLInputElement>document.getElementById("project_metadata_identifiers_value")).value || null;
+            identifier["name"] = (<HTMLInputElement>document.getElementById("project_metadata_identifiers_name")).value || null;
+
+            if(!identifier["identifier_type"] || !identifier["value"] || !identifier["name"]){
+                Tools.show_alert("Couldn't add Identifier: Please fill out all fields.", "danger");
+                return;
+            }
+
+            try{
+                Tools.start_loading_spinner();
+                let response = await send_add_identifier_request(identifier);
+                Tools.stop_loading_spinner();
+
+                Tools.show_alert("Identifier added.", "success");
+
+                // @ts-ignore
+                //document.getElementById("project_metadata_identifiers").innerHTML += Handlebars.templates.editor_identifier_li(response);
+
+                //Add remove handler:
+                // @ts-ignore
+                //for(let button of document.getElementsByClassName("project_metadata_identifiers_remove")){
+                //    button.addEventListener("click", remove_identifier_btn_handler);
+                //}
+            }catch (e) {
+                Tools.stop_loading_spinner();
+                Tools.show_alert("Failed to add identifier.", "danger");
+                console.log(e);
+            }
+
+        }
+
+        async function send_remove_identifier_request(identifier_id: string){
+            const response = await fetch(`/api/projects/${globalThis.project_id}/metadata/identifiers/${identifier_id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+            });
+            if(!response.ok){
+                throw new Error(`Failed to send remove identifier request`);
+            }else{
+                let response_data = await response.json();
+                if(response_data.hasOwnProperty("error")) {
+                    throw new Error(`Failed to remove identifier: ${response_data["error"]}`);
+                }else{
+                    return response_data;
+                }
+            }
+        }
+
+        async function send_add_identifier_request(identifier: Object){
+            const response = await fetch(`/api/projects/${globalThis.project_id}/metadata/identifiers/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(identifier)
+            });
+            if(!response.ok){
+                throw new Error(`Failed to send add identifier request`);
+            }else{
+                let response_data = await response.json();
+                if(response_data.hasOwnProperty("error")) {
+                    throw new Error(`Failed to remove keyword: ${response_data["error"]}`);
+                }else{
+                    return response_data;
+                }
+            }
         }
 
         // @ts-ignore
@@ -625,10 +701,7 @@ namespace Editor{
             let data = {};
             data["title"] = (<HTMLInputElement>document.getElementById("project_metadata_title")).value || null;
             data["subtitle"] = (<HTMLInputElement>document.getElementById("project_metadata_subtitle")).value || null;
-            data["authors"] = null;
-            data["editors"] = null;
             data["web_url"] = (<HTMLInputElement>document.getElementById("project_metadata_web_url")).value || null;
-            data["identifiers"] = null;
             data["published"] = null;
             data["languages"] = null;
             data["number_of_pages"] = null;
@@ -646,7 +719,7 @@ namespace Editor{
             try {
                 Tools.start_loading_spinner();
                 const response = await fetch(`/api/projects/${globalThis.project_id}/metadata`, {
-                    method: 'POST',
+                    method: 'PATCH',
                     body: JSON.stringify(data),
                     headers: {
                         'Content-Type': 'application/json'
