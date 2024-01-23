@@ -94,15 +94,17 @@
         </div>
     </div>
     <div class="form-group">
-        <label for="project_metadata_language">Language</label>
-        {{#each metadata.languages}}
-
-        {{/each}}
-        <select class="form-select form-select-sm" id="project_metadata_language">
-            <option value="unsest">Unset</option>
-            <option value="DE">German</option>
-            <option value="EN">English</option>
-        </select>
+        <label>Languages</label>
+        <div class="project_metadata_languages">
+            <div class="form-check form-check-inline">
+                <input class="form-check-input project_metadata_field project_metadata_language_checkbox" type="checkbox" id="project_metadata_languages_DE" value="DE" {{#if metadata.languages.DE}}checked="true"{{/if}}>
+                <label class="form-check-label" for="project_metadata_languages_DE">German</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input project_metadata_field project_metadata_language_checkbox" type="checkbox" id="project_metadata_languages_EN" value="EN" {{#if metadata.languages.EN}}checked="true"{{/if}}>
+                <label class="form-check-label" for="project_metadata_languages_EN">English</label>
+            </div>
+        </div>
     </div>
     <label for="project_metadata_ddc">DDC Classifications</label>
     <div id="project_metadata_ddc" class="row m-0">

@@ -79,6 +79,14 @@ var Editor;
                             Tools.show_alert("Failed to load all editors", "danger");
                         }
                     }
+                    if (data["metadata"] != null && data["metadata"]["languages"] != null) {
+                        // Set each entry to true if it is in the languages array
+                        let languages = {};
+                        for (let language of data["metadata"]["languages"]) {
+                            languages[language] = true;
+                        }
+                        data["metadata"]["languages"] = languages;
+                    }
                     console.log(data);
                     // @ts-ignore
                     let details = Handlebars.templates.editor_main_project_overview(data);
@@ -732,6 +740,17 @@ var Editor;
                 data["web_url"] = document.getElementById("project_metadata_web_url").value || null;
                 data["published"] = null;
                 data["languages"] = null;
+                // Check which languages are checked
+                let languages = [];
+                // @ts-ignore
+                for (let checkbox of document.getElementsByClassName("project_metadata_language_checkbox")) {
+                    if (checkbox.checked) {
+                        languages.push(checkbox.value);
+                    }
+                }
+                if (languages.length > 0) {
+                    data["languages"] = languages;
+                }
                 data["short_abstract"] = document.getElementById("project_metadata_short_abstract").value || null;
                 data["long_abstract"] = document.getElementById("project_metadata_long_abstract").value || null;
                 data["license"] = null;
