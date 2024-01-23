@@ -769,8 +769,32 @@ namespace Editor{
             }
         }
 
-        function update_settings(){
+        async function update_settings(){
             console.log("Updating settings for project "+globalThis.project_id);
+
+            let data = {};
+            data["toc_enabled"] = (<HTMLInputElement>document.getElementById("project_settings_toc_enabled")).checked;
+
+            try {
+                Tools.start_loading_spinner();
+                const response = await fetch(`/api/projects/${globalThis.project_id}/settings`, {
+                    method: 'POST',
+                    body: JSON.stringify(data),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                Tools.stop_loading_spinner();
+                if (!response.ok) {
+                    throw new Error(`Failed to update project settings ${globalThis.project_id}`);
+                } else {
+                    Tools.show_alert("Settings updated.", "success");
+                    return response.json();
+                }
+            }catch(e){
+                Tools.stop_loading_spinner();
+                Tools.show_alert("Failed to update settings.", "danger");
+            }
         }
 
         async function update_metadata(){
@@ -834,7 +858,7 @@ namespace Editor{
                 });
                 Tools.stop_loading_spinner();
                 if (!response.ok) {
-                    throw new Error(`Failed to load project metadata ${globalThis.project_id}`);
+                    throw new Error(`Failed to update project metadata ${globalThis.project_id}`);
                 } else {
                     Tools.show_alert("Metadata updated.", "success");
                     return response.json();

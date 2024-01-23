@@ -2,7 +2,7 @@
 <h3 class="mt-3">Project Settings:</h3>
 <div class="project_settings">
     <div class="form-check">
-        <input class="form-check-input" type="checkbox" {{#if settings.toc_enabled}}checked="true"{{/if}}" id="project_settings_toc_enabled">
+        <input class="form-check-input" type="checkbox" {{#if settings.toc_enabled}}checked="true"{{/if}} id="project_settings_toc_enabled">
         <label class="form-check-label" for="project_settings_toc_enabled">
             Enable Table of Contents (TOC)
         </label>
