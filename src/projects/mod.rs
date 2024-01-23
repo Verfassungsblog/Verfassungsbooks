@@ -47,7 +47,7 @@ pub struct ProjectMetadata{
     /// Keywords of the book
     pub keywords: Option<Vec<Keyword>>,
     /// Dewey Decimal Classification (DDC) classes (subject groups)
-    pub ddc: Option<Vec<u16>>,
+    pub ddc: Option<String>, //TODO: validate DDC on api set
     /// License of the book
     pub license: Option<License>,
     /// Series the book belongs to

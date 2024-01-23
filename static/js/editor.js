@@ -87,10 +87,37 @@ var Editor;
                         }
                         data["metadata"]["languages"] = languages;
                     }
+                    if (data["metadata"] != null && data["metadata"]["license"] != null) {
+                        let license = data["metadata"]["license"];
+                        data["metadata"]["license"] = {};
+                        data["metadata"]["license"][license] = true;
+                    }
                     console.log(data);
                     // @ts-ignore
                     let details = Handlebars.templates.editor_main_project_overview(data);
                     document.getElementsByClassName("editor-details")[0].innerHTML = details;
+                    // Show selected DDC
+                    if (data["metadata"] != null && data["metadata"]["ddc"] != null) {
+                        let ddc = data["metadata"]["ddc"];
+                        console.log("DDC is:" + ddc);
+                        //Split ddc into three digits
+                        let ddc_first_level = ddc.substring(0, 1);
+                        let ddc_second_level = ddc.substring(0, 2);
+                        let ddc_third_level = ddc.substring(0, 3);
+                        let first_level = document.getElementById("project_metadata_ddc_main_classes");
+                        first_level.value = ddc_first_level;
+                        let second_level = document.getElementById("project_metadata_ddc_" + ddc_first_level);
+                        second_level.value = ddc_second_level;
+                        second_level.classList.remove("hide");
+                        let third_level = document.getElementById("project_metadata_ddc_" + ddc_second_level);
+                        if (third_level) {
+                            third_level.value = ddc_third_level;
+                            third_level.classList.remove("hide");
+                        }
+                        else {
+                            second_level.value = ddc_third_level;
+                        }
+                    }
                     attach_ddc_handlers();
                     document.getElementById("project_settings_toc_enabled").addEventListener("change", update_settings);
                     document.getElementById("project_metadata_search_authors").addEventListener("input", search_authors);
@@ -705,22 +732,31 @@ var Editor;
             });
         }
         function attach_ddc_handlers() {
+            // @ts-ignore
             let handle_change = function () {
-                let value = parseInt(this.options[this.selectedIndex].value);
-                // Hide all sub selects
-                if (this.classList.contains("ddc_first_level")) {
-                    Tools.hide_all("ddc_second_level");
-                    Tools.hide_all("ddc_third_level");
-                }
-                else if (this.classList.contains("ddc_second_level")) {
-                    Tools.hide_all("ddc_third_level");
-                }
-                // Show the sub select
-                let sub_select = document.getElementById("project_metadata_ddc_" + value);
-                if (sub_select) {
-                    sub_select.classList.remove("hide");
-                }
-                console.log(value);
+                return __awaiter(this, void 0, void 0, function* () {
+                    let value = this.options[this.selectedIndex].value;
+                    // Hide all sub selects
+                    if (this.classList.contains("ddc_first_level")) {
+                        Tools.hide_all("ddc_second_level");
+                        Tools.hide_all("ddc_third_level");
+                    }
+                    else if (this.classList.contains("ddc_second_level")) {
+                        Tools.hide_all("ddc_third_level");
+                    }
+                    // Show the sub select
+                    let sub_select = document.getElementById("project_metadata_ddc_" + value);
+                    if (sub_select) {
+                        sub_select.classList.remove("hide");
+                        // Show the sub sub select
+                        let value2 = sub_select.options[sub_select.selectedIndex].value;
+                        let sub_sub_select = document.getElementById("project_metadata_ddc_" + value2);
+                        if (sub_sub_select) {
+                            sub_sub_select.classList.remove("hide");
+                        }
+                    }
+                    yield update_metadata();
+                });
             };
             let selects = document.getElementsByClassName("ddc_select");
             // @ts-ignore
@@ -754,10 +790,26 @@ var Editor;
                 data["short_abstract"] = document.getElementById("project_metadata_short_abstract").value || null;
                 data["long_abstract"] = document.getElementById("project_metadata_long_abstract").value || null;
                 data["license"] = null;
+                if (document.getElementById("project_metadata_license").value !== "none") {
+                    data["license"] = document.getElementById("project_metadata_license").value;
+                }
                 data["series"] = document.getElementById("project_metadata_series").value || null;
                 data["volume"] = document.getElementById("project_metadata_volume").value || null;
                 data["edition"] = document.getElementById("project_metadata_edition").value || null;
                 data["publisher"] = document.getElementById("project_metadata_publisher").value || null;
+                data["ddc"] = null;
+                // Get DDC class:
+                let main_class = document.getElementById("project_metadata_ddc_main_classes").value;
+                if (main_class !== "none") {
+                    let second_class = document.getElementById("project_metadata_ddc_" + main_class).value;
+                    let third_class = document.getElementById("project_metadata_ddc_" + second_class);
+                    if (third_class) {
+                        data["ddc"] = third_class.value;
+                    }
+                    else {
+                        data["ddc"] = second_class;
+                    }
+                }
                 console.log("new data: " + JSON.stringify(data));
                 try {
                     Tools.start_loading_spinner();

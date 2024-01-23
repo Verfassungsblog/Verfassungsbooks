@@ -125,7 +125,7 @@
 
         <!-- DDC 0xx-->
         <select class="form-select form-select-sm hide ddc_select ddc_second_level" id="project_metadata_ddc_0">
-            <option value="00">00 - Computer science, knowledge & systems</option>
+            <option value="00">00 - Computer science, information & general works</option>
             <option value="01">01 - Bibliographies</option>
             <option value="02">02 - Library & information sciences</option>
             <option value="03">03 - General encyclopedic works</option>
@@ -388,7 +388,7 @@
 
         <!-- DDC 2xx -->
         <select class="form-select form-select-sm hide ddc_select ddc_second_level" id="project_metadata_ddc_2">
-            <option value="20">20 - Religion</option>
+            <option value="200">20 - Religion</option>
             <option value="21">21 - Philosophy & theory of religion</option>
             <option value="22">22 - The Bible</option>
             <option value="23">23 - Christianity & Christian theology</option>
@@ -528,7 +528,7 @@
 
         <!-- DDC 3xx -->
         <select class="form-select form-select-sm hide ddc_select ddc_second_level" id="project_metadata_ddc_3">
-            <option value="30">30 - Social sciences, sociology & anthropology</option>
+            <option value="300">30 - Social sciences, sociology & anthropology</option>
             <option value="31">31 - Statistics</option>
             <option value="32">32 - Political science</option>
             <option value="33">33 - Economics</option>
@@ -666,8 +666,9 @@
             <option value="399">399 - Customs of war & diplomacy</option>
         </select>
 
+        <!-- DDC 4xx -->
         <select class="form-select form-select-sm hide ddc_select ddc_second_level" id="project_metadata_ddc_4">
-            <option value="40">40 - Language</option>
+            <option value="400">40 - Language</option>
             <option value="41">41 - Linguistics</option>
             <option value="42">42 - English & Old English languages</option>
             <option value="43">43 - German & related languages</option>
@@ -792,7 +793,7 @@
 
         <!-- DDC 5x -->
         <select class="form-select form-select-sm hide ddc_select ddc_second_level" id="project_metadata_ddc_5">
-            <option value="50">50 - Science</option>
+            <option value="500">50 - Science</option>
             <option value="51">51 - Mathematics</option>
             <option value="52">52 - Astronomy</option>
             <option value="53">53 - Physics</option>
@@ -1511,31 +1512,31 @@
     </div>
     <div class="form-group">
         <label for="project_metadata_license">License</label>
-        <select class="form-select form-select-sm" id="project_metadata_license">
+        <select class="form-select form-select-sm project_metadata_field" id="project_metadata_license">
             <option value="none">None</option>
-            <option value="CC0">CC0 Public Domain</option>
-            <option value="CC_BY_4">CC BY 4.0</option>
-            <option value="CC_BY_SA_4">CC BY-SA 4.0</option>
-            <option value="CC_BY_ND_4">CC BY-ND 4.0</option>
-            <option value="CC_BY_NC_4">CC BY-NC 4.0</option>
-            <option value="CC_BY_NC_SA_4">CC BY-NC-SA 4.0</option>
-            <option value="CC_BY_NC_ND_4">CC BY-NC-ND 4.0</option>
+            <option value="CC0" {{#if metadata.license.CC0}}selected="true"{{/if}}>CC0 Public Domain</option>
+            <option value="CC_BY_4" {{#if metadata.license.CC_BY_4}}selected="true"{{/if}}>CC BY 4.0</option>
+            <option value="CC_BY_SA_4" {{#if metadata.license.CC_BY_SA_4}}selected="true"{{/if}}>CC BY-SA 4.0</option>
+            <option value="CC_BY_ND_4" {{#if metadata.license.CC_BY_ND_4}}selected="true"{{/if}}>CC BY-ND 4.0</option>
+            <option value="CC_BY_NC_4" {{#if metadata.license.CC_BY_NC_4}}selected="true"{{/if}}>CC BY-NC 4.0</option>
+            <option value="CC_BY_NC_SA_4" {{#if metadata.license.CC_BY_NC_SA_4}}selected="true"{{/if}}>CC BY-NC-SA 4.0</option>
+            <option value="CC_BY_NC_ND_4" {{#if metadata.license.CC_BY_NC_ND_4}}selected="true"{{/if}}>CC BY-NC-ND 4.0</option>
         </select>
     </div>
     <div class="form-group">
         <label for="project_metadata_series">Series</label>
-        <input type="text" class="form-control form-control-sm" id="project_metadata_series">
+        <input type="text" class="form-control form-control-sm project_metadata_field" id="project_metadata_series" value="{{metadata.series}}">
     </div>
     <div class="form-group">
         <label for="project_metadata_volume">Volume</label>
-        <input type="text" class="form-control form-control-sm" id="project_metadata_volume">
+        <input type="text" class="form-control form-control-sm project_metadata_field" id="project_metadata_volume" value="{{metadata.volume}}">
     </div>
     <div class="form-group">
         <label for="project_metadata_edition">Edition</label>
-        <input type="text" class="form-control form-control-sm" id="project_metadata_edition">
+        <input type="text" class="form-control form-control-sm project_metadata_field" id="project_metadata_edition" value="{{metadata.edition}}">
     </div>
     <div class="form-group">
         <label for="project_metadata_publisher">Publisher</label>
-        <input type="text" class="form-control form-control-sm" id="project_metadata_publisher">
+        <input type="text" class="form-control form-control-sm project_metadata_field" id="project_metadata_publisher" value="{{metadata.publisher}}">
     </div>
 </div>

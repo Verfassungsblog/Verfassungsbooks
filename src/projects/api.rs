@@ -203,7 +203,7 @@ pub struct PatchProjectMetadata{
     pub keywords: Option<Option<Vec<Keyword>>>,
     /// Dewey Decimal Classification (DDC) classes (subject groups)
     #[serde(default, skip_serializing_if = "Option::is_none", with = "::serde_with::rust::double_option")]
-    pub ddc: Option<Option<Vec<u16>>>,
+    pub ddc: Option<Option<String>>,
     /// License of the book
     #[serde(default, skip_serializing_if = "Option::is_none", with = "::serde_with::rust::double_option")]
     pub license: Option<Option<License>>,
