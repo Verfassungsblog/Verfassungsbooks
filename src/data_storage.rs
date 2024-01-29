@@ -5,7 +5,7 @@ use std::sync::atomic::AtomicBool;
 use std::time::SystemTime;
 use serde::{Deserialize, Serialize};
 use bincode::{Encode, Decode};
-use crate::projects::{Person, ProjectMetadata, ProjectSettings, SectionOrToc};
+use crate::projects::{Person, ProjectMetadata, ProjectSettings, Section, SectionContent, SectionOrToc};
 use crate::settings::Settings;
 
 /// Storage for small data like users, passwords and login attempts
@@ -558,6 +558,69 @@ pub struct ProjectData{
     pub metadata: Option<ProjectMetadata>,
     pub settings: Option<ProjectSettings>,
     pub sections: Vec<SectionOrToc>,
+}
+
+impl ProjectData{
+    pub fn remove_section(&mut self, section_to_remove_id: &uuid::Uuid) -> Option<Section> {
+        let pos = self.sections.iter().position(|section| match section {
+            SectionOrToc::Section(section) => section.id == Some(*section_to_remove_id),
+            _ => false,
+        });
+
+        match pos {
+            Some(pos) => self.sections.remove(pos).into_section(),
+            None => {
+                for section in &mut self.sections {
+                    if let SectionOrToc::Section(section) = section {
+                        if let Some(removed) = section.remove_child_section(section_to_remove_id) {
+                            return Some(removed);
+                        }
+                    }
+                }
+                None
+            }
+        }
+    }
+    pub fn insert_section_as_first_child(&mut self, parent_section_id: &uuid::Uuid, section_to_insert: Section) -> Result<(), ()> {
+        for section in &mut self.sections {
+            if let SectionOrToc::Section(section) = section {
+                // Check if this is the parent section
+                if section.id == Some(*parent_section_id) {
+                    section.children.insert(0, SectionContent::Section(section_to_insert));
+                    return Ok(());
+                }else{
+                    // Check if one of the children is the parent section
+                    if let Some(_) = section.insert_child_section_as_child(parent_section_id, &section_to_insert) {
+                        return Ok(());
+                    }
+                }
+            }
+        }
+        Err(())
+    }
+    pub fn insert_section_after(&mut self, previous_element: &uuid::Uuid, section_to_insert: Section) -> Result<(), ()> {
+        let pos = self.sections.iter().position(|section| match section {
+            SectionOrToc::Section(section) => section.id == Some(*previous_element),
+            _ => false,
+        });
+
+        match pos {
+            Some(pos) => {
+                self.sections.insert(pos + 1, SectionOrToc::Section(section_to_insert));
+                Ok(())
+            }
+            None => {
+                for section in &mut self.sections {
+                    if let SectionOrToc::Section(section) = section {
+                        if let Some(_) = section.insert_child_section_after(previous_element, &section_to_insert) {
+                            return Ok(());
+                        }
+                    }
+                }
+                Err(())
+            }
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]

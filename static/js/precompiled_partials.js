@@ -18,9 +18,44 @@ Handlebars.partials['persons_bio_edit'] = template({"compiler":[8,">= 4.3.0"],"m
     + alias4(((helper = (helper = lookupProperty(helpers,"language_code") || (depth0 != null ? lookupProperty(depth0,"language_code") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"language_code","hash":{},"data":data,"loc":{"start":{"line":4,"column":172},"end":{"line":4,"column":189}}}) : helper)))
     + "\" rows=\"3\"></textarea>\n    </div>\n</div>";
 },"useData":true});
-Handlebars.partials['editor_sidebar_section_overview'] = template({"compiler":[8,">= 4.3.0"],"main":function(container,depth0,helpers,partials,data) {
-    return "<div class=\"editor-sidebar-structure\"></div>\n<div class=\"editor-sidebar-structure-ctl input-group\">\n    <input type=\"text\" class=\"form-control\" placeholder=\"Chaptername\">\n    <button type=\"button\" class=\"btn btn-outline-success\">Add</button>\n</div>";
-},"useData":true});
+Handlebars.partials['editor_sidebar_section'] = template({"1":function(container,depth0,helpers,partials,data) {
+    var stack1, lookupProperty = container.lookupProperty || function(parent, propertyName) {
+        if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
+          return parent[propertyName];
+        }
+        return undefined
+    };
+
+  return ((stack1 = lookupProperty(helpers,"if").call(depth0 != null ? depth0 : (container.nullContext || {}),(depth0 != null ? lookupProperty(depth0,"Section") : depth0),{"name":"if","hash":{},"fn":container.program(2, data, 0),"inverse":container.program(4, data, 0),"data":data,"loc":{"start":{"line":11,"column":8},"end":{"line":15,"column":15}}})) != null ? stack1 : "");
+},"2":function(container,depth0,helpers,partials,data) {
+    var stack1, lookupProperty = container.lookupProperty || function(parent, propertyName) {
+        if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
+          return parent[propertyName];
+        }
+        return undefined
+    };
+
+  return ((stack1 = container.invokePartial(lookupProperty(partials,"editor_sidebar_section"),depth0,{"name":"editor_sidebar_section","data":data,"indent":"        ","helpers":helpers,"partials":partials,"decorators":container.decorators})) != null ? stack1 : "");
+},"4":function(container,depth0,helpers,partials,data) {
+    return "        Toc\n";
+},"compiler":[8,">= 4.3.0"],"main":function(container,depth0,helpers,partials,data) {
+    var stack1, alias1=container.lambda, alias2=container.escapeExpression, lookupProperty = container.lookupProperty || function(parent, propertyName) {
+        if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
+          return parent[propertyName];
+        }
+        return undefined
+    };
+
+  return "<div class=\"editor_sidebar_contents_section_wrapper\" data-section-id=\""
+    + alias2(alias1(((stack1 = (depth0 != null ? lookupProperty(depth0,"Section") : depth0)) != null ? lookupProperty(stack1,"id") : stack1), depth0))
+    + "\" draggable=\"true\" id=\"section_"
+    + alias2(alias1(((stack1 = (depth0 != null ? lookupProperty(depth0,"Section") : depth0)) != null ? lookupProperty(stack1,"id") : stack1), depth0))
+    + "\">\n    <div class=\"editor_sidebar_contents_section\">\n                        <span class=\"editor_sidebar_contents_section_title\">\n                            <span><svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24\" viewBox=\"0 -960 960 960\" width=\"24\"><path\n                                    d=\"M320-240h320v-80H320v80Zm0-160h320v-80H320v80ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm280-520v-200H240v640h480v-440H520ZM240-800v200-200 640-640Z\"/></svg></span>\n                            <span class=\"align-middle\">"
+    + alias2(alias1(((stack1 = ((stack1 = (depth0 != null ? lookupProperty(depth0,"Section") : depth0)) != null ? lookupProperty(stack1,"metadata") : stack1)) != null ? lookupProperty(stack1,"title") : stack1), depth0))
+    + "</span>\n                        </span>\n    </div>\n    <div class=\"editor_sidebar_contents_section_children\">\n"
+    + ((stack1 = lookupProperty(helpers,"each").call(depth0 != null ? depth0 : (container.nullContext || {}),((stack1 = (depth0 != null ? lookupProperty(depth0,"Section") : depth0)) != null ? lookupProperty(stack1,"children") : stack1),{"name":"each","hash":{},"fn":container.program(1, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":10,"column":8},"end":{"line":16,"column":17}}})) != null ? stack1 : "")
+    + "    </div>\n    <div class=\"editor_sidebar_contents_section_after_dropzone\">\n    </div>\n</div>";
+},"usePartial":true,"useData":true});
 Handlebars.partials['editor_add_identifier_row'] = template({"compiler":[8,">= 4.3.0"],"main":function(container,depth0,helpers,partials,data) {
     var helper, alias1=depth0 != null ? depth0 : (container.nullContext || {}), alias2=container.hooks.helperMissing, alias3="function", alias4=container.escapeExpression, lookupProperty = container.lookupProperty || function(parent, propertyName) {
         if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
@@ -288,4 +323,38 @@ Handlebars.partials['editor_add_editors_li'] = template({"compiler":[8,">= 4.3.0
     + alias4(((helper = (helper = lookupProperty(helpers,"last_names") || (depth0 != null ? lookupProperty(depth0,"last_names") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"last_names","hash":{},"data":data,"loc":{"start":{"line":1,"column":37},"end":{"line":1,"column":51}}}) : helper)))
     + " <button class=\"img-btn project_metadata_editors_remove\"><svg xmlns=\"http://www.w3.org/2000/svg\" height=\"20\" viewBox=\"0 -960 960 960\" width=\"20\" fill=\"red\"><path d=\"M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z\"/></svg></button>\n</li>";
 },"useData":true});
+Handlebars.partials['editor_sidebar'] = template({"1":function(container,depth0,helpers,partials,data) {
+    var stack1, lookupProperty = container.lookupProperty || function(parent, propertyName) {
+        if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
+          return parent[propertyName];
+        }
+        return undefined
+    };
+
+  return ((stack1 = lookupProperty(helpers,"if").call(depth0 != null ? depth0 : (container.nullContext || {}),(depth0 != null ? lookupProperty(depth0,"Section") : depth0),{"name":"if","hash":{},"fn":container.program(2, data, 0),"inverse":container.program(4, data, 0),"data":data,"loc":{"start":{"line":9,"column":12},"end":{"line":13,"column":19}}})) != null ? stack1 : "");
+},"2":function(container,depth0,helpers,partials,data) {
+    var stack1, lookupProperty = container.lookupProperty || function(parent, propertyName) {
+        if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
+          return parent[propertyName];
+        }
+        return undefined
+    };
+
+  return ((stack1 = container.invokePartial(lookupProperty(partials,"editor_sidebar_section"),depth0,{"name":"editor_sidebar_section","data":data,"indent":"                ","helpers":helpers,"partials":partials,"decorators":container.decorators})) != null ? stack1 : "");
+},"4":function(container,depth0,helpers,partials,data) {
+    return "                Toc\n";
+},"compiler":[8,">= 4.3.0"],"main":function(container,depth0,helpers,partials,data) {
+    var stack1, lookupProperty = container.lookupProperty || function(parent, propertyName) {
+        if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
+          return parent[propertyName];
+        }
+        return undefined
+    };
+
+  return "<div class=\"editor-sidebar-structure\">\n    <span id=\"editor_sidebar_project_title\">\n        <span><svg xmlns=\"http://www.w3.org/2000/svg\" height=\"20\" viewBox=\"0 -960 960 960\" width=\"20\"><path\n                d=\"M270-60.782q-53.479 0-91.349-36.355-37.869-36.355-37.869-89.993v-551.783q0-47.609 29.717-84.109 29.718-36.501 76.762-46.196l391.609-78v658.088l-372.783 75.434q-10.13 2-17.543 9.218-7.414 7.217-7.414 17.348 0 11 8.661 18.5t20.209 7.5h448.87v-658.088h100.348v758.436H270Zm111.479-274.263 157.042-31.086v-458.217l-157.042 31.087v458.216ZM281.13-314.523v-458.781l-13.869 3q-11.565 2-18.848 10.913-7.283 8.913-7.283 20.478v433.825q5.884-2 12.355-3.5 6.472-1.5 12.602-3.065l15.043-2.87Zm-40-452.781v462.216-462.216Z\"/></svg></span>\n        <span class=\"align-middle\">"
+    + container.escapeExpression(container.lambda(((stack1 = (depth0 != null ? lookupProperty(depth0,"metadata") : depth0)) != null ? lookupProperty(stack1,"title") : stack1), depth0))
+    + "</span>\n    </span>\n    <div id=\"editor_sidebar_contents\">\n"
+    + ((stack1 = lookupProperty(helpers,"each").call(depth0 != null ? depth0 : (container.nullContext || {}),(depth0 != null ? lookupProperty(depth0,"contents") : depth0),{"name":"each","hash":{},"fn":container.program(1, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":8,"column":8},"end":{"line":14,"column":17}}})) != null ? stack1 : "")
+    + "    </div>\n</div>\n<div class=\"editor-sidebar-structure-ctl input-group\">\n    <input type=\"text\" class=\"form-control\" placeholder=\"Chaptername\" id=\"editor_sidebar_section_name\">\n    <button type=\"button\" class=\"btn btn-outline-success\" id=\"editor_sidebar_add_section\">Add</button>\n</div>";
+},"usePartial":true,"useData":true});
 })();

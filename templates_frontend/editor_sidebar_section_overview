@@ -1,5 +1,0 @@
-<div class="editor-sidebar-structure"></div>
-<div class="editor-sidebar-structure-ctl input-group">
-    <input type="text" class="form-control" placeholder="Chaptername">
-    <button type="button" class="btn btn-outline-success">Add</button>
-</div>

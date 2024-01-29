@@ -9,6 +9,15 @@ pub enum SectionOrToc{
     Toc,
 }
 
+impl SectionOrToc{
+    pub fn into_section(self) -> Option<Section> {
+        match self {
+            SectionOrToc::Section(section) => Some(section),
+            SectionOrToc::Toc => None,
+        }
+    }
+}
+
 /// Struct holds all project-level settings
 #[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub struct ProjectSettings{
@@ -85,16 +94,100 @@ pub enum License{
 #[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub struct Section{
     /// Unique id of the section
+    /// Only None if the section is not yet saved in the database
     #[bincode(with_serde)]
-    pub id: uuid::Uuid,
-    /// Level of the section (e.g. chapter, part)
-    pub level: SectionLevel,
+    pub id: Option<uuid::Uuid>,
+    /// Additional classes to style the Section
+    pub css_classes: Option<Vec<String>>,
     /// Holds all contents of the section (either another section or a content block)
     pub children: Vec<SectionContent>,
     /// If true, the section is visible in the table of contents
     pub visible_in_toc: bool,
     /// Metadata of the section
     pub metadata: SectionMetadata,
+}
+
+impl Section{
+    pub fn clone_without_contentblock_content(&self) -> Section {
+        let mut new_section = self.clone();
+        new_section.children = new_section.children.iter_mut().map(|child| child.clone_without_contentblock_content()).collect();
+        new_section
+    }
+
+    pub fn insert_child_section_as_child(&mut self, parent_section_id: &uuid::Uuid, new_section: &Section) -> Option<()>{
+        for (i, child) in self.children.iter_mut().enumerate(){
+            match child{
+                SectionContent::Section(section) => {
+                    if section.id == Some(*parent_section_id){
+                        section.children.push(SectionContent::Section(new_section.clone()));
+                        return Some(())
+                    }else{
+                        match section.insert_child_section_as_child(parent_section_id, new_section){
+                            Some(_) => {
+                                return Some(())
+                            },
+                            None => {},
+                        }
+                    }
+                },
+                SectionContent::ContentBlock(_) => {},
+            }
+        }
+        None
+    }
+
+    pub fn insert_child_section_after(&mut self, section_id: &uuid::Uuid, new_section: &Section) -> Option<()>{
+        for (i, child) in self.children.iter_mut().enumerate(){
+            match child{
+                SectionContent::Section(section) => {
+                    if section.id == Some(*section_id){
+                        self.children.insert(i+1, SectionContent::Section(new_section.clone()));
+                        return Some(())
+                    }else{
+                        match section.insert_child_section_after(section_id, new_section){
+                            Some(_) => {
+                                return Some(())
+                            },
+                            None => {},
+                        }
+                    }
+                },
+                SectionContent::ContentBlock(_) => {},
+            }
+        }
+        None
+    }
+
+    pub fn remove_child_section(&mut self, section_id: &uuid::Uuid) -> Option<Section>{
+        let mut index = None;
+        for (i, child) in self.children.iter_mut().enumerate(){
+            match child{
+                SectionContent::Section(section) => {
+                    if section.id == Some(*section_id){
+                        index = Some(i);
+                    }else{
+                        match section.remove_child_section(section_id){
+                            Some(section) => {
+                                return Some(section)
+                            },
+                            None => {},
+                        }
+                    }
+                },
+                SectionContent::ContentBlock(_) => {},
+            }
+        }
+        match index{
+            Some(index) => {
+                let section = self.children.remove(index);
+                match section{
+                    SectionContent::Section(section) => Some(section),
+                    SectionContent::ContentBlock(_) => None,
+                }
+            },
+            None => None,
+        }
+    }
 }
 
 /// Enum to differentiate between real content blocks and another nested section
@@ -104,9 +197,34 @@ pub enum SectionContent{
     ContentBlock(ContentBlock),
 }
 
+impl SectionContent{
+    pub fn clone_without_contentblock_content(&mut self) -> SectionContent{
+        match self{
+            SectionContent::Section(_) => self.clone(),
+            SectionContent::ContentBlock(content_block) => SectionContent::ContentBlock(content_block.clone_without_contentblock_content()),
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
+pub struct ContentBlock{
+    #[bincode(with_serde)]
+    pub id: uuid::Uuid,
+    pub content: Option<InnerContentBlock>,
+    pub css_classes: Option<Vec<String>>,
+}
+
+impl ContentBlock{
+    pub fn clone_without_contentblock_content(&mut self) -> ContentBlock{
+        let mut new_contentblock = self.clone();
+        new_contentblock.content = None;
+        new_contentblock
+    }
+}
+
 /// Enum to differentiate between different content blocks
 #[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
-pub enum ContentBlock{
+pub enum InnerContentBlock{
     Paragraph(Paragraph),
     Image, //TODO: implement
     Headline(Headline),

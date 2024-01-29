@@ -870,7 +870,7 @@ namespace Editor{
         }
 
         // @ts-ignore
-        async function load_project_metadata(project_id: string): Promise<Object> {
+        export async function load_project_metadata(project_id: string): Promise<Object> {
             const response = await fetch(`/api/projects/${project_id}/metadata`, {
                 method: 'GET',
                 headers: {

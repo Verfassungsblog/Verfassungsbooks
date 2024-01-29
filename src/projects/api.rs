@@ -1,3 +1,4 @@
+use crate::projects::{SectionContent, SectionOrToc};
 use rocket::serde::json::Json;
 use std::sync::Arc;
 use bincode::{Decode, Encode};
@@ -17,8 +18,8 @@ use crate::settings::Settings;
 ///     Returns the settings of the project
 /// GET /api/projects/<project_id>/contents
 ///     Returns a list of all contents (sections or toc placeholder) in the project
-/// GET /api/projects/<project_id>/sections/<section_id>
-///     Returns a section
+/// GET /api/projects/<project_id>/content_block/<content_block_id>
+///     Returns a content block
 
 #[derive(Serialize, Deserialize)]
 pub struct ApiResult<T> {
@@ -544,7 +545,7 @@ pub async fn add_keyword_to_project(project_id: String, keyword: Json<Keyword>, 
     let project_storage = Arc::clone(project_storage);
 
     let project_entry = match project_storage.get_project(&project_id, settings).await{
-        Ok(project_entry) => project_entry,
+        Ok(project_entry) => project_entry.clone(),
         Err(_) => {
             eprintln!("Couldn't get project with id {}", project_id);
             return ApiResult::new_error(ApiError::NotFound);
@@ -584,7 +585,7 @@ pub async fn remove_keyword_from_project(project_id: String, keyword: String, _s
     let project_storage = Arc::clone(project_storage);
 
     let project_entry = match project_storage.get_project(&project_id, settings).await{
-        Ok(project_entry) => project_entry,
+        Ok(project_entry) => project_entry.clone(),
         Err(_) => {
             eprintln!("Couldn't get project with id {}", project_id);
             return ApiResult::new_error(ApiError::NotFound);
@@ -631,7 +632,7 @@ pub async fn add_identifier_to_project(project_id: String, mut identifier: Json<
     let project_storage = Arc::clone(project_storage);
 
     let project_entry = match project_storage.get_project(&project_id, settings).await{
-        Ok(project_entry) => project_entry,
+        Ok(project_entry) => project_entry.clone(),
         Err(_) => {
             eprintln!("Couldn't get project with id {}", project_id);
             return ApiResult::new_error(ApiError::NotFound);
@@ -679,7 +680,7 @@ pub async fn remove_identifier_from_project(project_id: String, identifier_id: S
     let project_storage = Arc::clone(project_storage);
 
     let project_entry = match project_storage.get_project(&project_id, settings).await{
-        Ok(project_entry) => project_entry,
+        Ok(project_entry) => project_entry.clone(),
         Err(_) => {
             eprintln!("Couldn't get project with id {}", project_id);
             return ApiResult::new_error(ApiError::NotFound);
@@ -737,7 +738,7 @@ pub async fn update_identifier_in_project(project_id: String, identifier_id: Str
     let project_storage = Arc::clone(project_storage);
 
     let project_entry = match project_storage.get_project(&project_id, settings).await{
-        Ok(project_entry) => project_entry,
+        Ok(project_entry) => project_entry.clone(),
         Err(_) => {
             eprintln!("Couldn't get project with id {}", project_id);
             return ApiResult::new_error(ApiError::NotFound);
@@ -758,5 +759,208 @@ pub async fn update_identifier_in_project(project_id: String, identifier_id: Str
         ApiResult::new_data(())
     }else{
         ApiResult::new_error(ApiError::NotFound)
+    }
+}
+
+/// GET /api/projects/<project_id>/contents
+/// Returns a list of all contents (sections or toc placeholder) in the project
+/// Strips out the inner content of ContentBlocks
+#[get("/api/projects/<project_id>/contents")]
+pub async fn get_project_contents(project_id: String, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<Vec<SectionOrToc>>> {
+    let project_id = match uuid::Uuid::parse_str(&project_id) {
+        Ok(project_id) => project_id,
+        Err(e) => {
+            println!("Couldn't parse project id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let project_storage = Arc::clone(project_storage);
+
+    let project = match project_storage.get_project(&project_id, settings).await{
+        Ok(project) => project,
+        Err(_) => {
+            println!("Couldn't get project with id {}", project_id);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let project = project.read().unwrap();
+
+    let mut contents = Vec::new();
+    for entry in project.sections.iter(){
+        match entry{
+            SectionOrToc::Toc => {
+                contents.push(entry.clone());
+            },
+            SectionOrToc::Section(section) => {
+                contents.push(SectionOrToc::Section(section.clone_without_contentblock_content()));
+            }
+        }
+    }
+
+    ApiResult::new_data(contents)
+}
+
+/// POST /api/projects/<project_id>/contents
+/// Add a new section or toc placeholder to the project
+#[post("/api/projects/<project_id>/contents", data = "<content>")]
+pub async fn add_content(project_id: String, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>, content: Json<SectionOrToc>) -> Json<ApiResult<SectionOrToc>>{
+    let project_id = match uuid::Uuid::parse_str(&project_id) {
+        Ok(project_id) => project_id,
+        Err(e) => {
+            eprintln!("Couldn't parse project id: {}", e);
+            return ApiResult::new_error(ApiError::BadRequest("Couldn't parse project id".to_string()));
+        },
+    };
+
+    // Check if Section or Toc, generate uuid if section
+    let mut content = content.into_inner();
+    match &mut content{
+        SectionOrToc::Section(section) => {
+            if let None = section.id{
+                section.id = Some(uuid::Uuid::new_v4());
+            }
+        },
+        SectionOrToc::Toc => {},
+    }
+
+    let project_storage = Arc::clone(project_storage);
+
+    let project_entry = match project_storage.get_project(&project_id, settings).await{
+        Ok(project_entry) => project_entry.clone(),
+        Err(_) => {
+            eprintln!("Couldn't get project with id {}", project_id);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    // Insert new content block at the end
+    project_entry.write().unwrap().sections.push(content.clone());
+
+    //Return inserted content block
+    ApiResult::new_data(content)
+}
+
+// PUT /api/projects/<project_id>/contents/<content_id>/move/after/<after_id>
+// Move a section or toc after another section or toc
+#[put("/api/projects/<project_id>/contents/<content_id>/move/after/<after_id>")]
+pub async fn move_content_after(project_id: String, content_id: String, after_id: String, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<()>> {
+    let content_id = match uuid::Uuid::parse_str(&content_id) {
+        Ok(content_id) => content_id,
+        Err(e) => {
+            eprintln!("Couldn't parse content id: {}", e);
+            return ApiResult::new_error(ApiError::BadRequest("Couldn't parse content id".to_string()));
+        },
+    };
+
+    let after_id = match uuid::Uuid::parse_str(&after_id) {
+        Ok(after_id) => after_id,
+        Err(e) => {
+            eprintln!("Couldn't parse after id: {}", e);
+            return ApiResult::new_error(ApiError::BadRequest("Couldn't parse after id".to_string()));
+        },
+    };
+
+    let project_id = match uuid::Uuid::parse_str(&project_id) {
+        Ok(project_id) => project_id,
+        Err(e) => {
+            println!("Couldn't parse project id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let project_storage = Arc::clone(project_storage);
+
+    let project = match project_storage.get_project(&project_id, settings).await {
+        Ok(project) => project,
+        Err(_) => {
+            println!("Couldn't get project with id {}", project_id);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let mut project = project.write().unwrap();
+
+    // Get section to move
+    let content = match project.remove_section(&content_id){
+        Some(content) => content,
+        None => {
+            println!("Couldn't find content with id {}", content_id);
+            return ApiResult::new_error(ApiError::NotFound);
+        }
+    };
+
+    // Add section after specified section
+    match project.insert_section_after(&after_id, content.clone()){
+        Ok(_) => ApiResult::new_data(()),
+        Err(_) => {
+            println!("Couldn't find content with id {}", after_id);
+            //TODO re-add content to the end
+            project.sections.push(SectionOrToc::Section(content));
+            ApiResult::new_error(ApiError::NotFound)
+        }
+    }
+}
+
+
+// PUT /api/projects/<project_id>/contents/<content_id>/move/child_of/<parent_id>
+// Move a section or toc to be a child of another section or toc. It will be the first child.
+#[put("/api/projects/<project_id>/contents/<content_id>/move/child_of/<parent_id>")]
+pub async fn move_content_child_of(project_id: String, content_id: String, parent_id: String, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<()>> {
+    let content_id = match uuid::Uuid::parse_str(&content_id) {
+        Ok(content_id) => content_id,
+        Err(e) => {
+            eprintln!("Couldn't parse content id: {}", e);
+            return ApiResult::new_error(ApiError::BadRequest("Couldn't parse content id".to_string()));
+        },
+    };
+
+    let parent_id = match uuid::Uuid::parse_str(&parent_id) {
+        Ok(parent_id) => parent_id,
+        Err(e) => {
+            eprintln!("Couldn't parse parent id: {}", e);
+            return ApiResult::new_error(ApiError::BadRequest("Couldn't parse parent id".to_string()));
+        },
+    };
+
+    let project_id = match uuid::Uuid::parse_str(&project_id) {
+        Ok(project_id) => project_id,
+        Err(e) => {
+            println!("Couldn't parse project id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let project_storage = Arc::clone(project_storage);
+
+    let project = match project_storage.get_project(&project_id, settings).await {
+        Ok(project) => project,
+        Err(_) => {
+            println!("Couldn't get project with id {}", project_id);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let mut project = project.write().unwrap();
+
+    // Get section to move
+    let content = match project.remove_section(&content_id){
+        Some(content) => content,
+        None => {
+            println!("Couldn't find content with id {}", content_id);
+            return ApiResult::new_error(ApiError::NotFound);
+        }
+    };
+
+    // Add section as first child of specified section
+    match project.insert_section_as_first_child(&parent_id, content.clone()){
+        Ok(_) => ApiResult::new_data(()),
+        Err(_) => {
+            println!("Couldn't find content with id {}", parent_id);
+            //TODO re-add content to the end
+            project.sections.push(SectionOrToc::Section(content));
+            ApiResult::new_error(ApiError::NotFound)
+        }
     }
 }
