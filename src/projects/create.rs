@@ -46,7 +46,7 @@ pub async fn process_create_project(_session: Session, data: rocket::form::Form<
         name: data.project_name.clone(),
         description: data.project_description.clone(),
         template_id,
-        last_edited: 0,
+        last_interaction: 0,
         metadata: None,
         settings: None,
         sections: vec![],

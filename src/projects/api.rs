@@ -1,26 +1,19 @@
+use std::time::SystemTime;
+use crate::data_storage::DataStorage;
 use crate::projects::SectionMetadata;
-use crate::projects::{SectionContent, SectionOrToc};
+use crate::projects::SectionOrToc;
 use rocket::serde::json::Json;
-use std::sync::{Arc, RwLockWriteGuard};
+use std::sync::Arc;
 use bincode::{Decode, Encode};
 use chrono::NaiveDateTime;
 use rocket::State;
 use serde_derive::{Deserialize, Serialize};
-use crate::data_storage::{ProjectData, ProjectStorage};
+use crate::data_storage::ProjectStorage;
 use crate::projects::{Identifier, Keyword, Language, License, ProjectMetadata, ProjectSettings, Section};
 use crate::session::session_guard::Session;
 use crate::settings::Settings;
 
 /// Api Endpoints for the project editor
-
-/// GET /api/projects/<project_id>/metadata
-///     Returns the metadata of the project
-/// GET /api/projects/<project_id>/settings
-///     Returns the settings of the project
-/// GET /api/projects/<project_id>/contents
-///     Returns a list of all contents (sections or toc placeholder) in the project
-/// GET /api/projects/<project_id>/content_block/<content_block_id>
-///     Returns a content block
 
 #[derive(Serialize, Deserialize)]
 pub struct ApiResult<T> {
@@ -75,10 +68,11 @@ pub async fn get_project_metadata(project_id: String, _session: Session, setting
 
     let metadata = project_entry.read().unwrap().metadata.clone();
 
+    // TODO: Check if all authors and editors still exist, if not, remove them from the metadata and save the project
+
     ApiResult::new_data(metadata)
 
 }
-
 trait Patch<P, T>{
     fn patch(&mut self, patch: P) -> T;
 }
@@ -354,7 +348,7 @@ pub async fn set_project_metadata(project_id: String, _session: Session, setting
 }
 
 #[patch("/api/projects/<project_id>/metadata", data = "<metadata>")]
-pub async fn patch_project_metadata(project_id: String, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>, metadata: Json<PatchProjectMetadata>) -> Json<ApiResult<()>> {
+pub async fn patch_project_metadata(project_id: String, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>, data_storage: &State<Arc<DataStorage>>, metadata: Json<PatchProjectMetadata>) -> Json<ApiResult<()>> {
     let project_id = match uuid::Uuid::parse_str(&project_id) {
         Ok(project_id) => project_id,
         Err(e) => {
@@ -382,6 +376,25 @@ pub async fn patch_project_metadata(project_id: String, _session: Session, setti
     };
 
     let new_metadata = old_metadata.patch(metadata.into_inner());
+
+    // Validate new metadata
+
+    // Validate authors: Check if each author exists
+    if let Some(ref authors) = new_metadata.authors {
+        for author in authors.iter() {
+            if !data_storage.person_exists(author){
+                return ApiResult::new_error(ApiError::BadRequest(format!("Author {} does not exist", author)));
+            }
+        }
+    }
+    // Validate editors: Check if each editor exists
+    if let Some(ref editors) = new_metadata.editors {
+        for editor in editors.iter() {
+            if !data_storage.person_exists(editor){
+                return ApiResult::new_error(ApiError::BadRequest(format!("Editor {} does not exist", editor)));
+            }
+        }
+    }
 
     let mut project = project_entry.write().unwrap();
 
@@ -1074,7 +1087,7 @@ pub async fn move_content_child_of(project_id: String, content_id: String, paren
 /// GET /api/projects/<project_id>/contents/<content_id>
 /// Get a section, but strip out subsections
 #[get("/api/projects/<project_id>/sections/<content_path>")]
-pub async fn get_section(project_id: String, content_path: String, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<Section>> {
+pub async fn get_section(project_id: &str, content_path: &str, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<Section>> {
     let project_id = match uuid::Uuid::parse_str(&project_id) {
         Ok(project_id) => project_id,
         Err(e) => {
@@ -1095,6 +1108,8 @@ pub async fn get_section(project_id: String, content_path: String, _session: Ses
         }
     }
 
+    println!("Path: {:?}", path);
+
     if path.len() == 0{
         println!("Couldn't parse content path: path is empty");
         return ApiResult::new_error(ApiError::BadRequest("Couldn't parse content path".to_string()));
@@ -1114,6 +1129,7 @@ pub async fn get_section(project_id: String, content_path: String, _session: Ses
 
     let section = crate::data_storage::get_section_by_path(&project, &path);
 
+    // TODO: check if authors and editors still exist, if not, remove them and save section
     match section{
         Ok(section) => ApiResult::new_data(section.clone_without_subsections()),
         Err(e) => ApiResult::new_error(e)
@@ -1123,8 +1139,8 @@ pub async fn get_section(project_id: String, content_path: String, _session: Ses
 /// PATCH /api/projects/<project_id>/contents/<content_path>
 /// Patch a section, but without content (subsections / content blocks)
 /// Check [PatchSection] for more information
-#[patch("/api/projects/<project_id>/sections/<content_path>/metadata", data = "<section_patch>")]
-pub async fn update_section(project_id: String, content_path: String, section_patch: Json<PatchSection>, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<()>> {
+#[patch("/api/projects/<project_id>/sections/<content_path>", data = "<section_patch>")]
+pub async fn update_section(project_id: String, content_path: String, section_patch: Json<PatchSection>, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>, data_storage: &State<Arc<DataStorage>>) -> Json<ApiResult<()>> {
     let project_id = match uuid::Uuid::parse_str(&project_id) {
         Ok(project_id) => project_id,
         Err(e) => {
@@ -1166,7 +1182,34 @@ pub async fn update_section(project_id: String, content_path: String, section_pa
 
     match section{
         Ok(section) => {
-            *section = section.patch(section_patch.into_inner());
+            let mut new_section_data = section.patch(section_patch.into_inner());
+            // Check if new section data is valid
+            // Check authors
+            for author in new_section_data.metadata.authors.iter(){
+                if !data_storage.person_exists(author){
+                    return ApiResult::new_error(ApiError::BadRequest(format!("Author {} does not exist", author)));
+                }
+            }
+
+            // Check editors
+            for editor in new_section_data.metadata.editors.iter(){
+                if !data_storage.person_exists(editor){
+                    return ApiResult::new_error(ApiError::BadRequest(format!("Editor {} does not exist", editor)));
+                }
+            }
+
+            // Remove duplicants
+            new_section_data.metadata.authors.sort_unstable();
+            new_section_data.metadata.authors.dedup();
+            new_section_data.metadata.editors.sort_unstable();
+            new_section_data.metadata.editors.dedup();
+
+
+            // Set last changed to now
+            new_section_data.metadata.last_changed = Some(chrono::Utc::now().naive_utc());
+
+            *section = new_section_data;
+
             ApiResult::new_data(())
         },
         Err(e) => ApiResult::new_error(e)

@@ -26,6 +26,7 @@ namespace Editor{
                     for (let author of data["metadata"]["authors"]) {
                         promises.push(send_get_person_request(author));
                     }
+                    //TODO: implement a order or sort
 
                     Tools.start_loading_spinner();
 
@@ -539,7 +540,7 @@ namespace Editor{
         }
 
         // @ts-ignore
-        async function search_person(search_term: string, result_container: HTMLElement, searchbar: HTMLElement, select_handler: function){
+        export async function search_person(search_term: string, result_container: HTMLElement, searchbar: HTMLElement, select_handler: function){
             if(search_term === ""){
                 throw new Error("Search term is empty");
             }
@@ -656,7 +657,8 @@ namespace Editor{
             }
         }
 
-        async function send_get_person_request(person_id: string){
+        // TODO move to avoid export
+        export async function send_get_person_request(person_id: string){
             const response = await fetch(`/api/persons/${person_id}`, {
                 method: 'GET',
                 headers: {

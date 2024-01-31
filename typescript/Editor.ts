@@ -5,6 +5,7 @@
 namespace Editor{
     declare var project_id: string;
     declare var section_id: string | null;
+    declare var section_path: string | null;
 
     // @ts-ignore
     export async function init() {

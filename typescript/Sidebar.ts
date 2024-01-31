@@ -39,7 +39,8 @@ namespace Editor{
             }
         }
 
-        function toc_click_listener(e){
+        // @ts-ignore
+        async function toc_click_listener(e){
             let target = e.target;
             if(!target.classList.contains("editor_sidebar_contents_section_wrapper")){
                 target = target.closest(".editor_sidebar_contents_section_wrapper");
@@ -47,12 +48,31 @@ namespace Editor{
             let section_id = target.getAttribute("data-section-id") || null;
 
             if(section_id === null){
-                console.error("Section id is null");
+                console.error("Section has no id");
                 return;
             }
 
+            // Get path of section
+            let path : string = section_id;
+
+            // Append parents to path, until we reach the root
+            while (target.parentElement.closest(".editor_sidebar_contents_section_wrapper") !== null){
+                let parent_section_id = target.parentElement.closest(".editor_sidebar_contents_section_wrapper").getAttribute("data-section-id") || null;
+                if(parent_section_id === null){
+                    console.error("Parent section has no id");
+                    return;
+                }
+
+                // Append parent section id to path
+                path = parent_section_id + ":" + path;
+
+                // Go up one level
+                target = target.parentElement.closest(".editor_sidebar_contents_section_wrapper");
+            }
+
             globalThis.section_id = section_id;
-            Editor.SectionView.show_section_view();
+            globalThis.section_path = path;
+            await Editor.SectionView.show_section_view();
         }
         function add_draggables(){
             let dragstart = function(ev){

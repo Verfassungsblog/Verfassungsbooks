@@ -41,6 +41,7 @@ pub struct ProjectMetadata{
     /// URL to a web version of the book or reference
     pub web_url: Option<String>,
     /// List of identifiers of the book (e.g. ISBNs)
+    // TODO: build identifier validator
     pub identifiers: Option<Vec<Identifier>>,
     /// Date of publication
     #[bincode(with_serde)]

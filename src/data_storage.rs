@@ -69,6 +69,11 @@ impl DataStorage{
         }
     }
 
+    /// Check if user exists
+    pub fn person_exists(&self, uuid: &uuid::Uuid) -> bool{
+        self.data.read().unwrap().persons.contains_key(uuid)
+    }
+
     /// Loads the [DataStorage] from disk
     ///
     /// Path is defined as data_path from settings + /data.bincode
@@ -267,7 +272,7 @@ impl ProjectStorage {
 
     /// Unloads all unused projects from memory
     ///
-    /// Checks if projects last edited time is older than project_cache_time defined in config
+    /// Checks if projects last interaction time is older than project_cache_time defined in config
     /// Saves the project to disk before unloading it
     pub async fn unload_unused_projects(&mut self, settings: &Settings) -> Result<(), ()>{
         let mut projects_to_unload = vec![];
@@ -275,7 +280,7 @@ impl ProjectStorage {
         for (uuid, project_data) in self.projects.read().unwrap().iter(){
             if let Some(project) = &project_data.data{
                 let now =  SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
-                if Arc::strong_count(&project) == 1 && project.read().unwrap().last_edited + settings.project_cache_time < now{
+                if Arc::strong_count(&project) == 1 && project.read().unwrap().last_interaction + settings.project_cache_time < now{
                     projects_to_unload.push(uuid.clone());
                 }
             }
@@ -380,7 +385,7 @@ impl ProjectStorage {
         let uuid = uuid::Uuid::new_v4();
 
         // Update last edited to current time, so the project doesn't get unloaded immediately
-        project.last_edited = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
+        project.last_interaction = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
         let entry = ProjectStorageEntry{
             name: project.name.clone(),
             data: Some(Arc::new(RwLock::new(project))),
@@ -437,7 +442,7 @@ impl ProjectStorage {
                         if let Some(tproject) = self.projects.write().unwrap().get_mut(uuid){
                                 // Update last edited to current time, so the project doesn't get unloaded immediately
                                 let mut project: ProjectData = project;
-                                project.last_edited = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
+                                project.last_interaction = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
                                 tproject.name = project.name.clone();
                                 println!("Replacing project");
                                 tproject.data.replace(Arc::new(RwLock::new(project)));
@@ -469,7 +474,7 @@ impl ProjectStorage {
         match self.projects.read().unwrap().get(uuid) {
             Some(project) => {
                 if let Some(project) = &project.data {
-                    project.write().unwrap().last_edited = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
+                    project.write().unwrap().last_interaction = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
                     return Ok(Arc::clone(project));
                 }
             },
@@ -488,7 +493,8 @@ impl ProjectStorage {
                         Err(())
                     }
                     Some(project) => {
-                        project.write().unwrap().last_edited = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
+                        // Update last interaction time, so the project doesn't get unloaded immediately
+                        project.write().unwrap().last_interaction = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
                         Ok(Arc::clone(project))
                     },
                 }
@@ -555,7 +561,7 @@ pub struct ProjectData{
     pub description: Option<String>,
     #[bincode(with_serde)]
     pub template_id: uuid::Uuid,
-    pub last_edited: u64,
+    pub last_interaction: u64,
     pub metadata: Option<ProjectMetadata>,
     pub settings: Option<ProjectSettings>,
     pub sections: Vec<SectionOrToc>,
@@ -624,40 +630,54 @@ impl ProjectData{
     }
 }
 
-pub fn get_section_by_path_mut<'a>(project: &'a mut RwLockWriteGuard<ProjectData>, path: &Vec<uuid::Uuid>) -> Result<&'a mut Section, ApiError>{
-    let mut first_section : Option<&mut Section> = None;
+pub fn get_section_by_path_mut<'a>(
+    project: &'a mut RwLockWriteGuard<ProjectData>,
+    path: &Vec<uuid::Uuid>
+) -> Result<&'a mut Section, ApiError> {
 
     // Find first section
-    for section in project.sections.iter_mut(){
-        if let SectionOrToc::Section(section) = section{
-            if section.id.unwrap_or_default() == path[0]{
-                first_section = Some(section);
+    let first_section_opt = project.sections.iter_mut()
+        .find_map(|section| {
+            if let SectionOrToc::Section(section) = section {
+                if section.id.unwrap_or_default() == path[0] {
+                    Some(section)
+                } else {
+                    None
+                }
+            } else {
+                None
             }
-        }
-    }
+        });
 
     // Return error if no first section found
-    let first_section: &mut Section = match first_section{
-        Some(first_section) => first_section,
-        None => {
+    let mut current_section = first_section_opt
+        .ok_or_else(|| {
             println!("Couldn't find section with id {}", path[0]);
-            return Err(ApiError::NotFound);
-        }
-    };
+            ApiError::NotFound
+        })?;
 
-    let mut current_section: &mut Section = first_section;
+    // Iterate through the path
+    for &part in path.iter().skip(1) {
+        let mut found_section = None;
 
-    for part in path.iter().skip(1){
-        for child in current_section.children.iter_mut(){
-            if let SectionContent::Section(section) = child{
-                if section.id.unwrap_or_default() == *part{
-                    current_section = section;
+        for child in &mut current_section.children {
+            if let SectionContent::Section(section) = child {
+                if section.id.unwrap_or_default() == part {
+                    found_section = Some(section);
                     break;
                 }
             }
         }
-        println!("Couldn't find section with id {}", part);
-        return Err(ApiError::NotFound);
+
+        match found_section {
+            Some(section) => {
+                current_section = section;
+            },
+            None => {
+                println!("Couldn't find section with id {}", part);
+                return Err(ApiError::NotFound);
+            }
+        }
     }
 
     Ok(current_section)
@@ -686,17 +706,24 @@ pub fn get_section_by_path<'a>(project: &'a RwLockWriteGuard<ProjectData>, path:
 
     let mut current_section: &Section = first_section;
 
+    // Skip first element, because we already found it
     for part in path.iter().skip(1){
+
+        // Search for next section in the current sections children
+        let mut found = false;
         for child in current_section.children.iter(){
             if let SectionContent::Section(section) = child{
                 if section.id.unwrap_or_default() == *part{
                     current_section = section;
+                    found = true;
                     break;
                 }
             }
         }
-        println!("Couldn't find section with id {}", part);
-        return Err(ApiError::NotFound);
+        if !found {
+            println!("Couldn't find section with id {}", part);
+            return Err(ApiError::NotFound);
+        }
     }
 
     Ok(current_section)
@@ -733,7 +760,7 @@ pub async fn save_data_worker(data_storage: Arc<DataStorage>, project_storage: A
             for project_id in project_storage.projects.read().unwrap().keys(){
                 if let Some(project) = project_storage.projects.read().unwrap().get(project_id){
                     if let Some(project) = &project.data{
-                        if project.read().unwrap().last_edited > last_save{
+                        if project.read().unwrap().last_interaction > last_save{
                             projects_to_save.push(project_id.clone());
                         }
                     }
@@ -775,7 +802,7 @@ mod tests {
             name: "Test Project".to_string(),
             description: None,
             template_id: Default::default(),
-            last_edited: 0,
+            last_interaction: 0,
             metadata: None,
             settings: None,
             sections: vec![],
@@ -792,7 +819,7 @@ mod tests {
             name: "Test Project".to_string(),
             description: None,
             template_id: Default::default(),
-            last_edited: 0,
+            last_interaction: 0,
             metadata: None,
             settings: None,
             sections: vec![],
@@ -802,7 +829,7 @@ mod tests {
         let id = project_storage.insert_project(test_project.clone(), &settings).await.unwrap();
         project_storage.load_from_directory(&settings).await.unwrap();
         let loaded_project = project_storage.get_project(&id, &settings).await.unwrap().read().unwrap().clone();
-        test_project.last_edited = loaded_project.last_edited;
+        test_project.last_interaction = loaded_project.last_interaction;
         assert_eq!(loaded_project, test_project);
     }
 
@@ -813,7 +840,7 @@ mod tests {
             name: "Test Project".to_string(),
             description: None,
             template_id: Default::default(),
-            last_edited: 0,
+            last_interaction: 0,
             metadata: None,
             settings: None,
             sections: vec![],
@@ -833,7 +860,7 @@ mod tests {
             name: "Test Project".to_string(),
             description: None,
             template_id: Default::default(),
-            last_edited: 0,
+            last_interaction: 0,
             metadata: None,
             settings: None,
             sections: vec![],
@@ -854,7 +881,7 @@ mod tests {
             name: "Test Project".to_string(),
             description: None,
             template_id: Default::default(),
-            last_edited: 0,
+            last_interaction: 0,
             metadata: None,
             settings: None,
             sections: vec![],
@@ -878,7 +905,7 @@ mod tests {
             name: "Test Project Old".to_string(),
             description: None,
             template_id: Default::default(),
-            last_edited: 0,
+            last_interaction: 0,
             metadata: None,
             settings: None,
             sections: vec![],
@@ -891,7 +918,7 @@ mod tests {
             name: "Test Project New".to_string(),
             description: None,
             template_id: Default::default(),
-            last_edited: 0,
+            last_interaction: 0,
             metadata: None,
             settings: None,
             sections: vec![],

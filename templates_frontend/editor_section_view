@@ -1,14 +1,58 @@
 <div class="editor_section_view_metadata">
     <span class="text-center d-block">Section Metadata</span>
     <label>Title</label>
-    <h1 contenteditable="true">Testtitle</h1>
+    <h1 contenteditable="true">{{metadata.title}}</h1>
     <label>Description</label>
-    <textarea class="form-control"></textarea>
+    <textarea class="form-control form-control-sm">{{metadata.description}}</textarea>
     <label>Authors</label>
+    <ul id="section_metadata_authors_ul">
+        {{#each metadata.authors_with_details}}
+        {{> editor_section_authors_li}}
+        {{/each}}
+    </ul>
+    <div class="m-0 align-items-baseline">
+        <input type="text" style="width: 300px;" class="form-control form-control-sm" id="section_metadata_search_authors" placeholder="Add Author">
+        <ul class="list-group search_result_list hide" tabindex="0" id="section_metadata_search_authors_results">
+        </ul>
+    </div>
     <label>Editors</label>
+    <ul id="section_metadata_editors_ul">
+        {{#each metadata.editors_with_details}}
+        {{> editor_section_editors_li}}
+        {{/each}}
+    </ul>
+    <div class="m-0 align-items-baseline">
+        <input type="text" style="width: 300px;" class="form-control form-control-sm" id="section_metadata_search_editors" placeholder="Add Editor">
+        <ul class="list-group search_result_list hide" tabindex="0" id="section_metadata_search_editors_results">
+        </ul>
+    </div>
     <label>Web URL</label>
-    <input type="text" class="form-control">
-    <label>Identifier</label>
-    <label>Published</label>
+    <input type="text" class="form-control form-control-sm" value="{{metadata.web_url}}">
+    <label>Identifiers</label>
+    <div id="section_metadata_identifiers_list">
+        {{#each metadata.identifiers}}
+        {{> editor_section_identifier_row}}
+        {{/each}}
+    </div>
+    <div class="row mt-4">
+        <div class="col col-8 pe-1">
+            <div class="input-group" id="section_metadata_identifiers">
+                <select class="form-select form-select-sm" id="section_metadata_identifiers_type">
+                    <option value="DOI">DOI</option>
+                    <option value="URN">URN</option>
+                </select>
+                <input type="text" class="form-control form-control-sm" id="project_metadata_identifiers_name" placeholder="Name (e.g. DOI)">
+                <input type="text" class="form-control form-control-sm" id="project_metadata_identifiers_value" placeholder="Value (e.g. 10.123456/...)">
+            </div>
+        </div>
+        <div class="col col-2 ps-0">
+            <button class="btn btn-sm btn-primary" id="section_metadata_identifiers_add">Add</button>
+        </div>
+    </div>
     <label>Language</label>
+    <select class="form-select form-select-sm">
+        <option value="none">Not Specified</option>
+        <option value="DE">German</option>
+        <option value="EN">English</option>
+    </select>
 </div>
