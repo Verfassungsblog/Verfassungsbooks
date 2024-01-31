@@ -1,12 +1,13 @@
+use crate::projects::SectionMetadata;
 use crate::projects::{SectionContent, SectionOrToc};
 use rocket::serde::json::Json;
-use std::sync::Arc;
+use std::sync::{Arc, RwLockWriteGuard};
 use bincode::{Decode, Encode};
 use chrono::NaiveDateTime;
 use rocket::State;
 use serde_derive::{Deserialize, Serialize};
-use crate::data_storage::ProjectStorage;
-use crate::projects::{Identifier, Keyword, Language, License, ProjectMetadata, ProjectSettings};
+use crate::data_storage::{ProjectData, ProjectStorage};
+use crate::projects::{Identifier, Keyword, Language, License, ProjectMetadata, ProjectSettings, Section};
 use crate::session::session_guard::Session;
 use crate::settings::Settings;
 
@@ -159,6 +160,109 @@ impl Patch<PatchProjectMetadata, ProjectMetadata> for ProjectMetadata{
         }
 
         new_metadata
+    }
+}
+
+/// Struct for patching a section
+/// Does NOT allow to patch the content of a section, use the content_block endpoints or move endpoints for that
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq, Default)]
+pub struct PatchSection{
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "::serde_with::rust::double_option")]
+    #[bincode(with_serde)]
+    pub id: Option<Option<uuid::Uuid>>,
+    pub css_classes: Option<Vec<String>>,
+    pub visible_in_toc: Option<bool>,
+    pub metadata: Option<PatchSectionMetadata>
+}
+
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq, Default)]
+pub struct PatchSectionMetadata {
+    pub title: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "::serde_with::rust::double_option")]
+    pub description: Option<Option<String>>,
+    #[bincode(with_serde)]
+    pub authors: Option<Vec<uuid::Uuid>>,
+    #[bincode(with_serde)]
+    pub editors: Option<Vec<uuid::Uuid>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "::serde_with::rust::double_option")]
+    pub web_url: Option<Option<String>>,
+    pub identifiers: Option<Vec<Identifier>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "::serde_with::rust::double_option")]
+    #[bincode(with_serde)]
+    pub published: Option<Option<NaiveDateTime>>,
+    #[bincode(with_serde)]
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "::serde_with::rust::double_option")]
+    pub last_changed: Option<Option<NaiveDateTime>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "::serde_with::rust::double_option")]
+    pub lang: Option<Option<Language>>,
+}
+
+impl Patch<PatchSectionMetadata, SectionMetadata> for SectionMetadata{
+    fn patch(&mut self, patch: PatchSectionMetadata) -> SectionMetadata{
+        let mut new_metadata = self.clone();
+
+        if let Some(title) = patch.title{
+            new_metadata.title = title;
+        }
+
+        if let Some(description) = patch.description{
+            new_metadata.description = description;
+        }
+
+        if let Some(authors) = patch.authors{
+            new_metadata.authors = authors;
+        }
+
+        if let Some(editors) = patch.editors{
+            new_metadata.editors = editors;
+        }
+
+        if let Some(web_url) = patch.web_url{
+            new_metadata.web_url = web_url;
+        }
+
+        if let Some(identifiers) = patch.identifiers{
+            new_metadata.identifiers = identifiers;
+        }
+
+        if let Some(published) = patch.published{
+            new_metadata.published = published;
+        }
+
+        if let Some(last_changed) = patch.last_changed{
+            new_metadata.last_changed = last_changed;
+        }
+
+        if let Some(lang) = patch.lang{
+            new_metadata.lang = lang;
+        }
+
+        new_metadata
+    }
+}
+
+// Implement patch for PatchSection
+impl Patch<PatchSection, Section> for Section{
+    fn patch(&mut self, patch: PatchSection) -> Section{
+        let mut new_section = self.clone();
+
+        if let Some(id) = patch.id{
+            new_section.id = id;
+        }
+
+        if let Some(css_classes) = patch.css_classes{
+            new_section.css_classes = css_classes;
+        }
+
+        if let Some(visible_in_toc) = patch.visible_in_toc{
+            new_section.visible_in_toc = visible_in_toc;
+        }
+
+        if let Some(metadata) = patch.metadata{
+            new_section.metadata = self.metadata.patch(metadata);
+        }
+
+        new_section
     }
 }
 
@@ -842,8 +946,9 @@ pub async fn add_content(project_id: String, _session: Session, settings: &State
     ApiResult::new_data(content)
 }
 
-// PUT /api/projects/<project_id>/contents/<content_id>/move/after/<after_id>
-// Move a section or toc after another section or toc
+/// PUT /api/projects/<project_id>/contents/<content_id>/move/after/<after_id>
+/// Move a section or toc after another section or toc
+// TODO: implement for toc
 #[put("/api/projects/<project_id>/contents/<content_id>/move/after/<after_id>")]
 pub async fn move_content_after(project_id: String, content_id: String, after_id: String, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<()>> {
     let content_id = match uuid::Uuid::parse_str(&content_id) {
@@ -904,8 +1009,9 @@ pub async fn move_content_after(project_id: String, content_id: String, after_id
 }
 
 
-// PUT /api/projects/<project_id>/contents/<content_id>/move/child_of/<parent_id>
-// Move a section or toc to be a child of another section or toc. It will be the first child.
+/// PUT /api/projects/<project_id>/contents/<content_id>/move/child_of/<parent_id>
+/// Move a section or toc to be a child of another section or toc. It will be the first child.
+//TODO: Implement for toc
 #[put("/api/projects/<project_id>/contents/<content_id>/move/child_of/<parent_id>")]
 pub async fn move_content_child_of(project_id: String, content_id: String, parent_id: String, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<()>> {
     let content_id = match uuid::Uuid::parse_str(&content_id) {
@@ -962,5 +1068,107 @@ pub async fn move_content_child_of(project_id: String, content_id: String, paren
             project.sections.push(SectionOrToc::Section(content));
             ApiResult::new_error(ApiError::NotFound)
         }
+    }
+}
+
+/// GET /api/projects/<project_id>/contents/<content_id>
+/// Get a section, but strip out subsections
+#[get("/api/projects/<project_id>/sections/<content_path>")]
+pub async fn get_section(project_id: String, content_path: String, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<Section>> {
+    let project_id = match uuid::Uuid::parse_str(&project_id) {
+        Ok(project_id) => project_id,
+        Err(e) => {
+            println!("Couldn't parse project id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let mut path = vec![];
+
+    for part in content_path.split(":"){
+        match uuid::Uuid::parse_str(part){
+            Ok(part) => path.push(part),
+            Err(e) => {
+                println!("Couldn't parse content path: {}", e);
+                return ApiResult::new_error(ApiError::BadRequest("Couldn't parse content path".to_string()));
+            }
+        }
+    }
+
+    if path.len() == 0{
+        println!("Couldn't parse content path: path is empty");
+        return ApiResult::new_error(ApiError::BadRequest("Couldn't parse content path".to_string()));
+    }
+
+    let project_storage = Arc::clone(project_storage);
+
+    let project = match project_storage.get_project(&project_id, settings).await {
+        Ok(project) => project,
+        Err(_) => {
+            println!("Couldn't get project with id {}", project_id);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let project = project.write().unwrap();
+
+    let section = crate::data_storage::get_section_by_path(&project, &path);
+
+    match section{
+        Ok(section) => ApiResult::new_data(section.clone_without_subsections()),
+        Err(e) => ApiResult::new_error(e)
+    }
+}
+
+/// PATCH /api/projects/<project_id>/contents/<content_path>
+/// Patch a section, but without content (subsections / content blocks)
+/// Check [PatchSection] for more information
+#[patch("/api/projects/<project_id>/sections/<content_path>/metadata", data = "<section_patch>")]
+pub async fn update_section(project_id: String, content_path: String, section_patch: Json<PatchSection>, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<()>> {
+    let project_id = match uuid::Uuid::parse_str(&project_id) {
+        Ok(project_id) => project_id,
+        Err(e) => {
+            println!("Couldn't parse project id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let mut path = vec![];
+
+    for part in content_path.split(":"){
+        match uuid::Uuid::parse_str(part){
+            Ok(part) => path.push(part),
+            Err(e) => {
+                println!("Couldn't parse content path: {}", e);
+                return ApiResult::new_error(ApiError::BadRequest("Couldn't parse content path".to_string()));
+            }
+        }
+    }
+
+    if path.len() == 0{
+        println!("Couldn't parse content path: path is empty");
+        return ApiResult::new_error(ApiError::BadRequest("Couldn't parse content path".to_string()));
+    }
+
+    let project_storage = Arc::clone(project_storage);
+
+    let project = match project_storage.get_project(&project_id, settings).await {
+        Ok(project) => project,
+        Err(_) => {
+            println!("Couldn't get project with id {}", project_id);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let mut project = project.write().unwrap();
+
+    let section = crate::data_storage::get_section_by_path_mut(&mut project, &path);
+
+    match section{
+        Ok(section) => {
+            *section = section.patch(section_patch.into_inner());
+            ApiResult::new_data(())
+        },
+        Err(e) => ApiResult::new_error(e)
     }
 }

@@ -541,90 +541,76 @@ var Editor;
                 }
             });
         }
-        function search_authors() {
-            let search_term = document.getElementById("project_metadata_search_authors").value;
-            let result_ul = document.getElementById("project_metadata_search_authors_results");
-            if (search_term === "") {
-                result_ul.innerHTML = "";
-                return;
-            }
-            send_search_person_request(search_term).then(function (data) {
-                console.log(data.data);
-                result_ul.innerHTML = "";
-                result_ul.classList.remove("hide");
+        // @ts-ignore
+        function search_person(search_term, result_container, searchbar, select_handler) {
+            return __awaiter(this, void 0, void 0, function* () {
+                if (search_term === "") {
+                    throw new Error("Search term is empty");
+                }
+                let res = yield send_search_person_request(search_term);
+                console.log(res);
+                result_container.innerHTML = "";
+                result_container.classList.remove("hide");
                 let hide_results = function (e) {
                     let target = e.target;
-                    if (target !== result_ul && target !== document.getElementById("project_metadata_search_authors")) {
+                    if (target !== result_container && target !== searchbar) {
                         if (target != null) {
-                            if (target.parentElement === result_ul) {
+                            if (target.parentElement === result_container) {
                                 return;
                             }
                         }
-                        result_ul.classList.add("hide");
+                        result_container.classList.add("hide");
                         window.removeEventListener("click", hide_results);
                         window.removeEventListener("focusin", hide_results);
                     }
                 };
                 window.addEventListener("click", hide_results);
                 window.addEventListener("focusin", hide_results);
-                for (let person of data.data) {
+                for (let person of res.data) {
                     // @ts-ignore
-                    result_ul.innerHTML += Handlebars.templates.editor_add_person_li(person);
+                    result_container.innerHTML += Handlebars.templates.editor_add_person_li(person);
                 }
                 // @ts-ignore
-                let add_person_handler = function () {
-                    return __awaiter(this, void 0, void 0, function* () {
-                        let person_id = this.getAttribute("data-id");
-                        try {
-                            yield send_add_author_to_project_request(person_id);
-                            let person_data = yield send_get_person_request(person_id);
-                            // @ts-ignore
-                            document.getElementById("project_metadata_authors_ul").innerHTML += Handlebars.templates.editor_add_authors_li(person_data);
-                            add_remove_author_editor_handlers();
-                        }
-                        catch (e) {
-                            Tools.show_alert("Failed to add author.", "danger");
-                        }
-                    });
-                };
-                // @ts-ignore
-                for (let li of result_ul.getElementsByTagName("li")) {
-                    li.addEventListener("click", add_person_handler);
+                for (let li of result_container.getElementsByTagName("li")) {
+                    li.addEventListener("click", select_handler);
                 }
-            }).catch(function () {
-                Tools.show_alert("Failed to search for authors. Check your network connection.", "danger");
             });
         }
-        function search_editors() {
-            let search_term = document.getElementById("project_metadata_search_editors").value;
-            let result_ul = document.getElementById("project_metadata_search_editors_results");
-            if (search_term === "") {
-                result_ul.innerHTML = "";
-                return;
-            }
-            send_search_person_request(search_term).then(function (data) {
-                console.log(data.data);
-                result_ul.innerHTML = "";
-                result_ul.classList.remove("hide");
-                let hide_results = function (e) {
-                    let target = e.target;
-                    if (target !== result_ul && target !== document.getElementById("project_metadata_search_editors")) {
-                        if (target != null) {
-                            if (target.parentElement === result_ul) {
-                                return;
-                            }
-                        }
-                        result_ul.classList.add("hide");
-                        window.removeEventListener("click", hide_results);
-                        window.removeEventListener("focusin", hide_results);
-                    }
+        // @ts-ignore
+        function search_authors() {
+            return __awaiter(this, void 0, void 0, function* () {
+                // @ts-ignore
+                let author_search_select_handler = function () {
+                    return __awaiter(this, void 0, void 0, function* () {
+                        let person_id = this.getAttribute("data-id");
+                        yield send_add_author_to_project_request(person_id);
+                        let person_data = yield send_get_person_request(person_id);
+                        // @ts-ignore
+                        document.getElementById("project_metadata_authors_ul").innerHTML += Handlebars.templates.editor_add_authors_li(person_data);
+                        add_remove_author_editor_handlers();
+                    });
                 };
-                window.addEventListener("click", hide_results);
-                window.addEventListener("focusin", hide_results);
-                for (let person of data.data) {
-                    // @ts-ignore
-                    result_ul.innerHTML += Handlebars.templates.editor_add_person_li(person);
+                let search_term = document.getElementById("project_metadata_search_authors").value;
+                let result_ul = document.getElementById("project_metadata_search_authors_results");
+                if (search_term === "") {
+                    result_ul.innerHTML = "";
+                    return;
                 }
+                try {
+                    yield search_person(search_term, result_ul, document.getElementById("project_metadata_search_authors"), author_search_select_handler);
+                }
+                catch (e) {
+                    console.error(e);
+                    Tools.show_alert("Failed to search for authors. Check your network connection.", "danger");
+                }
+            });
+        }
+        // @ts-ignore
+        function search_editors() {
+            return __awaiter(this, void 0, void 0, function* () {
+                let search_term = document.getElementById("project_metadata_search_editors").value;
+                let result_ul = document.getElementById("project_metadata_search_editors_results");
+                let searchbar = document.getElementById("project_metadata_search_editors");
                 // @ts-ignore
                 let add_person_handler = function () {
                     return __awaiter(this, void 0, void 0, function* () {
@@ -637,16 +623,22 @@ var Editor;
                             add_remove_author_editor_handlers();
                         }
                         catch (e) {
+                            console.error(e);
                             Tools.show_alert("Failed to add editor.", "danger");
                         }
                     });
                 };
-                // @ts-ignore
-                for (let li of result_ul.getElementsByTagName("li")) {
-                    li.addEventListener("click", add_person_handler);
+                if (search_term === "") {
+                    result_ul.innerHTML = "";
+                    return;
                 }
-            }).catch(function () {
-                Tools.show_alert("Failed to search for authors. Check your network connection.", "danger");
+                try {
+                    yield search_person(search_term, result_ul, searchbar, add_person_handler);
+                }
+                catch (e) {
+                    console.error(e);
+                    Tools.show_alert("Failed to search for editors. Check your network connection.", "danger");
+                }
             });
         }
         function send_search_person_request(search_term) {
@@ -905,9 +897,12 @@ var Editor;
     let SectionView;
     (function (SectionView) {
         function show_section_view() {
-            alert("Loading section: " + globalThis.section_id);
+            // @ts-ignore
+            document.getElementsByClassName("editor-details")[0].innerHTML = Handlebars.templates.editor_section_view();
         }
         SectionView.show_section_view = show_section_view;
+        function send_get_section_metadata() {
+        }
     })(SectionView = Editor.SectionView || (Editor.SectionView = {}));
 })(Editor || (Editor = {}));
 /// <reference path="Editor.ts" />

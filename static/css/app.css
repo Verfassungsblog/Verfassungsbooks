@@ -130,6 +130,15 @@ h3 {
 .editor_sidebar_contents_section_children{
     margin-left: 20px;
 }
+.editor{
+    height: calc(100vh - 40px);
+    min-height: 100%;
+}
+.editor_section_view_metadata{
+    background-color: white;
+    border-radius: 5px;
+    padding: 10px;
+}
 .active-border-bottom{
     border-bottom: 2px solid var(--light-blue);
 }

@@ -538,128 +538,108 @@ namespace Editor{
             }
         }
 
-        function search_authors(){
+        // @ts-ignore
+        async function search_person(search_term: string, result_container: HTMLElement, searchbar: HTMLElement, select_handler: function){
+            if(search_term === ""){
+                throw new Error("Search term is empty");
+            }
+
+            let res = await send_search_person_request(search_term);
+            console.log(res);
+            result_container.innerHTML = "";
+            result_container.classList.remove("hide");
+
+            let hide_results = function(e){
+                let target = e.target as HTMLElement;
+
+                if(target !== result_container && target !== searchbar){
+                    if(target != null){
+                        if(target.parentElement === result_container){
+                            return;
+                        }
+                    }
+                    result_container.classList.add("hide");
+                    window.removeEventListener("click", hide_results);
+                    window.removeEventListener("focusin", hide_results);
+                }
+            }
+
+            window.addEventListener("click", hide_results);
+            window.addEventListener("focusin", hide_results);
+
+            for(let person of res.data){
+                // @ts-ignore
+                result_container.innerHTML += Handlebars.templates.editor_add_person_li(person);
+            }
+
+            // @ts-ignore
+            for(let li of result_container.getElementsByTagName("li")){
+                li.addEventListener("click", select_handler);
+            }
+
+        }
+
+        // @ts-ignore
+        async function search_authors() {
+            // @ts-ignore
+            let author_search_select_handler = async function () {
+                let person_id = this.getAttribute("data-id");
+                await send_add_author_to_project_request(person_id);
+
+                let person_data = await send_get_person_request(person_id);
+                // @ts-ignore
+                document.getElementById("project_metadata_authors_ul").innerHTML += Handlebars.templates.editor_add_authors_li(person_data);
+                add_remove_author_editor_handlers();
+            }
             let search_term = (<HTMLInputElement>document.getElementById("project_metadata_search_authors")).value;
             let result_ul = document.getElementById("project_metadata_search_authors_results");
 
-            if(search_term === ""){
+            if (search_term === "") {
                 result_ul.innerHTML = "";
                 return;
             }
 
-            send_search_person_request(search_term).then(function(data){
-                console.log(data.data);
-                result_ul.innerHTML = "";
-                result_ul.classList.remove("hide");
-
-                let hide_results = function(e){
-                    let target = e.target as HTMLElement;
-
-                    if(target !== result_ul && target !== document.getElementById("project_metadata_search_authors")){
-                        if(target != null){
-                            if(target.parentElement === result_ul){
-                                return;
-                            }
-                        }
-                        result_ul.classList.add("hide");
-                        window.removeEventListener("click", hide_results);
-                        window.removeEventListener("focusin", hide_results);
-                    }
-                }
-
-                window.addEventListener("click", hide_results);
-                window.addEventListener("focusin", hide_results);
-
-                for(let person of data.data){
-                    // @ts-ignore
-                    result_ul.innerHTML += Handlebars.templates.editor_add_person_li(person);
-                }
-
-                // @ts-ignore
-                let add_person_handler = async function () {
-                    let person_id = this.getAttribute("data-id");
-                    try {
-                        await send_add_author_to_project_request(person_id);
-
-                        let person_data = await send_get_person_request(person_id);
-                        // @ts-ignore
-                        document.getElementById("project_metadata_authors_ul").innerHTML += Handlebars.templates.editor_add_authors_li(person_data);
-                        add_remove_author_editor_handlers();
-                    } catch (e) {
-                        Tools.show_alert("Failed to add author.", "danger");
-                    }
-                }
-
-                // @ts-ignore
-                for(let li of result_ul.getElementsByTagName("li")){
-                    li.addEventListener("click", add_person_handler);
-                }
-
-            }).catch(function(){
+            try {
+                await search_person(search_term, result_ul, document.getElementById("project_metadata_search_authors"), author_search_select_handler);
+            } catch (e) {
+                console.error(e);
                 Tools.show_alert("Failed to search for authors. Check your network connection.", "danger");
-            });
+            }
         }
 
-        function search_editors(){
+        // @ts-ignore
+        async function search_editors() {
             let search_term = (<HTMLInputElement>document.getElementById("project_metadata_search_editors")).value;
             let result_ul = document.getElementById("project_metadata_search_editors_results");
+            let searchbar = document.getElementById("project_metadata_search_editors");
 
-            if(search_term === ""){
+            // @ts-ignore
+            let add_person_handler = async function () {
+                let person_id = this.getAttribute("data-id");
+                try {
+                    await send_add_editor_to_project_request(person_id);
+
+                    let person_data = await send_get_person_request(person_id);
+                    // @ts-ignore
+                    document.getElementById("project_metadata_editors_ul").innerHTML += Handlebars.templates.editor_add_editors_li(person_data);
+                    add_remove_author_editor_handlers();
+                } catch (e) {
+                    console.error(e);
+                    Tools.show_alert("Failed to add editor.", "danger");
+                }
+            }
+
+            if (search_term === "") {
                 result_ul.innerHTML = "";
                 return;
             }
 
-            send_search_person_request(search_term).then(function(data){
-                console.log(data.data);
-                result_ul.innerHTML = "";
-                result_ul.classList.remove("hide");
-
-                let hide_results = function(e){
-                    let target = e.target as HTMLElement;
-
-                    if(target !== result_ul && target !== document.getElementById("project_metadata_search_editors")){
-                        if(target != null){
-                            if(target.parentElement === result_ul){
-                                return;
-                            }
-                        }
-                        result_ul.classList.add("hide");
-                        window.removeEventListener("click", hide_results);
-                        window.removeEventListener("focusin", hide_results);
-                    }
-                }
-
-                window.addEventListener("click", hide_results);
-                window.addEventListener("focusin", hide_results);
-
-                for(let person of data.data){
-                    // @ts-ignore
-                    result_ul.innerHTML += Handlebars.templates.editor_add_person_li(person);
-                }
-
-                // @ts-ignore
-                let add_person_handler = async function () {
-                    let person_id = this.getAttribute("data-id");
-                    try {
-                        await send_add_editor_to_project_request(person_id);
-
-                        let person_data = await send_get_person_request(person_id);
-                        // @ts-ignore
-                        document.getElementById("project_metadata_editors_ul").innerHTML += Handlebars.templates.editor_add_editors_li(person_data);
-                        add_remove_author_editor_handlers();
-                    } catch (e) {
-                        Tools.show_alert("Failed to add editor.", "danger");
-                    }
-                }
-
-                // @ts-ignore
-                for(let li of result_ul.getElementsByTagName("li")){
-                    li.addEventListener("click", add_person_handler);
-                }
-
-            }).catch(function(){
-                Tools.show_alert("Failed to search for authors. Check your network connection.", "danger");
-            });
+            try {
+                await search_person(search_term, result_ul, searchbar, add_person_handler);
+            } catch (e) {
+                console.error(e);
+                Tools.show_alert("Failed to search for editors. Check your network connection.", "danger");
+            }
         }
 
         async function send_search_person_request(search_term: string){

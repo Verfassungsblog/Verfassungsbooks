@@ -323,6 +323,9 @@ Handlebars.partials['editor_add_editors_li'] = template({"compiler":[8,">= 4.3.0
     + alias4(((helper = (helper = lookupProperty(helpers,"last_names") || (depth0 != null ? lookupProperty(depth0,"last_names") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"last_names","hash":{},"data":data,"loc":{"start":{"line":1,"column":37},"end":{"line":1,"column":51}}}) : helper)))
     + " <button class=\"img-btn project_metadata_editors_remove\"><svg xmlns=\"http://www.w3.org/2000/svg\" height=\"20\" viewBox=\"0 -960 960 960\" width=\"20\" fill=\"red\"><path d=\"M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z\"/></svg></button>\n</li>";
 },"useData":true});
+Handlebars.partials['editor_section_view'] = template({"compiler":[8,">= 4.3.0"],"main":function(container,depth0,helpers,partials,data) {
+    return "<div class=\"editor_section_view_metadata\">\n    <span class=\"text-center d-block\">Section Metadata</span>\n    <label>Title</label>\n    <h1 contenteditable=\"true\">Testtitle</h1>\n    <label>Description</label>\n    <textarea class=\"form-control\"></textarea>\n    <label>Authors</label>\n    <label>Editors</label>\n    <label>Web URL</label>\n    <input type=\"text\" class=\"form-control\">\n    <label>Identifier</label>\n    <label>Published</label>\n    <label>Language</label>\n</div>";
+},"useData":true});
 Handlebars.partials['editor_sidebar'] = template({"1":function(container,depth0,helpers,partials,data) {
     var stack1, lookupProperty = container.lookupProperty || function(parent, propertyName) {
         if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {

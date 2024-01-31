@@ -98,7 +98,7 @@ pub struct Section{
     #[bincode(with_serde)]
     pub id: Option<uuid::Uuid>,
     /// Additional classes to style the Section
-    pub css_classes: Option<Vec<String>>,
+    pub css_classes: Vec<String>,
     /// Holds all contents of the section (either another section or a content block)
     pub children: Vec<SectionContent>,
     /// If true, the section is visible in the table of contents
@@ -111,6 +111,15 @@ impl Section{
     pub fn clone_without_contentblock_content(&self) -> Section {
         let mut new_section = self.clone();
         new_section.children = new_section.children.iter_mut().map(|child| child.clone_without_contentblock_content()).collect();
+        new_section
+    }
+
+    pub fn clone_without_subsections(&self) -> Section {
+        let mut new_section = self.clone();
+        new_section.children = new_section.children.iter_mut().map(|child| match child{
+            SectionContent::Section(section) => SectionContent::Section(section.clone_without_subsections()),
+            SectionContent::ContentBlock(_) => child.clone(),
+        }).collect();
         new_section
     }
 
@@ -339,11 +348,11 @@ pub struct SectionMetadata{
     pub title: String,
     pub description: Option<String>,
     #[bincode(with_serde)]
-    pub authors: Option<Vec<uuid::Uuid>>,
+    pub authors: Vec<uuid::Uuid>,
     #[bincode(with_serde)]
-    pub editors: Option<Vec<uuid::Uuid>>,
+    pub editors: Vec<uuid::Uuid>,
     pub web_url: Option<String>,
-    pub identifiers: Option<Vec<Identifier>>,
+    pub identifiers: Vec<Identifier>,
     #[bincode(with_serde)]
     pub published: Option<NaiveDateTime>,
     #[bincode(with_serde)]

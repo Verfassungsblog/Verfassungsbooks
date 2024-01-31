@@ -1,0 +1,14 @@
+<div class="editor_section_view_metadata">
+    <span class="text-center d-block">Section Metadata</span>
+    <label>Title</label>
+    <h1 contenteditable="true">Testtitle</h1>
+    <label>Description</label>
+    <textarea class="form-control"></textarea>
+    <label>Authors</label>
+    <label>Editors</label>
+    <label>Web URL</label>
+    <input type="text" class="form-control">
+    <label>Identifier</label>
+    <label>Published</label>
+    <label>Language</label>
+</div>
