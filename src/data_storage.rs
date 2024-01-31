@@ -1,11 +1,12 @@
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock, RwLockWriteGuard};
 use std::sync::atomic::AtomicBool;
 use std::time::SystemTime;
 use serde::{Deserialize, Serialize};
 use bincode::{Encode, Decode};
 use crate::projects::{Person, ProjectMetadata, ProjectSettings, Section, SectionContent, SectionOrToc};
+use crate::projects::api::ApiError;
 use crate::settings::Settings;
 
 /// Storage for small data like users, passwords and login attempts
@@ -622,6 +623,85 @@ impl ProjectData{
         }
     }
 }
+
+pub fn get_section_by_path_mut<'a>(project: &'a mut RwLockWriteGuard<ProjectData>, path: &Vec<uuid::Uuid>) -> Result<&'a mut Section, ApiError>{
+    let mut first_section : Option<&mut Section> = None;
+
+    // Find first section
+    for section in project.sections.iter_mut(){
+        if let SectionOrToc::Section(section) = section{
+            if section.id.unwrap_or_default() == path[0]{
+                first_section = Some(section);
+            }
+        }
+    }
+
+    // Return error if no first section found
+    let first_section: &mut Section = match first_section{
+        Some(first_section) => first_section,
+        None => {
+            println!("Couldn't find section with id {}", path[0]);
+            return Err(ApiError::NotFound);
+        }
+    };
+
+    let mut current_section: &mut Section = first_section;
+
+    for part in path.iter().skip(1){
+        for child in current_section.children.iter_mut(){
+            if let SectionContent::Section(section) = child{
+                if section.id.unwrap_or_default() == *part{
+                    current_section = section;
+                    break;
+                }
+            }
+        }
+        println!("Couldn't find section with id {}", part);
+        return Err(ApiError::NotFound);
+    }
+
+    Ok(current_section)
+}
+
+pub fn get_section_by_path<'a>(project: &'a RwLockWriteGuard<ProjectData>, path: &Vec<uuid::Uuid>) -> Result<&'a Section, ApiError>{
+    let mut first_section : Option<&Section> = None;
+
+    // Find first section
+    for section in project.sections.iter(){
+        if let SectionOrToc::Section(section) = section{
+            if section.id.unwrap_or_default() == path[0]{
+                first_section = Some(section);
+            }
+        }
+    }
+
+    // Return error if no first section found
+    let first_section: &Section = match first_section{
+        Some(first_section) => first_section,
+        None => {
+            println!("Couldn't find section with id {}", path[0]);
+            return Err(ApiError::NotFound);
+        }
+    };
+
+    let mut current_section: &Section = first_section;
+
+    for part in path.iter().skip(1){
+        for child in current_section.children.iter(){
+            if let SectionContent::Section(section) = child{
+                if section.id.unwrap_or_default() == *part{
+                    current_section = section;
+                    break;
+                }
+            }
+        }
+        println!("Couldn't find section with id {}", part);
+        return Err(ApiError::NotFound);
+    }
+
+    Ok(current_section)
+}
+
 
 #[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
 pub struct User{
