@@ -1,9 +1,9 @@
 <div class="editor_section_view_metadata">
     <span class="text-center d-block">Section Metadata</span>
     <label>Title</label>
-    <h1 contenteditable="true">{{metadata.title}}</h1>
-    <label>Description</label>
-    <textarea class="form-control form-control-sm">{{metadata.description}}</textarea>
+    <h1 contenteditable="true" id="section_metadata_title" class="quickchange">{{metadata.title}}</h1>
+    <label>Subtitle</label>
+    <h2 contenteditable="true" id="section_metadata_subtitle"  class="quickchange">{{metadata.subtitle}}</h2>
     <label>Authors</label>
     <ul id="section_metadata_authors_ul">
         {{#each metadata.authors_with_details}}
@@ -27,7 +27,7 @@
         </ul>
     </div>
     <label>Web URL</label>
-    <input type="text" class="form-control form-control-sm" value="{{metadata.web_url}}">
+    <input type="text" class="form-control form-control-sm quickchange" value="{{metadata.web_url}}" id="section_metadata_web_url">
     <label>Identifiers</label>
     <div id="section_metadata_identifiers_list">
         {{#each metadata.identifiers}}
@@ -41,8 +41,8 @@
                     <option value="DOI">DOI</option>
                     <option value="URN">URN</option>
                 </select>
-                <input type="text" class="form-control form-control-sm" id="project_metadata_identifiers_name" placeholder="Name (e.g. DOI)">
-                <input type="text" class="form-control form-control-sm" id="project_metadata_identifiers_value" placeholder="Value (e.g. 10.123456/...)">
+                <input type="text" class="form-control form-control-sm" id="section_metadata_identifiers_name" placeholder="Name (e.g. DOI)">
+                <input type="text" class="form-control form-control-sm" id="section_metadata_identifiers_value" placeholder="Value (e.g. 10.123456/...)">
             </div>
         </div>
         <div class="col col-2 ps-0">
@@ -50,9 +50,9 @@
         </div>
     </div>
     <label>Language</label>
-    <select class="form-select form-select-sm">
+    <select class="form-select form-select-sm quickchange" id="section_metadata_lang">
         <option value="none">Not Specified</option>
-        <option value="DE">German</option>
-        <option value="EN">English</option>
+        <option value="DE" {{#if metadata.langval.DE}}selected{{/if}}>German</option>
+        <option value="EN" {{#if metadata.langval.EN}}selected{{/if}}>English</option>
     </select>
 </div>

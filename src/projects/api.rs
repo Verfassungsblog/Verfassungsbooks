@@ -173,7 +173,7 @@ pub struct PatchSection{
 pub struct PatchSectionMetadata {
     pub title: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", with = "::serde_with::rust::double_option")]
-    pub description: Option<Option<String>>,
+    pub subtitle: Option<Option<String>>,
     #[bincode(with_serde)]
     pub authors: Option<Vec<uuid::Uuid>>,
     #[bincode(with_serde)]
@@ -199,8 +199,8 @@ impl Patch<PatchSectionMetadata, SectionMetadata> for SectionMetadata{
             new_metadata.title = title;
         }
 
-        if let Some(description) = patch.description{
-            new_metadata.description = description;
+        if let Some(subtitle) = patch.subtitle{
+            new_metadata.subtitle = subtitle;
         }
 
         if let Some(authors) = patch.authors{
@@ -1140,7 +1140,7 @@ pub async fn get_section(project_id: &str, content_path: &str, _session: Session
 /// Patch a section, but without content (subsections / content blocks)
 /// Check [PatchSection] for more information
 #[patch("/api/projects/<project_id>/sections/<content_path>", data = "<section_patch>")]
-pub async fn update_section(project_id: String, content_path: String, section_patch: Json<PatchSection>, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>, data_storage: &State<Arc<DataStorage>>) -> Json<ApiResult<()>> {
+pub async fn update_section(project_id: String, content_path: String, section_patch: Json<PatchSection>, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>, data_storage: &State<Arc<DataStorage>>) -> Json<ApiResult<Section>> {
     let project_id = match uuid::Uuid::parse_str(&project_id) {
         Ok(project_id) => project_id,
         Err(e) => {
@@ -1204,13 +1204,20 @@ pub async fn update_section(project_id: String, content_path: String, section_pa
             new_section_data.metadata.editors.sort_unstable();
             new_section_data.metadata.editors.dedup();
 
+            // Add ids for identifiers
+            for identifier in new_section_data.metadata.identifiers.iter_mut(){
+                if identifier.id.is_none(){
+                    identifier.id = Some(uuid::Uuid::new_v4());
+                }
+            }
+
 
             // Set last changed to now
             new_section_data.metadata.last_changed = Some(chrono::Utc::now().naive_utc());
 
-            *section = new_section_data;
+            *section = new_section_data.clone();
 
-            ApiResult::new_data(())
+            ApiResult::new_data(new_section_data)
         },
         Err(e) => ApiResult::new_error(e)
     }

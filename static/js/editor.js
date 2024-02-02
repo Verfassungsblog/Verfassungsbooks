@@ -903,6 +903,7 @@ var Editor;
         // @ts-ignore
         function show_section_view() {
             return __awaiter(this, void 0, void 0, function* () {
+                typing_timer = null;
                 try {
                     section_data = yield send_get_section(globalThis.section_path);
                     console.log(section_data);
@@ -959,6 +960,11 @@ var Editor;
                             Tools.show_alert("Failed to load all editors", "danger");
                         }
                     }
+                    if (section_data["metadata"]["lang"] !== null) {
+                        section_data["metadata"]["langval"] = {};
+                        // Add the language to the langval object, so that the language is selected in the dropdown
+                        section_data["metadata"]["langval"][section_data["metadata"]["lang"]] = true;
+                    }
                     // @ts-ignore
                     document.getElementsByClassName("editor-details")[0].innerHTML = Handlebars.templates.editor_section_view(section_data);
                     // Add event listeners
@@ -968,6 +974,9 @@ var Editor;
                     document.getElementById("section_metadata_search_editors").addEventListener("click", search_editors);
                     add_author_remove_handlers();
                     add_editor_remove_handlers();
+                    add_identifier_remove_handlers();
+                    add_quickchange_handlers();
+                    document.getElementById("section_metadata_identifiers_add").addEventListener("click", add_identifier);
                 }
                 catch (e) {
                     console.error(e);
@@ -976,6 +985,160 @@ var Editor;
             });
         }
         SectionView.show_section_view = show_section_view;
+        let add_quickchange_handlers = function () {
+            // @ts-ignore
+            for (let input of document.getElementsByClassName("quickchange")) {
+                input.addEventListener("input", quickchange_handler);
+            }
+        };
+        // @ts-ignore
+        let quickchange_handler = function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                if (typing_timer) {
+                    clearTimeout(typing_timer);
+                }
+                // Set a timeout to wait for the user to stop typing
+                // @ts-ignore
+                typing_timer = setTimeout(function () {
+                    return __awaiter(this, void 0, void 0, function* () {
+                        yield metadata_change_handler();
+                    });
+                }, 1000);
+            });
+        };
+        /// Handle metadata changes, except for authors and editors
+        // @ts-ignore
+        let metadata_change_handler = function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                console.log("Metadata change handler");
+                // Scrape identifiers from the DOM, since it may have changed
+                let identifiers = [];
+                // @ts-ignore
+                for (let identifier_row of document.getElementsByClassName("section_metadata_identifier_row")) {
+                    let identifier_id = identifier_row.getAttribute("data-identifier-id");
+                    let identifier_type = identifier_row.getAttribute("data-identifier-type");
+                    let identifier_name = identifier_row.getElementsByClassName("section_metadata_identifier_name")[0].value;
+                    let identifier_value = identifier_row.getElementsByClassName("section_metadata_identifier_value")[0].value;
+                    identifiers.push({
+                        "id": identifier_id,
+                        "identifier_type": identifier_type,
+                        "name": identifier_name,
+                        "value": identifier_value
+                    });
+                }
+                let lang = document.getElementById("section_metadata_lang").value;
+                if (lang === "none") {
+                    lang = null;
+                }
+                let patch_data = {
+                    "metadata": {
+                        "title": document.getElementById("section_metadata_title").innerText || null,
+                        "subtitle": document.getElementById("section_metadata_subtitle").innerText || null,
+                        "identifiers": identifiers,
+                        "web_url": document.getElementById("section_metadata_web_url").value || null,
+                        "lang": lang,
+                    }
+                };
+                console.log(patch_data);
+                Tools.start_loading_spinner();
+                try {
+                    section_data = yield send_patch_section(globalThis.section_path, patch_data);
+                    Tools.show_alert("Successfully updated section metadata.", "success");
+                }
+                catch (e) {
+                    console.error(e);
+                    Tools.show_alert("Failed to patch section metadata.", "danger");
+                }
+                Tools.stop_loading_spinner();
+            });
+        };
+        let add_identifier_remove_handlers = function () {
+            // @ts-ignore
+            for (let button of document.getElementsByClassName("section_metadata_identifier_remove_btn")) {
+                button.addEventListener("click", remove_identifier_handler);
+            }
+        };
+        // @ts-ignore
+        function add_identifier() {
+            return __awaiter(this, void 0, void 0, function* () {
+                let type = document.getElementById("section_metadata_identifiers_type").value || null;
+                let name = document.getElementById("section_metadata_identifiers_name").value || null;
+                let value = document.getElementById("section_metadata_identifiers_value").value || null;
+                if (type === null || name === null || value === null) {
+                    Tools.show_alert("Please fill out all fields.", "warning");
+                    return;
+                }
+                let identifiers = section_data["metadata"]["identifiers"];
+                let new_identifier = {
+                    "identifier_type": type,
+                    "name": name,
+                    "value": value
+                };
+                identifiers.push(new_identifier);
+                let patch_data = {
+                    "metadata": {
+                        "identifiers": identifiers,
+                    }
+                };
+                Tools.start_loading_spinner();
+                try {
+                    let resp = yield send_patch_section(globalThis.section_path, patch_data);
+                    // Get the new identifier from the response
+                    new_identifier = resp["metadata"]["identifiers"][identifiers.length - 1];
+                    section_data["metadata"]["identifiers"] = resp["metadata"]["identifiers"];
+                    // @ts-ignore
+                    document.getElementById("section_metadata_identifiers_list").innerHTML += Handlebars.templates.editor_section_identifier_row(new_identifier);
+                    add_identifier_remove_handlers();
+                    add_quickchange_handlers();
+                }
+                catch (e) {
+                    console.error(e);
+                    Tools.show_alert("Failed to add identifier to section.", "danger");
+                    // Remove the identifier from the list again
+                    identifiers.splice(identifiers.length - 1, 1);
+                }
+                Tools.stop_loading_spinner();
+            });
+        }
+        // @ts-ignore
+        function remove_identifier_handler() {
+            return __awaiter(this, void 0, void 0, function* () {
+                let target = this;
+                let identifier_row = target.closest(".section_metadata_identifier_row");
+                let identifier_id = identifier_row.getAttribute("data-identifier-id");
+                let identifiers = section_data["metadata"]["identifiers"];
+                // Search identifier with id
+                let identifier_index = -1;
+                for (let i = 0; i < identifiers.length; i++) {
+                    if (identifiers[i]["id"] === identifier_id) {
+                        identifier_index = i;
+                        break;
+                    }
+                }
+                if (identifier_index === -1) {
+                    Tools.show_alert("Failed to remove identifier from section.", "danger");
+                    console.log(section_data["metadata"]["identifiers"]);
+                    console.log("couldn't find identifier with id " + identifier_id);
+                    return;
+                }
+                identifiers.splice(identifier_index, 1);
+                let patch_data = {
+                    "metadata": {
+                        "identifiers": identifiers,
+                    }
+                };
+                Tools.start_loading_spinner();
+                try {
+                    yield send_patch_section(globalThis.section_path, patch_data);
+                    identifier_row.remove();
+                }
+                catch (e) {
+                    console.error(e);
+                    Tools.show_alert("Failed to remove identifier from section.", "danger");
+                }
+                Tools.stop_loading_spinner();
+            });
+        }
         // @ts-ignore
         function search_authors() {
             return __awaiter(this, void 0, void 0, function* () {
@@ -1119,7 +1282,6 @@ var Editor;
             // @ts-ignore
             let handler = function () {
                 return __awaiter(this, void 0, void 0, function* () {
-                    alert("Test");
                     let editor_id = this.parentElement.getAttribute("data-id");
                     let editors = section_data["metadata"]["editors"];
                     editors.splice(editors.indexOf(editor_id), 1);
@@ -1187,7 +1349,7 @@ var Editor;
                         throw new Error(`Failed to patch section data: ${response_data["error"]}`);
                     }
                     else {
-                        return response_data;
+                        return response_data.data;
                     }
                 }
             });
