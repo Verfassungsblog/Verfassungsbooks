@@ -1,0 +1,1 @@
+{{#if this.String}}{{this.String}}{{/if}}{{#if this.FormattedText}}{{> editor_content_block_formatted_text this.FormattedText}}{{/if}}{{#if this.Note}}{{> editor_content_block_note this.Note}}{{/if}}{{#if this.Link}}{{> editor_content_block_link this.Link}}{{/if}}{{#if this.LineBreak}}<br>{{/if}}

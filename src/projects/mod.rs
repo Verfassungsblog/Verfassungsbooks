@@ -219,7 +219,9 @@ impl SectionContent{
 #[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub struct ContentBlock{
     #[bincode(with_serde)]
-    pub id: uuid::Uuid,
+    pub id: Option<uuid::Uuid>,
+    #[bincode(with_serde)]
+    pub revision_id: Option<uuid::Uuid>, //TODO handle revision ids
     pub content: Option<InnerContentBlock>,
     pub css_classes: Option<Vec<String>>,
 }
@@ -257,8 +259,6 @@ pub struct Headline{
 /// Paragraph Content Block holding TextElements
 #[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub struct Paragraph{
-    #[bincode(with_serde)]
-    revision_id: uuid::Uuid,
     /// Contents of the paragraph
     pub contents: Vec<TextElement>,
     /// Optional block-level alignment of the paragraph
@@ -286,7 +286,7 @@ pub enum TextElement{
     /// Footnote or Endnote
     Note(Note),
     /// Linebreak
-    LineBreak
+    LineBreak(LineBreak)
 }
 
 /// Weblink to url with optional link text
@@ -305,6 +305,10 @@ pub struct Note{
     pub note_type: NoteType,
     /// Contents of the note
     pub content: Vec<TextElement>,
+}
+
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
+pub struct LineBreak{
 }
 
 /// Enum to differentiate between footnote and endnote

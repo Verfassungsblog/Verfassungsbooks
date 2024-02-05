@@ -6,10 +6,11 @@ namespace Editor{
 
             let project_data = load_project_metadata(globalThis.project_id);
             let project_settings = load_project_settings(globalThis.project_id);
+            let build_sidebar = Sidebar.build_sidebar();
 
             Tools.start_loading_spinner();
             // @ts-ignore
-            Promise.all([project_data, project_settings]).then(async function(values){
+            Promise.all([project_data, project_settings, build_sidebar]).then(async function(values){
                 // @ts-ignore
                 Tools.stop_loading_spinner();
 

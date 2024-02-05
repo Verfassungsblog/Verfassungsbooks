@@ -1,0 +1,9 @@
+<a href="{{url}}">
+    {{#if text}}
+    {{#each text}}
+        {{> editor_content_block_textelement this}}
+    {{/each}}
+    {{else}}
+        {{url}}
+    {{/if}}
+</a>

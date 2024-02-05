@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::{Arc, RwLock, RwLockWriteGuard};
+use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::sync::atomic::AtomicBool;
 use std::time::SystemTime;
 use serde::{Deserialize, Serialize};
@@ -568,6 +568,7 @@ pub struct ProjectData{
 }
 
 impl ProjectData{
+    // TODO migrate to using path instead of the id and searching for it
     pub fn remove_section(&mut self, section_to_remove_id: &uuid::Uuid) -> Option<Section> {
         let pos = self.sections.iter().position(|section| match section {
             SectionOrToc::Section(section) => section.id == Some(*section_to_remove_id),
@@ -683,7 +684,7 @@ pub fn get_section_by_path_mut<'a>(
     Ok(current_section)
 }
 
-pub fn get_section_by_path<'a>(project: &'a RwLockWriteGuard<ProjectData>, path: &Vec<uuid::Uuid>) -> Result<&'a Section, ApiError>{
+pub fn get_section_by_path<'a>(project: &'a RwLockReadGuard<ProjectData>, path: &Vec<uuid::Uuid>) -> Result<&'a Section, ApiError>{
     let mut first_section : Option<&Section> = None;
 
     // Find first section
@@ -780,6 +781,8 @@ pub async fn save_data_worker(data_storage: Arc<DataStorage>, project_storage: A
 #[cfg(test)]
 mod tests {
     use std::thread;
+    use rocket::serde::json::Json;
+    use crate::projects::{ContentBlock, InnerContentBlock, Paragraph, TextElement, TextFormat};
     use super::*;
     #[test]
     fn setup_test_environment() {
@@ -924,4 +927,40 @@ mod tests {
             sections: vec![],
         };
     }
+
+    #[rocket::tokio::test]
+    async fn test2(){
+        setup_test_environment();
+        let test_project = ProjectData{
+            name: "Test Project Old".to_string(),
+            description: None,
+            template_id: Default::default(),
+            last_interaction: 0,
+            metadata: None,
+            settings: None,
+            sections: vec![],
+        };
+
+
+        let content_block = ContentBlock{
+            id: None,
+            revision_id: None,
+            content: Some(InnerContentBlock::Paragraph(Paragraph{
+                contents: vec![
+                    TextElement::FormattedText(crate::projects::FormattedText{
+                        contents: vec![
+                            TextElement::String("Test".to_string())
+                        ],
+                        format: TextFormat::Bold,
+                    }),
+                    TextElement::LineBreak(crate::projects::LineBreak{}),
+                ],
+                alignment: None,
+            })),
+            css_classes: None,
+        };
+
+        println!("{}", serde_json::to_string(&content_block).unwrap());
+    }
+
 }

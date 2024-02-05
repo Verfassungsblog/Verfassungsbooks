@@ -10,7 +10,8 @@
         {{#each Section.children}}
         {{#if this.Section}}
         {{> editor_sidebar_section}}
-        {{else}}
+        {{/if}}
+        {{#if this.Toc}}
         Toc
         {{/if}}
         {{/each}}

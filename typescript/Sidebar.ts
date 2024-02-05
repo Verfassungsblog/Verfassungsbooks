@@ -29,6 +29,19 @@ namespace Editor{
             add_dropzones();
             add_draggables();
             add_toc_listeners();
+            document.getElementById("editor_sidebar_project_title").addEventListener("click", ProjectOverview.show_overview);
+        }
+
+        export function show_content_block_settings_sidebar(caller){
+            let content_block = caller.target.closest(".content_block");
+            let id = content_block.getAttribute("data-block-id");
+            console.log("Showing settings for content block "+id);
+            let sidebar = document.getElementById("editor-sidebar");
+            // @ts-ignore
+            sidebar.innerHTML = Handlebars.templates.editor_sidebar_content_block_settings();
+
+            // Add back listener:
+            document.getElementById("editor_sidebar_content_block_settings_back").addEventListener("click", build_sidebar);
         }
 
         function add_toc_listeners(){
@@ -168,18 +181,19 @@ namespace Editor{
                 "Section": {
                     "children": [],
                     "visible_in_toc": true,
+                    "css_classes": [],
                     "metadata": {
                         "title": title,
+                        "authors": [],
+                        "editors": [],
+                        "identifiers": [],
                     }
                 }
             };
 
             try {
                 let section = await send_add_section(data);
-                add_dropzones();
-                add_draggables();
-                add_toc_listeners();
-                console.log(section);
+                await build_sidebar();
             }catch (e) {
                 console.error(e);
                 Tools.show_alert("Failed to add section", "danger");
@@ -233,11 +247,11 @@ namespace Editor{
                 body: JSON.stringify(data)
             });
             if(!response.ok){
-                throw new Error(`Failed to get contents: ${response.status}`);
+                throw new Error(`Failed to add section: ${response.status}`);
             }else{
                 let response_data = await response.json();
                 if(response_data.hasOwnProperty("error")) {
-                    throw new Error(`Failed to get contents: ${response_data["error"]}`);
+                    throw new Error(`Failed to add section: ${response_data["error"]}`);
                 }else{
                     return response_data;
                 }

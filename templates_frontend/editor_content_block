@@ -1,0 +1,18 @@
+<div class="content_block"
+     {{#if content.Paragraph}}
+     data-block-type="paragraph"
+    {{/if}} data-block-id="{{id}}">
+<div class="content_block_ctls">
+    <!-- Label-->
+    <span class="content_block_ctls_type"><svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20"><path d="M160-200v-60h386v60H160Zm0-167v-60h640v60H160Zm0-166v-60h640v60H160Zm0-167v-60h640v60H160Z"></path></svg></span>
+    <!-- Arrow up-->
+    <span class="content_block_ctls_up"><svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20"><path d="M480-528 296-344l-56-56 240-240 240 240-56 56-184-184Z"/></svg></span>
+    <!-- Arrow down-->
+    <span class="content_block_ctls_down"><svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20"><path d="M480-344 240-584l56-56 184 184 184-184 56 56-240 240Z"/></svg></span>
+</div>
+    <div class="inner_content_block">
+    {{#if content.Paragraph}}
+    {{> editor_content_block_paragraph content.Paragraph}}
+    {{/if}}
+    </div>
+</div>

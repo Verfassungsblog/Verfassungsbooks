@@ -9,7 +9,7 @@ use chrono::NaiveDateTime;
 use rocket::State;
 use serde_derive::{Deserialize, Serialize};
 use crate::data_storage::ProjectStorage;
-use crate::projects::{Identifier, Keyword, Language, License, ProjectMetadata, ProjectSettings, Section};
+use crate::projects::{Identifier, Keyword, ContentBlock, Language, License, ProjectMetadata, ProjectSettings, Section};
 use crate::session::session_guard::Session;
 use crate::settings::Settings;
 
@@ -1084,7 +1084,7 @@ pub async fn move_content_child_of(project_id: String, content_id: String, paren
     }
 }
 
-/// GET /api/projects/<project_id>/contents/<content_id>
+/// GET /api/projects/<project_id>/sections/<content_id>
 /// Get a section, but strip out subsections
 #[get("/api/projects/<project_id>/sections/<content_path>")]
 pub async fn get_section(project_id: &str, content_path: &str, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<Section>> {
@@ -1125,7 +1125,7 @@ pub async fn get_section(project_id: &str, content_path: &str, _session: Session
         },
     };
 
-    let project = project.write().unwrap();
+    let project = project.read().unwrap();
 
     let section = crate::data_storage::get_section_by_path(&project, &path);
 
@@ -1136,7 +1136,7 @@ pub async fn get_section(project_id: &str, content_path: &str, _session: Session
     }
 }
 
-/// PATCH /api/projects/<project_id>/contents/<content_path>
+/// PATCH /api/projects/<project_id>/sections/<content_path>
 /// Patch a section, but without content (subsections / content blocks)
 /// Check [PatchSection] for more information
 #[patch("/api/projects/<project_id>/sections/<content_path>", data = "<section_patch>")]
@@ -1221,4 +1221,425 @@ pub async fn update_section(project_id: String, content_path: String, section_pa
         },
         Err(e) => ApiResult::new_error(e)
     }
+}
+
+/// DELETE /api/projects/<project_id>/sections/<content_path>
+/// Delete a section including all subsections and content blocks
+#[delete("/api/projects/<project_id>/sections/<content_path>")]
+pub async fn delete_section(project_id: String, content_path: String, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<()>> {
+    let project_id = match uuid::Uuid::parse_str(&project_id) {
+        Ok(project_id) => project_id,
+        Err(e) => {
+            println!("Couldn't parse project id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let mut path = vec![];
+
+    for part in content_path.split(":"){
+        match uuid::Uuid::parse_str(part){
+            Ok(part) => path.push(part),
+            Err(e) => {
+                println!("Couldn't parse content path: {}", e);
+                return ApiResult::new_error(ApiError::BadRequest("Couldn't parse content path".to_string()));
+            }
+        }
+    }
+
+    if path.len() == 0{
+        println!("Couldn't parse content path: path is empty");
+        return ApiResult::new_error(ApiError::BadRequest("Couldn't parse content path".to_string()));
+    }
+
+    let project_storage = Arc::clone(project_storage);
+
+    let project = match project_storage.get_project(&project_id, settings).await {
+        Ok(project) => project,
+        Err(_) => {
+            println!("Couldn't get project with id {}", project_id);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let mut project = project.write().unwrap();
+
+    match project.remove_section(path.last().unwrap()){
+        Some(_) => ApiResult::new_data(()),
+        None => ApiResult::new_error(ApiError::NotFound)
+    }
+}
+
+/// GET /api/projects/<project_id>/sections/<content_path>/content_blocks
+/// Get all content blocks in a section
+#[get("/api/projects/<project_id>/sections/<content_path>/content_blocks")]
+pub async fn get_content_blocks_in_section(project_id: String, content_path: String, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<Vec<ContentBlock>>> {
+    let project_id = match uuid::Uuid::parse_str(&project_id) {
+        Ok(project_id) => project_id,
+        Err(e) => {
+            println!("Couldn't parse project id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let mut path = vec![];
+
+    for part in content_path.split(":"){
+        match uuid::Uuid::parse_str(part){
+            Ok(part) => path.push(part),
+            Err(e) => {
+                println!("Couldn't parse content path: {}", e);
+                return ApiResult::new_error(ApiError::BadRequest("Couldn't parse content path".to_string()));
+            }
+        }
+    }
+
+    if path.len() == 0{
+        println!("Couldn't parse content path: path is empty");
+        return ApiResult::new_error(ApiError::BadRequest("Couldn't parse content path".to_string()));
+    }
+
+    let project_storage = Arc::clone(project_storage);
+
+    let project = match project_storage.get_project(&project_id, settings).await {
+        Ok(project) => project,
+        Err(_) => {
+            println!("Couldn't get project with id {}", project_id);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let project = project.read().unwrap();
+
+    let section = crate::data_storage::get_section_by_path(&project, &path);
+
+    match section{
+        Ok(section) => {
+            let mut content_blocks = Vec::new();
+            for child in section.children.iter(){
+                match child{
+                    crate::projects::SectionContent::ContentBlock(block) => {
+                        content_blocks.push(block.clone());
+                    },
+                    _ => {},
+                }
+            }
+            ApiResult::new_data(content_blocks)
+        },
+        Err(e) => ApiResult::new_error(e)
+    }
+}
+
+/// GET /api/projects/<project_id>/sections/<content_path>/content_blocks/<content_block_id>
+/// Get a single content block
+#[get("/api/projects/<project_id>/sections/<content_path>/content_blocks/<content_block_id>")]
+pub async fn get_content_block(project_id: String, content_path: String, content_block_id: String, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<ContentBlock>> {
+    let project_id = match uuid::Uuid::parse_str(&project_id) {
+        Ok(project_id) => project_id,
+        Err(e) => {
+            println!("Couldn't parse project id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let content_block_id = match uuid::Uuid::parse_str(&content_block_id) {
+        Ok(content_block_id) => content_block_id,
+        Err(e) => {
+            println!("Couldn't parse content block id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let mut path = vec![];
+
+    for part in content_path.split(":"){
+        match uuid::Uuid::parse_str(part){
+            Ok(part) => path.push(part),
+            Err(e) => {
+                println!("Couldn't parse content path: {}", e);
+                return ApiResult::new_error(ApiError::BadRequest("Couldn't parse content path".to_string()));
+            }
+        }
+    }
+
+    if path.len() == 0{
+        println!("Couldn't parse content path: path is empty");
+        return ApiResult::new_error(ApiError::BadRequest("Couldn't parse content path".to_string()));
+    }
+
+    let project_storage = Arc::clone(project_storage);
+
+    let project = match project_storage.get_project(&project_id, settings).await {
+        Ok(project) => project,
+        Err(_) => {
+            println!("Couldn't get project with id {}", project_id);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let project = project.read().unwrap();
+
+    let section = crate::data_storage::get_section_by_path(&project, &path);
+
+    match section{
+        Ok(section) => {
+            for child in section.children.iter(){
+                match child{
+                    crate::projects::SectionContent::ContentBlock(block) => {
+                        if block.id.unwrap_or_default() == content_block_id{
+                            return ApiResult::new_data(block.clone());
+                        }
+                    },
+                    _ => {},
+                }
+            }
+            ApiResult::new_error(
+                ApiError::NotFound
+            )
+        },
+        Err(e) => ApiResult::new_error(e)
+    }
+}
+
+/// POST /api/projects/<project_id>/sections/<content_path>/content_blocks
+/// Add a new content block to a section
+#[post("/api/projects/<project_id>/sections/<content_path>/content_blocks", data = "<content_block>")]
+pub async fn add_content_block_to_section(project_id: String, content_path: String, content_block: Json<ContentBlock>, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<ContentBlock>> {
+    let project_id = match uuid::Uuid::parse_str(&project_id) {
+        Ok(project_id) => project_id,
+        Err(e) => {
+            println!("Couldn't parse project id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let mut new_block = content_block.into_inner();
+    if new_block.id.is_some(){
+        return ApiResult::new_error(ApiError::BadRequest("Creating blocks with pre-defined id is not permitted.".to_string()));
+    }
+    new_block.id = Some(uuid::Uuid::new_v4());
+
+
+    let mut path = vec![];
+
+    for part in content_path.split(":"){
+        match uuid::Uuid::parse_str(part){
+            Ok(part) => path.push(part),
+            Err(e) => {
+                println!("Couldn't parse content path: {}", e);
+                return ApiResult::new_error(ApiError::BadRequest("Couldn't parse content path".to_string()));
+            }
+        }
+    }
+
+    if path.len() == 0{
+        println!("Couldn't parse content path: path is empty");
+        return ApiResult::new_error(ApiError::BadRequest("Couldn't parse content path".to_string()));
+    }
+
+    let project_storage = Arc::clone(project_storage);
+
+    let project = match project_storage.get_project(&project_id, settings).await {
+        Ok(project) => project,
+        Err(_) => {
+            println!("Couldn't get project with id {}", project_id);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let mut project = project.write().unwrap();
+
+    let section = crate::data_storage::get_section_by_path_mut(&mut project, &path);
+
+    match section{
+        Ok(section) => {
+            section.children.push(crate::projects::SectionContent::ContentBlock(new_block.clone()));
+            ApiResult::new_data(new_block)
+        },
+        Err(e) => ApiResult::new_error(e)
+    }
+}
+
+/// PUT /api/projects/<project_id>/sections/<content_path>/content_blocks/<content_block_id>
+/// Update a content block
+#[put("/api/projects/<project_id>/sections/<content_path>/content_blocks/<content_block_id>", data = "<content_block>")]
+pub async fn update_contentblock(project_id: String, content_block_id: String, content_path: String, content_block: Json<ContentBlock>, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<()>> {
+    println!("Content Block: {:?}", content_block.clone());
+    //TODO: filter out \u{200b} (zero width space) from content
+    let project_id = match uuid::Uuid::parse_str(&project_id) {
+        Ok(project_id) => project_id,
+        Err(e) => {
+            println!("Couldn't parse project id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let content_block_id = match uuid::Uuid::parse_str(&content_block_id) {
+        Ok(content_block_id) => content_block_id,
+        Err(e) => {
+            println!("Couldn't parse content block id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    if content_block_id != content_block.id.unwrap_or_default(){
+        return ApiResult::new_error(ApiError::BadRequest("Content block id in url and body don't match".to_string()));
+    }
+
+    let mut path = vec![];
+
+    for part in content_path.split(":"){
+        match uuid::Uuid::parse_str(part){
+            Ok(part) => path.push(part),
+            Err(e) => {
+                println!("Couldn't parse content path: {}", e);
+                return ApiResult::new_error(ApiError::BadRequest("Couldn't parse content path".to_string()));
+            }
+        }
+    }
+
+    if path.len() == 0{
+        println!("Couldn't parse content path: path is empty");
+        return ApiResult::new_error(ApiError::BadRequest("Couldn't parse content path".to_string()));
+    }
+
+    let project_storage = Arc::clone(project_storage);
+
+    let project = match project_storage.get_project(&project_id, settings).await {
+        Ok(project) => project,
+        Err(_) => {
+            println!("Couldn't get project with id {}", project_id);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let mut project = project.write().unwrap();
+
+    let section = crate::data_storage::get_section_by_path_mut(&mut project, &path);
+
+    match section{
+        Ok(section) => {
+            for child in section.children.iter_mut(){
+                match child{
+                    crate::projects::SectionContent::ContentBlock(block) => {
+                        if block.id.unwrap_or_default() == content_block_id{
+                            *block = content_block.into_inner();
+                            return ApiResult::new_data(());
+                        }
+                    },
+                    _ => {},
+                }
+            }
+            ApiResult::new_error(
+                ApiError::NotFound
+            )
+        },
+        Err(e) => ApiResult::new_error(e)
+    }
+}
+
+#[derive(Deserialize)]
+pub struct MoveContentBlock{
+    pub content_block_id: uuid::Uuid,
+    /// If None, the content block will be moved to the beginning of the section
+    pub insert_after: Option<uuid::Uuid>,
+}
+
+/// POST /api/projects/<project_id>/sections/<content_path>/content_blocks/move
+/// Move a content block to another position
+#[post("/api/projects/<project_id>/sections/<content_path>/content_blocks/move", data = "<move_data>")]
+pub async fn move_contentblock(project_id: String, content_path: String, move_data: Json<MoveContentBlock>, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<()>> {
+    let project_id = match uuid::Uuid::parse_str(&project_id) {
+        Ok(project_id) => project_id,
+        Err(e) => {
+            println!("Couldn't parse project id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let mut path = vec![];
+
+    for part in content_path.split(":") {
+        match uuid::Uuid::parse_str(part) {
+            Ok(part) => path.push(part),
+            Err(e) => {
+                println!("Couldn't parse content path: {}", e);
+                return ApiResult::new_error(ApiError::BadRequest("Couldn't parse content path".to_string()));
+            }
+        }
+    }
+
+    if path.len() == 0 {
+        println!("Couldn't parse content path: path is empty");
+        return ApiResult::new_error(ApiError::BadRequest("Couldn't parse content path".to_string()));
+    }
+
+    let project_storage = Arc::clone(project_storage);
+
+    let project = match project_storage.get_project(&project_id, settings).await {
+        Ok(project) => project,
+        Err(_) => {
+            println!("Couldn't get project with id {}", project_id);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let mut project = project.write().unwrap();
+
+    let section = match crate::data_storage::get_section_by_path_mut(&mut project, &path){
+        Ok(section) => section,
+        Err(e) => {
+            return ApiResult::new_error(e);
+        }
+    };
+
+    // Find content block
+    let mut content_block_pos = None;
+    for (i, block) in section.children.iter().enumerate(){
+        if let crate::projects::SectionContent::ContentBlock(block) = block{
+            if block.id.unwrap_or_default() == move_data.content_block_id{
+                content_block_pos = Some(i);
+                break;
+            }
+        }
+    }
+    let content_block_pos = match content_block_pos{
+        Some(pos) => pos,
+        None => {
+            return ApiResult::new_error(ApiError::NotFound);
+        }
+    };
+
+    // Remove block from old position
+    let block = section.children.remove(content_block_pos);
+
+    // Find new target and insert block
+    let mut insert_pos = None;
+    match move_data.insert_after{
+        Some(insert_after) => {
+            for (i, block) in section.children.iter().enumerate(){
+                if let crate::projects::SectionContent::ContentBlock(block) = block{
+                    if block.id.unwrap_or_default() == insert_after{
+                        insert_pos = Some(i);
+                        break;
+                    }
+                }
+            }
+        },
+        None => {
+            insert_pos = Some(0);
+        }
+    }
+
+    let insert_pos = match insert_pos{
+        Some(pos) => pos,
+        None => {
+            // Re-add content block to old position
+            section.children.insert(content_block_pos, block);
+            return ApiResult::new_error(ApiError::NotFound);
+        }
+    };
+    section.children.insert(insert_pos+1, block);
+    ApiResult::new_data(())
+
 }

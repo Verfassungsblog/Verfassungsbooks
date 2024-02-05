@@ -17,9 +17,10 @@ var Editor;
             console.log("Loading overview for project " + globalThis.project_id);
             let project_data = load_project_metadata(globalThis.project_id);
             let project_settings = load_project_settings(globalThis.project_id);
+            let build_sidebar = Editor.Sidebar.build_sidebar();
             Tools.start_loading_spinner();
             // @ts-ignore
-            Promise.all([project_data, project_settings]).then(function (values) {
+            Promise.all([project_data, project_settings, build_sidebar]).then(function (values) {
                 return __awaiter(this, void 0, void 0, function* () {
                     // @ts-ignore
                     Tools.stop_loading_spinner();
@@ -904,9 +905,9 @@ var Editor;
         function show_section_view() {
             return __awaiter(this, void 0, void 0, function* () {
                 typing_timer = null;
+                pending_content_block_changes = [];
                 try {
                     section_data = yield send_get_section(globalThis.section_path);
-                    console.log(section_data);
                     // Retrieve details for authors and editors
                     if (section_data["metadata"]["authors"] != null) {
                         let promises = [];
@@ -977,6 +978,29 @@ var Editor;
                     add_identifier_remove_handlers();
                     add_quickchange_handlers();
                     document.getElementById("section_metadata_identifiers_add").addEventListener("click", add_identifier);
+                    document.getElementById("section_delete_first_stage").addEventListener("click", function () {
+                        document.getElementById("section_delete_warning").classList.remove("hide");
+                    });
+                    document.getElementById("section_delete_cancel").addEventListener("click", function () {
+                        document.getElementById("section_delete_warning").classList.add("hide");
+                    });
+                    document.getElementById("section_delete_confirm").addEventListener("click", delete_section_handler);
+                    document.getElementById("section_show_metadata").addEventListener("click", expand_metadata);
+                    document.getElementById("section_hide_metadata").addEventListener("click", collapse_metadata);
+                    // @ts-ignore
+                    for (let button of document.getElementsByClassName("new_block_selection")) {
+                        button.addEventListener("click", new_block_selection_handler);
+                    }
+                    // Load content blocks
+                    let content_blocks = yield send_get_content_blocks(globalThis.section_path);
+                    console.log(content_blocks);
+                    for (let block of content_blocks) {
+                        // @ts-ignore
+                        let html = Handlebars.templates.editor_content_block(Editor.ContentBlockParser.contentblock_from_api(block));
+                        document.getElementById("section_content_blocks_inner").innerHTML += html;
+                        clean_content_block_input(document.getElementById("section_content_blocks_inner").lastChild);
+                    }
+                    add_content_block_handlers();
                 }
                 catch (e) {
                     console.error(e);
@@ -985,6 +1009,358 @@ var Editor;
             });
         }
         SectionView.show_section_view = show_section_view;
+        function add_content_block_handlers() {
+            // Register input change event listeners for all input fields in any content block
+            // @ts-ignore
+            for (let field of document.getElementsByClassName("content_block_input_trigger")) {
+                field.addEventListener("input", content_block_input_handler);
+            }
+            // Register move up event listeners for all content blocks
+            // @ts-ignore
+            for (let button of document.getElementsByClassName("content_block_ctls_up")) {
+                button.addEventListener("click", content_block_move_up_handler);
+            }
+            // Register move down event listeners for all content blocks
+            // @ts-ignore
+            for (let button of document.getElementsByClassName("content_block_ctls_down")) {
+                button.addEventListener("click", content_block_move_down_handler);
+            }
+            // @ts-ignore
+            for (let button of document.getElementsByClassName("textelement_edit_bar_btn")) {
+                button.addEventListener("click", content_block_edit_bar_handler);
+            }
+            // @ts-ignore
+            for (let button of document.getElementsByClassName("content_block")) {
+                button.addEventListener("click", Editor.Sidebar.show_content_block_settings_sidebar);
+            }
+        }
+        function content_block_edit_bar_handler(e) {
+            let action = e.target.getAttribute("data-action");
+            let selection = window.getSelection();
+            let range = selection.getRangeAt(0); // TODO: handle multiple ranges
+            function checkIfFormatted(node, type) {
+                while (node != null && node.nodeName !== "BODY") {
+                    if (node.nodeName === "SPAN" && node.classList.contains("formatted_text_" + type)) {
+                        return node; // Gibt den gefundenen <span> zurück
+                    }
+                    node = node.parentNode;
+                }
+                return null;
+            }
+            let formattedNode = checkIfFormatted(range.startContainer, "bold");
+            if (formattedNode) {
+                // Wenn bereits formatiert, <span> entfernen
+                let parent = formattedNode.parentNode;
+                while (formattedNode.firstChild) {
+                    parent.insertBefore(formattedNode.firstChild, formattedNode);
+                }
+                parent.removeChild(formattedNode);
+                return;
+            }
+            let new_element = document.createElement("span");
+            new_element.classList.add("formatted_text");
+            new_element.classList.add("formatted_text_bold");
+            range.surroundContents(new_element);
+            selection.removeAllRanges();
+        }
+        // @ts-ignore
+        function content_block_move_down_handler(e) {
+            return __awaiter(this, void 0, void 0, function* () {
+                let block = e.target.closest(".content_block");
+                let next = block.nextElementSibling || null;
+                if (next === null) { // Do nothing if block is already at the bottom
+                    return;
+                }
+                let block_id = block.getAttribute("data-block-id");
+                let after = null;
+                if (next === null) {
+                    after = null;
+                }
+                else {
+                    after = next.getAttribute("data-block-id");
+                }
+                try {
+                    yield send_move_content_block(globalThis.section_path, block_id, after);
+                    next.after(block);
+                }
+                catch (e) {
+                    console.error(e);
+                    Tools.show_alert("Failed to move content block.", "danger");
+                }
+            });
+        }
+        // @ts-ignore
+        function content_block_move_up_handler(e) {
+            return __awaiter(this, void 0, void 0, function* () {
+                let block = e.target.closest(".content_block");
+                let prev_sib = block.previousElementSibling || null;
+                if (prev_sib !== null) {
+                    prev_sib = prev_sib.previousElementSibling || null; // We need the previous sibling of the previous sibling to get the block to insert after
+                }
+                let block_id = block.getAttribute("data-block-id");
+                let prev = null;
+                if (prev_sib === null) {
+                    prev = null;
+                }
+                else {
+                    console.log(prev_sib);
+                    prev = prev_sib.getAttribute("data-block-id");
+                }
+                try {
+                    yield send_move_content_block(globalThis.section_path, block_id, prev);
+                    if (prev_sib !== null) {
+                        prev_sib.after(block);
+                    }
+                    else { // If there is no previous sibling, we need to move the block to the top
+                        block.parentElement.insertBefore(block, block.parentElement.firstChild);
+                    }
+                }
+                catch (e) {
+                    console.error(e);
+                    Tools.show_alert("Failed to move content block.", "danger");
+                }
+            });
+        }
+        // @ts-ignore
+        function content_block_input_handler(input) {
+            return __awaiter(this, void 0, void 0, function* () {
+                // Only store the content block in the to upload list if it's not already there
+                // @ts-ignore
+                if (pending_content_block_changes.includes(input.target)) {
+                    return;
+                }
+                pending_content_block_changes.push(input.target);
+                if (typing_timer) {
+                    clearTimeout(typing_timer);
+                }
+                // Set a timeout to wait for the user to stop typing
+                // @ts-ignore
+                typing_timer = setTimeout(function () {
+                    return __awaiter(this, void 0, void 0, function* () {
+                        yield upload_pending_content_block_changes();
+                    });
+                }, 1000);
+            });
+        }
+        /// Upload all pending content block changes
+        // @ts-ignore
+        function upload_pending_content_block_changes() {
+            return __awaiter(this, void 0, void 0, function* () {
+                let requests = [];
+                for (let change of pending_content_block_changes) {
+                    requests.push(content_block_change_handler(change));
+                }
+                pending_content_block_changes = [];
+                // @ts-ignore
+                yield Promise.all(requests);
+            });
+        }
+        function clean_content_block_input(block) {
+            let input = block.getElementsByClassName("content_block_input_trigger")[0];
+            input.innerHTML = input.innerHTML.replace("\n", "");
+        }
+        // @ts-ignore
+        function content_block_change_handler(e) {
+            return __awaiter(this, void 0, void 0, function* () {
+                let block = e.closest(".content_block");
+                let json = Editor.ContentBlockParser.parse_contentblock_from_html(block);
+                console.log(json);
+                try {
+                    let res = yield send_update_content_block(globalThis.section_path, json);
+                    console.log(res);
+                    Tools.show_alert("Successfully updated content block.", "success");
+                }
+                catch (e) {
+                    console.error(e);
+                    Tools.show_alert("Failed to update content block.", "danger");
+                }
+            });
+        }
+        function send_move_content_block(section_path, block_id, after) {
+            return __awaiter(this, void 0, void 0, function* () {
+                const response = yield fetch(`/api/projects/${globalThis.project_id}/sections/` + section_path + "/content_blocks/move", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        "insert_after": after,
+                        "content_block_id": block_id,
+                    })
+                });
+                if (!response.ok) {
+                    throw new Error(`Failed to move content block: ${response.status}`);
+                }
+                else {
+                    let response_data = yield response.json();
+                    if (response_data.hasOwnProperty("error")) {
+                        throw new Error(`Failed to move content block: ${response_data["error"]}`);
+                    }
+                    else {
+                        return response_data;
+                    }
+                }
+            });
+        }
+        function send_get_content_blocks(section_path) {
+            return __awaiter(this, void 0, void 0, function* () {
+                const response = yield fetch(`/api/projects/${globalThis.project_id}/sections/` + section_path + "/content_blocks", {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                });
+                if (!response.ok) {
+                    throw new Error(`Failed to get content blocks: ${response.status}`);
+                }
+                else {
+                    let response_data = yield response.json();
+                    if (response_data.hasOwnProperty("error")) {
+                        throw new Error(`Failed to get content blocks: ${response_data["error"]}`);
+                    }
+                    else {
+                        return response_data.data;
+                    }
+                }
+            });
+        }
+        function send_add_new_content_block(section_path, block_data) {
+            return __awaiter(this, void 0, void 0, function* () {
+                const response = yield fetch(`/api/projects/${globalThis.project_id}/sections/` + section_path + "/content_blocks", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(block_data)
+                });
+                if (!response.ok) {
+                    throw new Error(`Failed to create content block: ${response.status}`);
+                }
+                else {
+                    let response_data = yield response.json();
+                    if (response_data.hasOwnProperty("error")) {
+                        throw new Error(`Failed to create content block: ${response_data["error"]}`);
+                    }
+                    else {
+                        return response_data.data;
+                    }
+                }
+            });
+        }
+        function send_update_content_block(section_path, block_data) {
+            return __awaiter(this, void 0, void 0, function* () {
+                const response = yield fetch(`/api/projects/${globalThis.project_id}/sections/` + section_path + "/content_blocks/" + block_data.id, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(block_data)
+                });
+                if (!response.ok) {
+                    throw new Error(`Failed to update content block: ${response.status}`);
+                }
+                else {
+                    let response_data = yield response.json();
+                    if (response_data.hasOwnProperty("error")) {
+                        throw new Error(`Failed to post content block: ${response_data["error"]}`);
+                    }
+                    else {
+                        return response_data;
+                    }
+                }
+            });
+        }
+        // @ts-ignore
+        function new_block_selection_handler() {
+            return __awaiter(this, void 0, void 0, function* () {
+                let block_type = this.getAttribute("data-type") || null;
+                if (block_type === null) {
+                    console.error("No block type specified");
+                    return;
+                }
+                if (block_type === "paragraph") {
+                    let paragraph = {
+                        content: {
+                            Paragraph: {
+                                contents: []
+                            }
+                        },
+                        css_class: null,
+                        id: null,
+                        revision_id: null
+                    };
+                    try {
+                        let res = yield send_add_new_content_block(globalThis.section_path, paragraph);
+                        console.log(res);
+                        // @ts-ignore
+                        let html = Handlebars.templates.editor_content_block(Editor.ContentBlockParser.contentblock_from_api(res));
+                        document.getElementById("section_content_blocks_inner").innerHTML += html;
+                        add_content_block_handlers();
+                    }
+                    catch (e) {
+                        console.error(e);
+                        Tools.show_alert("Failed to add new paragraph.", "danger");
+                    }
+                }
+                else {
+                    Tools.show_alert("Block type not implemented.", "warning");
+                }
+            });
+        }
+        let collapse_metadata = function () {
+            document.getElementsByClassName("editor_section_view_metadata")[0].classList.add("hide");
+            document.getElementsByClassName("editor_section_view_collapsed_metadata")[0].classList.remove("hide");
+        };
+        let expand_metadata = function () {
+            document.getElementsByClassName("editor_section_view_collapsed_metadata")[0].classList.add("hide");
+            document.getElementsByClassName("editor_section_view_metadata")[0].classList.remove("hide");
+        };
+        // @ts-ignore
+        let delete_section_handler = function () {
+            return __awaiter(this, void 0, void 0, function* () {
+                // Hide the warning
+                document.getElementById("section_delete_warning").classList.add("hide");
+                if (globalThis.section_path.split(":").slice(-1)[0] !== section_data["id"]) {
+                    console.error("Section path and section data id don't match. This could lead to deleting the wrong section.");
+                    console.log("last section id in path is " + globalThis.section_path.split(":").slice(-1)[0] + " and id is " + section_data["id"]);
+                    Tools.show_alert("Failed to delete section.", "danger");
+                    return;
+                }
+                Tools.start_loading_spinner();
+                try {
+                    yield send_delete_section(globalThis.section_path);
+                    Editor.Sidebar.build_sidebar();
+                    Editor.ProjectOverview.show_overview();
+                }
+                catch (e) {
+                    console.error(e);
+                    Tools.show_alert("Failed to delete section.", "danger");
+                }
+                Tools.stop_loading_spinner();
+            });
+        };
+        let send_delete_section = function (section_path) {
+            return __awaiter(this, void 0, void 0, function* () {
+                const response = yield fetch(`/api/projects/${globalThis.project_id}/sections/` + section_path, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                });
+                if (!response.ok) {
+                    throw new Error(`Failed to delete section: ${response.status}`);
+                }
+                else {
+                    let response_data = yield response.json();
+                    if (response_data.hasOwnProperty("error")) {
+                        throw new Error(`Failed to delete section: ${response_data["error"]}`);
+                    }
+                    else {
+                        return response_data;
+                    }
+                }
+            });
+        };
         let add_quickchange_handlers = function () {
             // @ts-ignore
             for (let input of document.getElementsByClassName("quickchange")) {
@@ -1356,6 +1732,209 @@ var Editor;
         }
     })(SectionView = Editor.SectionView || (Editor.SectionView = {}));
 })(Editor || (Editor = {}));
+var Editor;
+(function (Editor) {
+    let ContentBlockParser;
+    (function (ContentBlockParser) {
+        let NoteType;
+        (function (NoteType) {
+            NoteType["Footnote"] = "Footnote";
+            NoteType["Endnote"] = "Endnote";
+        })(NoteType || (NoteType = {}));
+        function add_extra_fields(block) {
+            if (block.String) {
+                return block;
+            }
+            if (block.FormattedText) {
+                let format = block.FormattedText.format;
+                let format_extra = block.FormattedText.format_extra;
+                if (!format_extra) {
+                    if (format === "Bold") {
+                        format_extra = { Bold: true };
+                    }
+                    else if (format === "Italic") {
+                        format_extra = { Italic: true };
+                    }
+                    else if (format === "Underline") {
+                        format_extra = { Underline: true };
+                    }
+                    else if (format === "Strikethrough") {
+                        format_extra = { Strikethrough: true };
+                    }
+                    else if (format === "Superscript") {
+                        format_extra = { Superscript: true };
+                    }
+                    else if (format === "Subscript") {
+                        format_extra = { Subscript: true };
+                    }
+                    else if (format === "None") {
+                        format_extra = { None: true };
+                    }
+                }
+                let contents = [];
+                for (let content of block.FormattedText.contents) {
+                    contents.push(add_extra_fields(content));
+                }
+                return { FormattedText: { contents: contents, format: format, format_extra: format_extra } };
+            }
+            if (block.Link) {
+                let text = block.Link.text;
+                if (text) {
+                    let contents = text.map(add_extra_fields);
+                    return { Link: { url: block.Link.url, text: contents } };
+                }
+                else {
+                    return { Link: { url: block.Link.url, text: null } };
+                }
+            }
+            if (block.Note) {
+                let contents = block.Note.content.map(add_extra_fields);
+                let note_type = block.Note.note_type;
+                let note_type_extra = block.Note.note_type_extra;
+                if (!note_type_extra) {
+                    if (note_type === "Footnote") {
+                        note_type_extra = NoteType.Footnote;
+                    }
+                    else if (note_type === "Endnote") {
+                        note_type_extra = NoteType.Endnote;
+                    }
+                }
+                return { Note: { note_type: block.Note.note_type, note_type_extra: note_type_extra, content: contents } };
+            }
+            return block;
+        }
+        function contentblock_from_api(data) {
+            let content;
+            if (data.content.Paragraph) {
+                let contents = [];
+                for (let paragraph of data.content.Paragraph.contents) {
+                    contents.push(add_extra_fields(paragraph));
+                }
+                content = { Paragraph: { contents: contents } };
+            }
+            else {
+                console.error("Unknown content type: ", data.content);
+                throw new Error("Unknown content type: " + data.content);
+            }
+            let res = {
+                id: data.id,
+                revision_id: data.revision_id,
+                content: content,
+                css_class: data.css_class
+            };
+            //TODO: Add extra fields for other types
+            return res;
+        }
+        ContentBlockParser.contentblock_from_api = contentblock_from_api;
+        function parse_contentblock_from_html(block) {
+            //TODO: Clean up unnecessary splits into multiple text elements (e.g. after formatting got removed)
+            let res = {
+                content: undefined,
+                css_class: null,
+                id: block.getAttribute("data-block-id") || null,
+                revision_id: null
+            };
+            let type = block.getAttribute("data-block-type");
+            if (type === "paragraph") {
+                let p_tag = block.querySelector("p");
+                if (p_tag === null) {
+                    throw new Error("Paragraph block does not contain a p tag");
+                }
+                let inner_content = p_tag.childNodes;
+                let paragraph_contents = [];
+                // @ts-ignore
+                for (let node of inner_content) {
+                    paragraph_contents = paragraph_contents.concat(parse_node(node));
+                }
+                // Remove last line break
+                if (paragraph_contents.length > 0 && paragraph_contents[paragraph_contents.length - 1].LineBreak) {
+                    paragraph_contents.pop();
+                }
+                res.content = { Paragraph: { contents: paragraph_contents } };
+                return res;
+            }
+            else {
+                console.error("Unknown block type to parse: ", type);
+                throw new Error("Unknown block type to parse: " + type);
+            }
+        }
+        ContentBlockParser.parse_contentblock_from_html = parse_contentblock_from_html;
+        function parse_node(node) {
+            console.log("Parsing node: ");
+            console.log(node);
+            let res = [];
+            // Simple Text
+            if (node.nodeType === Node.TEXT_NODE) {
+                let text = node.textContent.replace('​', "").replace("\n", "").replace(/ {2,}/g, ' ');
+                /*if(text.length > 0){
+                    res.push({String: text+" "});
+                }*/
+                if (text.length > 0) {
+                    res.push({ String: text });
+                }
+            }
+            // Formatted Text, Link, Note
+            if (node.nodeType === Node.ELEMENT_NODE) {
+                let el = node;
+                // Line Break
+                if (el.tagName === "BR") {
+                    res.push({ LineBreak: {} });
+                }
+                // Formatted Text
+                if (el.classList.contains("formatted_text")) {
+                    let format_extra = {};
+                    let format = "";
+                    if (el.classList.contains("formatted_text_bold")) {
+                        format_extra.Bold = true;
+                        format = "Bold";
+                    }
+                    else if (el.classList.contains("formatted_text_italic")) {
+                        format_extra.Italic = true;
+                        format = "Italic";
+                    }
+                    else if (el.classList.contains("formatted_text_underline")) {
+                        format_extra.Underline = true;
+                        format = "Underline";
+                    }
+                    else if (el.classList.contains("formatted_text_strikethrough")) {
+                        format_extra.Strikethrough = true;
+                        format = "Strikethrough";
+                    }
+                    else if (el.classList.contains("formatted_text_superscript")) {
+                        format_extra.Superscript = true;
+                        format = "Superscript";
+                    }
+                    else if (el.classList.contains("formatted_text_subscript")) {
+                        format_extra.Subscript = true;
+                        format = "Subscript";
+                    }
+                    else if (el.classList.contains("formatted_text_none")) {
+                        format_extra.None = true;
+                        format = "None";
+                    }
+                    else {
+                        console.error("Unknown formatted text class: ", el.classList);
+                        throw new Error("Unknown formatted text class: " + el.classList);
+                    }
+                    let contents = [];
+                    // @ts-ignore
+                    for (let child of el.childNodes) {
+                        contents = contents.concat(parse_node(child));
+                        // TODO: merge consecutive strings
+                    } //TODO: check if we really need format_extra
+                    res.push({ FormattedText: { contents: contents, format: format, format_extra: format_extra } });
+                }
+                // Link
+                if (el.classList.contains("link")) {
+                    let link = el;
+                    res.push({ Link: { url: link.href, text: parse_node(link) } }); //TODO set text to null if it is empty
+                }
+                //TODO: implement notes
+            }
+            return res;
+        }
+    })(ContentBlockParser = Editor.ContentBlockParser || (Editor.ContentBlockParser = {}));
+})(Editor || (Editor = {}));
 /// <reference path="Editor.ts" />
 var Editor;
 /// <reference path="Editor.ts" />
@@ -1388,9 +1967,21 @@ var Editor;
                 add_dropzones();
                 add_draggables();
                 add_toc_listeners();
+                document.getElementById("editor_sidebar_project_title").addEventListener("click", Editor.ProjectOverview.show_overview);
             });
         }
         Sidebar.build_sidebar = build_sidebar;
+        function show_content_block_settings_sidebar(caller) {
+            let content_block = caller.target.closest(".content_block");
+            let id = content_block.getAttribute("data-block-id");
+            console.log("Showing settings for content block " + id);
+            let sidebar = document.getElementById("editor-sidebar");
+            // @ts-ignore
+            sidebar.innerHTML = Handlebars.templates.editor_sidebar_content_block_settings();
+            // Add back listener:
+            document.getElementById("editor_sidebar_content_block_settings_back").addEventListener("click", build_sidebar);
+        }
+        Sidebar.show_content_block_settings_sidebar = show_content_block_settings_sidebar;
         function add_toc_listeners() {
             // @ts-ignore
             for (let toc_item of document.getElementsByClassName("editor_sidebar_contents_section")) {
@@ -1517,17 +2108,18 @@ var Editor;
                     "Section": {
                         "children": [],
                         "visible_in_toc": true,
+                        "css_classes": [],
                         "metadata": {
                             "title": title,
+                            "authors": [],
+                            "editors": [],
+                            "identifiers": [],
                         }
                     }
                 };
                 try {
                     let section = yield send_add_section(data);
-                    add_dropzones();
-                    add_draggables();
-                    add_toc_listeners();
-                    console.log(section);
+                    yield build_sidebar();
                 }
                 catch (e) {
                     console.error(e);
@@ -1589,12 +2181,12 @@ var Editor;
                     body: JSON.stringify(data)
                 });
                 if (!response.ok) {
-                    throw new Error(`Failed to get contents: ${response.status}`);
+                    throw new Error(`Failed to add section: ${response.status}`);
                 }
                 else {
                     let response_data = yield response.json();
                     if (response_data.hasOwnProperty("error")) {
-                        throw new Error(`Failed to get contents: ${response_data["error"]}`);
+                        throw new Error(`Failed to add section: ${response_data["error"]}`);
                     }
                     else {
                         return response_data;
@@ -1669,11 +2261,13 @@ var Tools;
 })(Tools || (Tools = {}));
 /// <reference path="ProjectOverview.ts" />
 /// <reference path="SectionView.ts" />
+/// <reference path="ContentBlockParser.ts" />
 /// <reference path="Sidebar.ts" />
 /// <reference path="General.ts" />
 var Editor;
 /// <reference path="ProjectOverview.ts" />
 /// <reference path="SectionView.ts" />
+/// <reference path="ContentBlockParser.ts" />
 /// <reference path="Sidebar.ts" />
 /// <reference path="General.ts" />
 (function (Editor) {
@@ -1683,7 +2277,6 @@ var Editor;
             let project_id = extract_project_id_from_url();
             globalThis.project_id = project_id;
             Editor.ProjectOverview.show_overview();
-            yield Editor.Sidebar.build_sidebar();
         });
     }
     Editor.init = init;

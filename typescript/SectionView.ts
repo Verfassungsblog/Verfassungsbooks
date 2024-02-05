@@ -4,13 +4,15 @@ namespace Editor{
 
         declare var section_data: object | null;
         declare var typing_timer: number | null;
+        declare var pending_content_block_changes: Array<HTMLElement>;
 
         // @ts-ignore
         export async function show_section_view(){
             typing_timer = null;
+            pending_content_block_changes = [];
+
             try {
                 section_data = await send_get_section(globalThis.section_path);
-                console.log(section_data);
 
                 // Retrieve details for authors and editors
                 if (section_data["metadata"]["authors"] != null) {
@@ -89,9 +91,377 @@ namespace Editor{
                 add_identifier_remove_handlers();
                 add_quickchange_handlers();
                 document.getElementById("section_metadata_identifiers_add").addEventListener("click", add_identifier);
+                document.getElementById("section_delete_first_stage").addEventListener("click", function(){
+                    document.getElementById("section_delete_warning").classList.remove("hide");
+                });
+                document.getElementById("section_delete_cancel").addEventListener("click", function(){
+                    document.getElementById("section_delete_warning").classList.add("hide");
+                });
+                document.getElementById("section_delete_confirm").addEventListener("click", delete_section_handler);
+                document.getElementById("section_show_metadata").addEventListener("click", expand_metadata);
+                document.getElementById("section_hide_metadata").addEventListener("click", collapse_metadata);
+
+                // @ts-ignore
+                for(let button of document.getElementsByClassName("new_block_selection")){
+                    button.addEventListener("click", new_block_selection_handler);
+                }
+
+                // Load content blocks
+                let content_blocks = await send_get_content_blocks(globalThis.section_path);
+                console.log(content_blocks);
+                for(let block of content_blocks){
+                    // @ts-ignore
+                    let html = Handlebars.templates.editor_content_block(ContentBlockParser.contentblock_from_api(block));
+                    document.getElementById("section_content_blocks_inner").innerHTML += html;
+                    clean_content_block_input(document.getElementById("section_content_blocks_inner").lastChild);
+                }
+                add_content_block_handlers();
             }catch (e) {
                 console.error(e);
                 Tools.show_alert("Couldn't load section. Check your network connection.", "danger");
+            }
+        }
+
+        function add_content_block_handlers(){
+            // Register input change event listeners for all input fields in any content block
+            // @ts-ignore
+            for(let field of document.getElementsByClassName("content_block_input_trigger")){
+                field.addEventListener("input", content_block_input_handler);
+            }
+
+            // Register move up event listeners for all content blocks
+            // @ts-ignore
+            for(let button of document.getElementsByClassName("content_block_ctls_up")){
+                button.addEventListener("click", content_block_move_up_handler);
+            }
+
+            // Register move down event listeners for all content blocks
+            // @ts-ignore
+            for(let button of document.getElementsByClassName("content_block_ctls_down")){
+                button.addEventListener("click", content_block_move_down_handler);
+            }
+
+            // @ts-ignore
+            for(let button of document.getElementsByClassName("textelement_edit_bar_btn")){
+                button.addEventListener("click", content_block_edit_bar_handler);
+            }
+
+            // @ts-ignore
+            for(let button of document.getElementsByClassName("content_block")){
+                button.addEventListener("click", Sidebar.show_content_block_settings_sidebar);
+            }
+        }
+
+        function content_block_edit_bar_handler(e){
+            let action = e.target.getAttribute("data-action");
+
+            let selection = window.getSelection();
+            let range = selection.getRangeAt(0); // TODO: handle multiple ranges
+
+            function checkIfFormatted(node, type) {
+                while (node != null && node.nodeName !== "BODY") {
+                    if (node.nodeName === "SPAN" && node.classList.contains("formatted_text_"+type)) {
+                        return node; // Gibt den gefundenen <span> zurück
+                    }
+                    node = node.parentNode;
+                }
+                return null;
+            }
+
+            let formattedNode = checkIfFormatted(range.startContainer, "bold");
+            if (formattedNode) {
+                // Wenn bereits formatiert, <span> entfernen
+                let parent = formattedNode.parentNode;
+                while (formattedNode.firstChild) {
+                    parent.insertBefore(formattedNode.firstChild, formattedNode);
+                }
+                parent.removeChild(formattedNode);
+                return;
+            }
+
+            let new_element = document.createElement("span");
+            new_element.classList.add("formatted_text");
+            new_element.classList.add("formatted_text_bold");
+            range.surroundContents(new_element);
+            selection.removeAllRanges();
+        }
+
+        // @ts-ignore
+        async function content_block_move_down_handler(e){
+            let block = e.target.closest(".content_block");
+            let next = block.nextElementSibling || null;
+
+            if(next === null){ // Do nothing if block is already at the bottom
+                return;
+            }
+
+            let block_id = block.getAttribute("data-block-id");
+            let after = null;
+            if(next === null){
+                after= null;
+            }else{
+                after = next.getAttribute("data-block-id");
+            }
+
+            try {
+                await send_move_content_block(globalThis.section_path, block_id, after);
+                next.after(block);
+            }catch (e) {
+                console.error(e);
+                Tools.show_alert("Failed to move content block.", "danger");
+            }
+        }
+
+        // @ts-ignore
+        async function content_block_move_up_handler(e){
+            let block = e.target.closest(".content_block");
+            let prev_sib = block.previousElementSibling || null;
+            if(prev_sib !== null){
+                prev_sib = prev_sib.previousElementSibling || null; // We need the previous sibling of the previous sibling to get the block to insert after
+            }
+            let block_id = block.getAttribute("data-block-id");
+            let prev = null;
+            if(prev_sib === null){
+                prev = null;
+            }else{
+                console.log(prev_sib);
+                prev = prev_sib.getAttribute("data-block-id");
+            }
+
+            try {
+                await send_move_content_block(globalThis.section_path, block_id, prev);
+                if(prev_sib !== null) {
+                    prev_sib.after(block);
+                }else{ // If there is no previous sibling, we need to move the block to the top
+                    block.parentElement.insertBefore(block, block.parentElement.firstChild);
+                }
+            }catch (e) {
+                console.error(e);
+                Tools.show_alert("Failed to move content block.", "danger");
+            }
+        }
+
+        // @ts-ignore
+        async function content_block_input_handler(input){
+            // Only store the content block in the to upload list if it's not already there
+            // @ts-ignore
+            if(pending_content_block_changes.includes(input.target)){
+                return;
+            }
+            pending_content_block_changes.push(input.target);
+            if (typing_timer) {
+                clearTimeout(typing_timer);
+            }
+
+            // Set a timeout to wait for the user to stop typing
+            // @ts-ignore
+            typing_timer = setTimeout(async function(){
+                await upload_pending_content_block_changes();
+            }, 1000);
+        }
+
+        /// Upload all pending content block changes
+        // @ts-ignore
+        async function upload_pending_content_block_changes(){
+            let requests = [];
+            for(let change of pending_content_block_changes){
+                requests.push(content_block_change_handler(change));
+            }
+            pending_content_block_changes = [];
+            // @ts-ignore
+            await Promise.all(requests)
+        }
+
+        function clean_content_block_input(block){
+            let input = block.getElementsByClassName("content_block_input_trigger")[0];
+            input.innerHTML = input.innerHTML.replace("\n", "");
+        }
+
+        // @ts-ignore
+        async function content_block_change_handler(e){
+            let block = e.closest(".content_block");
+            let json = ContentBlockParser.parse_contentblock_from_html(block);
+            console.log(json);
+
+            try{
+                let res = await send_update_content_block(globalThis.section_path, json);
+                console.log(res);
+                Tools.show_alert("Successfully updated content block.", "success");
+            }catch(e){
+                console.error(e);
+                Tools.show_alert("Failed to update content block.", "danger");
+            }
+        }
+
+        async function send_move_content_block(section_path: string, block_id: string, after: string){
+            const response = await fetch(`/api/projects/${globalThis.project_id}/sections/`+section_path+"/content_blocks/move", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    "insert_after": after,
+                    "content_block_id": block_id,
+                })
+            });
+            if(!response.ok){
+                throw new Error(`Failed to move content block: ${response.status}`);
+            }else{
+                let response_data = await response.json();
+                if(response_data.hasOwnProperty("error")) {
+                    throw new Error(`Failed to move content block: ${response_data["error"]}`);
+                }else{
+                    return response_data;
+                }
+            }
+        }
+
+        async function send_get_content_blocks(section_path: string){
+            const response = await fetch(`/api/projects/${globalThis.project_id}/sections/`+section_path+"/content_blocks", {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+            });
+            if(!response.ok){
+                throw new Error(`Failed to get content blocks: ${response.status}`);
+            }else{
+                let response_data = await response.json();
+                if(response_data.hasOwnProperty("error")) {
+                    throw new Error(`Failed to get content blocks: ${response_data["error"]}`);
+                }else{
+                    return response_data.data;
+                }
+            }
+        }
+
+        async function send_add_new_content_block(section_path: string, block_data: Editor.ContentBlockParser.ContentBlock){
+            const response = await fetch(`/api/projects/${globalThis.project_id}/sections/`+section_path+"/content_blocks", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(block_data)
+            });
+            if(!response.ok){
+                throw new Error(`Failed to create content block: ${response.status}`);
+            }else{
+                let response_data = await response.json();
+                if(response_data.hasOwnProperty("error")) {
+                    throw new Error(`Failed to create content block: ${response_data["error"]}`);
+                }else{
+                    return response_data.data;
+                }
+            }
+        }
+
+        async function send_update_content_block(section_path: string, block_data: Editor.ContentBlockParser.ContentBlock){
+            const response = await fetch(`/api/projects/${globalThis.project_id}/sections/`+section_path+"/content_blocks/"+block_data.id, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(block_data)
+            });
+            if(!response.ok){
+                throw new Error(`Failed to update content block: ${response.status}`);
+            }else{
+                let response_data = await response.json();
+                if(response_data.hasOwnProperty("error")) {
+                    throw new Error(`Failed to post content block: ${response_data["error"]}`);
+                }else{
+                    return response_data;
+                }
+            }
+        }
+
+        // @ts-ignore
+        async function new_block_selection_handler(){
+            let block_type = this.getAttribute("data-type") || null;
+            if(block_type === null){
+                console.error("No block type specified");
+                return;
+            }
+            if (block_type === "paragraph") {
+                let paragraph: Editor.ContentBlockParser.ContentBlock = {
+                    content: {
+                        Paragraph: {
+                            contents: [
+                            ]
+                        }
+                    },
+                    css_class: null,
+                    id: null,
+                    revision_id: null
+                }
+                try {
+                    let res = await send_add_new_content_block(globalThis.section_path, paragraph);
+                    console.log(res);
+                    // @ts-ignore
+                    let html = Handlebars.templates.editor_content_block(ContentBlockParser.contentblock_from_api(res));
+                    document.getElementById("section_content_blocks_inner").innerHTML += html;
+                    add_content_block_handlers();
+
+                } catch (e) {
+                    console.error(e);
+                    Tools.show_alert("Failed to add new paragraph.", "danger");
+                }
+            }else{
+                Tools.show_alert("Block type not implemented.", "warning");
+            }
+        }
+
+        let collapse_metadata = function(){
+            document.getElementsByClassName("editor_section_view_metadata")[0].classList.add("hide");
+            document.getElementsByClassName("editor_section_view_collapsed_metadata")[0].classList.remove("hide");
+        }
+
+        let expand_metadata = function(){
+            document.getElementsByClassName("editor_section_view_collapsed_metadata")[0].classList.add("hide");
+            document.getElementsByClassName("editor_section_view_metadata")[0].classList.remove("hide");
+        }
+
+        // @ts-ignore
+        let delete_section_handler = async function() {
+            // Hide the warning
+            document.getElementById("section_delete_warning").classList.add("hide");
+
+            if(globalThis.section_path.split(":").slice(-1)[0] !== section_data["id"]){
+                console.error("Section path and section data id don't match. This could lead to deleting the wrong section.");
+                console.log("last section id in path is "+globalThis.section_path.split(":").slice(-1)[0]+ " and id is "+section_data["id"]);
+                Tools.show_alert("Failed to delete section.", "danger");
+                return;
+            }
+
+            Tools.start_loading_spinner();
+
+            try{
+                await send_delete_section(globalThis.section_path);
+                Sidebar.build_sidebar();
+                ProjectOverview.show_overview();
+            }catch (e) {
+                console.error(e);
+                Tools.show_alert("Failed to delete section.", "danger");
+            }
+            Tools.stop_loading_spinner();
+        };
+
+        let send_delete_section = async function(section_path: string){
+            const response = await fetch(`/api/projects/${globalThis.project_id}/sections/`+section_path, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+            });
+            if(!response.ok){
+                throw new Error(`Failed to delete section: ${response.status}`);
+            }else{
+                let response_data = await response.json();
+                if(response_data.hasOwnProperty("error")) {
+                    throw new Error(`Failed to delete section: ${response_data["error"]}`);
+                }else{
+                    return response_data;
+                }
             }
         }
 

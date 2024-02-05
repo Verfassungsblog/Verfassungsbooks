@@ -99,6 +99,10 @@ h3 {
     display: block;
     border-bottom: 1px solid var(--silver);
     font-weight: bold;
+    cursor: pointer;
+}
+#editor_sidebar_content_block_settings_back {
+    margin-bottom: 10px;
 }
 #editor_sidebar_contents{
     overflow-y: auto;
@@ -137,7 +141,8 @@ h3 {
 .editor_section_view_metadata{
     background-color: white;
     border-radius: 5px;
-    padding: 10px;
+    padding: 10px 10px 0px 10px;
+    margin-bottom: 10px;
 }
 .active-border-bottom{
     border-bottom: 2px solid var(--light-blue);
@@ -276,4 +281,73 @@ label{
 }
 #project_metadata_keywords{
     display: flex;
+}
+.section_metadata_panel_ctl{
+    text-align: center;
+}
+#section_hide_metadata{
+    background-color: var(--light-gray);
+    border-radius: 5rem 5rem 0 0 ;
+    margin-bottom: -20px;
+    padding-bottom: 10px;
+    cursor: pointer;
+}
+.editor_section_view_collapsed_metadata_inner{
+    background-color: white;
+    padding: 10px 10px 0px 10px;
+}
+.editor_section_view_collapsed_metadata{
+    margin-bottom: 50px;
+}
+#section_show_metadata{
+    background-color: white;
+    border-radius: 0 0 5rem 5rem;
+    margin-top: -8px;
+    position: absolute;
+    cursor: pointer;
+}
+.section_content_blocks_add_new_block{
+    background-color: white;
+    border-radius: 5px;
+    padding: 10px;
+    flex-wrap: wrap;
+    display: flex;
+}
+.new_block_selection{
+    width: 75px;
+    border: 1px solid var(--silver);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    padding: 5px;
+    margin-right: 5px;
+    margin-top: 5px;
+}
+.new_block_selection_label{
+    font-size: 0.6rem;
+    text-align: center;
+}
+.content_block{
+    margin-bottom: 10px;
+    display: flex;
+}
+.inner_content_block{
+    padding: 10px;
+    background-color: white;
+    border-radius: 5px;
+    width: 100%;
+}
+.content_block_ctls{
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+.content_block_ctls_type{
+    background-color: white;
+    z-index: 1000;
+    margin-right: -3px;
+}
+.formatted_text_bold{
+    font-weight: bold;
 }

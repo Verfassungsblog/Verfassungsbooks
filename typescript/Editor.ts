@@ -1,5 +1,6 @@
 /// <reference path="ProjectOverview.ts" />
 /// <reference path="SectionView.ts" />
+/// <reference path="ContentBlockParser.ts" />
 /// <reference path="Sidebar.ts" />
 /// <reference path="General.ts" />
 namespace Editor{
@@ -12,7 +13,6 @@ namespace Editor{
         let project_id = extract_project_id_from_url();
         globalThis.project_id = project_id;
         ProjectOverview.show_overview();
-        await Sidebar.build_sidebar();
     }
 
     function extract_project_id_from_url(){
