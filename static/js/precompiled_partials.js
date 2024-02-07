@@ -289,8 +289,10 @@ Handlebars.partials['editor_keyword_gnd_search'] = template({"compiler":[8,">= 4
     + "]</li>";
 },"useData":true});
 Handlebars.partials['editor_content_block'] = template({"1":function(container,depth0,helpers,partials,data) {
-    return "     data-block-type=\"paragraph\"\n    ";
+    return "     data-block-type=\"paragraph\"\n";
 },"3":function(container,depth0,helpers,partials,data) {
+    return "    data-block-type=\"heading\"\n";
+},"5":function(container,depth0,helpers,partials,data) {
     var stack1, lookupProperty = container.lookupProperty || function(parent, propertyName) {
         if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
           return parent[propertyName];
@@ -299,6 +301,15 @@ Handlebars.partials['editor_content_block'] = template({"1":function(container,d
     };
 
   return ((stack1 = container.invokePartial(lookupProperty(partials,"editor_content_block_paragraph"),((stack1 = (depth0 != null ? lookupProperty(depth0,"content") : depth0)) != null ? lookupProperty(stack1,"Paragraph") : stack1),{"name":"editor_content_block_paragraph","data":data,"indent":"    ","helpers":helpers,"partials":partials,"decorators":container.decorators})) != null ? stack1 : "");
+},"7":function(container,depth0,helpers,partials,data) {
+    var stack1, lookupProperty = container.lookupProperty || function(parent, propertyName) {
+        if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
+          return parent[propertyName];
+        }
+        return undefined
+    };
+
+  return ((stack1 = container.invokePartial(lookupProperty(partials,"editor_content_block_heading"),((stack1 = (depth0 != null ? lookupProperty(depth0,"content") : depth0)) != null ? lookupProperty(stack1,"Heading") : stack1),{"name":"editor_content_block_heading","data":data,"indent":"    ","helpers":helpers,"partials":partials,"decorators":container.decorators})) != null ? stack1 : "");
 },"compiler":[8,">= 4.3.0"],"main":function(container,depth0,helpers,partials,data) {
     var stack1, helper, alias1=depth0 != null ? depth0 : (container.nullContext || {}), lookupProperty = container.lookupProperty || function(parent, propertyName) {
         if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
@@ -309,10 +320,12 @@ Handlebars.partials['editor_content_block'] = template({"1":function(container,d
 
   return "<div class=\"content_block\"\n"
     + ((stack1 = lookupProperty(helpers,"if").call(alias1,((stack1 = (depth0 != null ? lookupProperty(depth0,"content") : depth0)) != null ? lookupProperty(stack1,"Paragraph") : stack1),{"name":"if","hash":{},"fn":container.program(1, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":2,"column":5},"end":{"line":4,"column":11}}})) != null ? stack1 : "")
-    + " data-block-id=\""
-    + container.escapeExpression(((helper = (helper = lookupProperty(helpers,"id") || (depth0 != null ? lookupProperty(depth0,"id") : depth0)) != null ? helper : container.hooks.helperMissing),(typeof helper === "function" ? helper.call(alias1,{"name":"id","hash":{},"data":data,"loc":{"start":{"line":4,"column":27},"end":{"line":4,"column":33}}}) : helper)))
+    + ((stack1 = lookupProperty(helpers,"if").call(alias1,((stack1 = (depth0 != null ? lookupProperty(depth0,"content") : depth0)) != null ? lookupProperty(stack1,"Heading") : stack1),{"name":"if","hash":{},"fn":container.program(3, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":5,"column":4},"end":{"line":7,"column":11}}})) != null ? stack1 : "")
+    + "data-block-id=\""
+    + container.escapeExpression(((helper = (helper = lookupProperty(helpers,"id") || (depth0 != null ? lookupProperty(depth0,"id") : depth0)) != null ? helper : container.hooks.helperMissing),(typeof helper === "function" ? helper.call(alias1,{"name":"id","hash":{},"data":data,"loc":{"start":{"line":8,"column":15},"end":{"line":8,"column":21}}}) : helper)))
     + "\">\n<div class=\"content_block_ctls\">\n    <!-- Label-->\n    <span class=\"content_block_ctls_type\"><svg xmlns=\"http://www.w3.org/2000/svg\" height=\"20\" viewBox=\"0 -960 960 960\" width=\"20\"><path d=\"M160-200v-60h386v60H160Zm0-167v-60h640v60H160Zm0-166v-60h640v60H160Zm0-167v-60h640v60H160Z\"></path></svg></span>\n    <!-- Arrow up-->\n    <span class=\"content_block_ctls_up\"><svg xmlns=\"http://www.w3.org/2000/svg\" height=\"20\" viewBox=\"0 -960 960 960\" width=\"20\"><path d=\"M480-528 296-344l-56-56 240-240 240 240-56 56-184-184Z\"/></svg></span>\n    <!-- Arrow down-->\n    <span class=\"content_block_ctls_down\"><svg xmlns=\"http://www.w3.org/2000/svg\" height=\"20\" viewBox=\"0 -960 960 960\" width=\"20\"><path d=\"M480-344 240-584l56-56 184 184 184-184 56 56-240 240Z\"/></svg></span>\n</div>\n    <div class=\"inner_content_block\">\n"
-    + ((stack1 = lookupProperty(helpers,"if").call(alias1,((stack1 = (depth0 != null ? lookupProperty(depth0,"content") : depth0)) != null ? lookupProperty(stack1,"Paragraph") : stack1),{"name":"if","hash":{},"fn":container.program(3, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":14,"column":4},"end":{"line":16,"column":11}}})) != null ? stack1 : "")
+    + ((stack1 = lookupProperty(helpers,"if").call(alias1,((stack1 = (depth0 != null ? lookupProperty(depth0,"content") : depth0)) != null ? lookupProperty(stack1,"Paragraph") : stack1),{"name":"if","hash":{},"fn":container.program(5, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":18,"column":4},"end":{"line":20,"column":11}}})) != null ? stack1 : "")
+    + ((stack1 = lookupProperty(helpers,"if").call(alias1,((stack1 = (depth0 != null ? lookupProperty(depth0,"content") : depth0)) != null ? lookupProperty(stack1,"Heading") : stack1),{"name":"if","hash":{},"fn":container.program(7, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":21,"column":4},"end":{"line":23,"column":11}}})) != null ? stack1 : "")
     + "    </div>\n</div>";
 },"usePartial":true,"useData":true});
 Handlebars.partials['editor_keyword_li'] = template({"1":function(container,depth0,helpers,partials,data) {
@@ -580,8 +593,71 @@ Handlebars.partials['editor_section_view'] = template({"1":function(container,de
     + ((stack1 = lookupProperty(helpers,"if").call(alias3,((stack1 = ((stack1 = (depth0 != null ? lookupProperty(depth0,"metadata") : depth0)) != null ? lookupProperty(stack1,"langval") : stack1)) != null ? lookupProperty(stack1,"EN") : stack1),{"name":"if","hash":{},"fn":container.program(7, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":65,"column":27},"end":{"line":65,"column":69}}})) != null ? stack1 : "")
     + ">English</option>\n    </select>\n    <label>Danger Zone: Delete Section & all Contents</label><br>\n    <button class=\"btn btn-sm btn-danger\" id=\"section_delete_first_stage\">Delete Section</button>\n    <div class=\"alert alert-danger mt-2 hide\" id=\"section_delete_warning\">\n        <h4 class=\"alert-heading\">Warning!</h4>\n        <p>Are you sure you want to delete this section, all subsections and all other content? This action cannot be undone!</p>\n        <hr>\n        <button class=\"btn btn-sm btn-danger\" id=\"section_delete_confirm\">Yes, Delete Section</button>\n        <button class=\"btn btn-sm btn-secondary\" id=\"section_delete_cancel\">Cancel</button>\n    </div>\n    <div class=\"section_metadata_panel_ctl\">\n        <button class=\"img-btn\" title=\"Hide Section Metadata\" id=\"section_hide_metadata\"><svg xmlns=\"http://www.w3.org/2000/svg\" height=\"36\" viewBox=\"0 -960 960 960\" width=\"36\"><path d=\"M480-528 296-344l-56-56 240-240 240 240-56 56-184-184Z\"/></svg></button>\n    </div>\n</div>\n<div id=\"section_content_blocks\">\n    <div id=\"section_content_blocks_inner\">\n        \n    </div>\n    <label>Add new Block:</label>\n    <div class=\"section_content_blocks_add_new_block\">\n        <div data-type=\"paragraph\" class=\"new_block_selection\">\n            <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"50\" viewBox=\"0 -960 960 960\" width=\"50\"><path d=\"M160-200v-60h386v60H160Zm0-167v-60h640v60H160Zm0-166v-60h640v60H160Zm0-167v-60h640v60H160Z\"/></svg>\n            <span class=\"new_block_selection_label\">Paragraph</span>\n        </div>\n        <div data-type=\"heading\" class=\"new_block_selection\">\n            <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"50\" viewBox=\"0 -960 960 960\" width=\"50\"><path d=\"M430-160v-540H200v-100h560v100H530v540H430Z\"/></svg>\n            <span class=\"new_block_selection_label\">Heading</span>\n        </div>\n        <div data-type=\"list\" class=\"new_block_selection\">\n            <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"50\" viewBox=\"0 -960 960 960\" width=\"50\"><path d=\"M377-198v-60h463v60H377Zm0-252v-60h463v60H377Zm0-253v-60h463v60H377ZM189-161q-28.05 0-48.025-19Q121-199 121-227.5t19.5-48q19.5-19.5 48-19.5t47.5 19.975Q255-255.05 255-227q0 27.225-19.387 46.613Q216.225-161 189-161Zm0-252q-28.05 0-48.025-19.681Q121-452.362 121-480t19.975-47.319Q160.95-547 189-547q27.225 0 46.613 19.681Q255-507.638 255-480t-19.387 47.319Q216.225-413 189-413Zm-1-253q-27.637 0-47.319-19.681Q121-705.362 121-733t19.681-47.319Q160.363-800 188-800q27.637 0 47.319 19.681Q255-760.638 255-733t-19.681 47.319Q215.637-666 188-666Z\"/></svg>\n            <span class=\"new_block_selection_label\">List</span>\n        </div>\n        <div data-type=\"hr\" class=\"new_block_selection\">\n            <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"50\" viewBox=\"0 -960 960 960\" width=\"50\"><path d=\"M160-450v-60h640v60H160Z\"/></svg>\n            <span class=\"new_block_selection_label\">Horizontal Rule</span>\n        </div>\n        <div data-type=\"html\" class=\"new_block_selection\">\n            <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"50\" viewBox=\"0 -960 960 960\" width=\"50\"><path d=\"M320-242 80-482l242-242 43 43-199 199 197 197-43 43Zm318 2-43-43 199-199-197-197 43-43 240 240-242 242Z\"/></svg>\n            <span class=\"new_block_selection_label\">Custom HTML</span>\n        </div>\n    </div>\n</div>";
 },"usePartial":true,"useData":true});
-Handlebars.partials['editor_sidebar_content_block_settings'] = template({"compiler":[8,">= 4.3.0"],"main":function(container,depth0,helpers,partials,data) {
-    return "<div class=\"editor-sidebar-structure\">\n    <button class=\"btn btn-outline-primary btn-sm\" id=\"editor_sidebar_content_block_settings_back\"><svg xmlns=\"http://www.w3.org/2000/svg\" height=\"20\" viewBox=\"0 -960 960 960\" width=\"20\"><path d=\"m274-450 248 248-42 42-320-320 320-320 42 42-248 248h526v60H274Z\"/></svg> Zurück</button>\n    <div id=\"editor_sidebar_contents\">\n        Test\n    </div>\n</div>";
+Handlebars.partials['editor_content_block_heading'] = template({"1":function(container,depth0,helpers,partials,data) {
+    var stack1, lookupProperty = container.lookupProperty || function(parent, propertyName) {
+        if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
+          return parent[propertyName];
+        }
+        return undefined
+    };
+
+  return ((stack1 = container.invokePartial(lookupProperty(partials,"editor_content_block_textelement"),depth0,{"name":"editor_content_block_textelement","data":data,"helpers":helpers,"partials":partials,"decorators":container.decorators})) != null ? stack1 : "")
+    + "​";
+},"compiler":[8,">= 4.3.0"],"main":function(container,depth0,helpers,partials,data) {
+    var stack1, helper, alias1=depth0 != null ? depth0 : (container.nullContext || {}), alias2=container.hooks.helperMissing, alias3="function", alias4=container.escapeExpression, lookupProperty = container.lookupProperty || function(parent, propertyName) {
+        if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
+          return parent[propertyName];
+        }
+        return undefined
+    };
+
+  return "<div class=\"content_block_textelement_edit_bar\">\n    <button type=\"button\" class=\"btn btn-outline-primary btn-sm textelement_edit_bar_btn\" data-action=\"bold\">Bold</button>\n</div>\n<h"
+    + alias4(((helper = (helper = lookupProperty(helpers,"level") || (depth0 != null ? lookupProperty(depth0,"level") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"level","hash":{},"data":data,"loc":{"start":{"line":4,"column":2},"end":{"line":4,"column":11}}}) : helper)))
+    + " contenteditable=\"true\" class=\"content_block_input_trigger content_block_heading_input\" data-level=\""
+    + alias4(((helper = (helper = lookupProperty(helpers,"level") || (depth0 != null ? lookupProperty(depth0,"level") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"level","hash":{},"data":data,"loc":{"start":{"line":4,"column":111},"end":{"line":4,"column":120}}}) : helper)))
+    + "\">"
+    + ((stack1 = lookupProperty(helpers,"each").call(alias1,(depth0 != null ? lookupProperty(depth0,"contents") : depth0),{"name":"each","hash":{},"fn":container.program(1, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":4,"column":122},"end":{"line":4,"column":198}}})) != null ? stack1 : "")
+    + "</h"
+    + alias4(((helper = (helper = lookupProperty(helpers,"level") || (depth0 != null ? lookupProperty(depth0,"level") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"level","hash":{},"data":data,"loc":{"start":{"line":4,"column":201},"end":{"line":4,"column":210}}}) : helper)))
+    + ">";
+},"usePartial":true,"useData":true});
+Handlebars.partials['editor_sidebar_content_block_settings'] = template({"1":function(container,depth0,helpers,partials,data) {
+    return "            <h2>Paragraph</h2>\n";
+},"3":function(container,depth0,helpers,partials,data) {
+    var stack1, alias1=depth0 != null ? depth0 : (container.nullContext || {}), lookupProperty = container.lookupProperty || function(parent, propertyName) {
+        if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
+          return parent[propertyName];
+        }
+        return undefined
+    };
+
+  return "            <h2>Heading</h2>\n            <label>Level</label>\n            <select class=\"form-select form-select-sm\" id=\"editor_sidebar_content_block_settings_heading_level_select\">\n                <option value=\"1\" "
+    + ((stack1 = lookupProperty(helpers,"if").call(alias1,((stack1 = ((stack1 = ((stack1 = (depth0 != null ? lookupProperty(depth0,"content") : depth0)) != null ? lookupProperty(stack1,"Heading") : stack1)) != null ? lookupProperty(stack1,"level_extra") : stack1)) != null ? lookupProperty(stack1,"level1") : stack1),{"name":"if","hash":{},"fn":container.program(4, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":11,"column":34},"end":{"line":11,"column":98}}})) != null ? stack1 : "")
+    + ">1</option>\n                <option value=\"2\" "
+    + ((stack1 = lookupProperty(helpers,"if").call(alias1,((stack1 = ((stack1 = ((stack1 = (depth0 != null ? lookupProperty(depth0,"content") : depth0)) != null ? lookupProperty(stack1,"Heading") : stack1)) != null ? lookupProperty(stack1,"level_extra") : stack1)) != null ? lookupProperty(stack1,"level2") : stack1),{"name":"if","hash":{},"fn":container.program(4, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":12,"column":34},"end":{"line":12,"column":98}}})) != null ? stack1 : "")
+    + ">2</option>\n                <option value=\"3\" "
+    + ((stack1 = lookupProperty(helpers,"if").call(alias1,((stack1 = ((stack1 = ((stack1 = (depth0 != null ? lookupProperty(depth0,"content") : depth0)) != null ? lookupProperty(stack1,"Heading") : stack1)) != null ? lookupProperty(stack1,"level_extra") : stack1)) != null ? lookupProperty(stack1,"level3") : stack1),{"name":"if","hash":{},"fn":container.program(4, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":13,"column":34},"end":{"line":13,"column":98}}})) != null ? stack1 : "")
+    + ">3</option>\n                <option value=\"4\" "
+    + ((stack1 = lookupProperty(helpers,"if").call(alias1,((stack1 = ((stack1 = ((stack1 = (depth0 != null ? lookupProperty(depth0,"content") : depth0)) != null ? lookupProperty(stack1,"Heading") : stack1)) != null ? lookupProperty(stack1,"level_extra") : stack1)) != null ? lookupProperty(stack1,"level4") : stack1),{"name":"if","hash":{},"fn":container.program(4, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":14,"column":34},"end":{"line":14,"column":98}}})) != null ? stack1 : "")
+    + ">4</option>\n                <option value=\"5\" "
+    + ((stack1 = lookupProperty(helpers,"if").call(alias1,((stack1 = ((stack1 = ((stack1 = (depth0 != null ? lookupProperty(depth0,"content") : depth0)) != null ? lookupProperty(stack1,"Heading") : stack1)) != null ? lookupProperty(stack1,"level_extra") : stack1)) != null ? lookupProperty(stack1,"level5") : stack1),{"name":"if","hash":{},"fn":container.program(4, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":15,"column":34},"end":{"line":15,"column":98}}})) != null ? stack1 : "")
+    + ">5</option>\n                <option value=\"6\" "
+    + ((stack1 = lookupProperty(helpers,"if").call(alias1,((stack1 = ((stack1 = ((stack1 = (depth0 != null ? lookupProperty(depth0,"content") : depth0)) != null ? lookupProperty(stack1,"Heading") : stack1)) != null ? lookupProperty(stack1,"level_extra") : stack1)) != null ? lookupProperty(stack1,"level6") : stack1),{"name":"if","hash":{},"fn":container.program(4, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":16,"column":34},"end":{"line":16,"column":98}}})) != null ? stack1 : "")
+    + ">6</option>\n            </select>\n";
+},"4":function(container,depth0,helpers,partials,data) {
+    return "selected=\"true\"";
+},"compiler":[8,">= 4.3.0"],"main":function(container,depth0,helpers,partials,data) {
+    var stack1, alias1=depth0 != null ? depth0 : (container.nullContext || {}), lookupProperty = container.lookupProperty || function(parent, propertyName) {
+        if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
+          return parent[propertyName];
+        }
+        return undefined
+    };
+
+  return "<div class=\"editor-sidebar-structure\">\n    <button class=\"btn btn-outline-primary btn-sm\" id=\"editor_sidebar_content_block_settings_back\"><svg xmlns=\"http://www.w3.org/2000/svg\" height=\"20\" viewBox=\"0 -960 960 960\" width=\"20\"><path d=\"m274-450 248 248-42 42-320-320 320-320 42 42-248 248h526v60H274Z\"/></svg> Back</button>\n    <div id=\"editor_sidebar_contents\">\n"
+    + ((stack1 = lookupProperty(helpers,"if").call(alias1,((stack1 = (depth0 != null ? lookupProperty(depth0,"content") : depth0)) != null ? lookupProperty(stack1,"Paragraph") : stack1),{"name":"if","hash":{},"fn":container.program(1, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":4,"column":8},"end":{"line":6,"column":15}}})) != null ? stack1 : "")
+    + ((stack1 = lookupProperty(helpers,"if").call(alias1,((stack1 = (depth0 != null ? lookupProperty(depth0,"content") : depth0)) != null ? lookupProperty(stack1,"Heading") : stack1),{"name":"if","hash":{},"fn":container.program(3, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":7,"column":8},"end":{"line":18,"column":15}}})) != null ? stack1 : "")
+    + "        <button class=\"btn btn-danger btn-sm mt-2\" id=\"editor_sidebar_content_block_settings_delete\">Delete Block</button>\n    </div>\n</div>";
 },"useData":true});
 Handlebars.partials['editor_content_block_note'] = template({"1":function(container,depth0,helpers,partials,data) {
     var stack1, lookupProperty = container.lookupProperty || function(parent, propertyName) {

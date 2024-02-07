@@ -1,6 +1,6 @@
 use std::time::SystemTime;
 use crate::data_storage::DataStorage;
-use crate::projects::SectionMetadata;
+use crate::projects::{InnerContentBlock, PatchInnerContentBlock, SectionMetadata};
 use crate::projects::SectionOrToc;
 use rocket::serde::json::Json;
 use std::sync::Arc;
@@ -73,7 +73,7 @@ pub async fn get_project_metadata(project_id: String, _session: Session, setting
     ApiResult::new_data(metadata)
 
 }
-trait Patch<P, T>{
+pub trait Patch<P, T>{
     fn patch(&mut self, patch: P) -> T;
 }
 
@@ -1401,6 +1401,83 @@ pub async fn get_content_block(project_id: String, content_path: String, content
     }
 }
 
+/// DELETE /api/projects/<project_id>/sections/<content_path>/content_blocks/<content_block_id>
+/// Delete a content block
+#[delete("/api/projects/<project_id>/sections/<content_path>/content_blocks/<content_block_id>")]
+pub async fn delete_content_block(project_id: String, content_path: String, content_block_id: String, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<()>> {
+    let project_id = match uuid::Uuid::parse_str(&project_id) {
+        Ok(project_id) => project_id,
+        Err(e) => {
+            println!("Couldn't parse project id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let content_block_id = match uuid::Uuid::parse_str(&content_block_id) {
+        Ok(content_block_id) => content_block_id,
+        Err(e) => {
+            println!("Couldn't parse content block id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let mut path = vec![];
+
+    for part in content_path.split(":"){
+        match uuid::Uuid::parse_str(part){
+            Ok(part) => path.push(part),
+            Err(e) => {
+                println!("Couldn't parse content path: {}", e);
+                return ApiResult::new_error(ApiError::BadRequest("Couldn't parse content path".to_string()));
+            }
+        }
+    }
+
+    if path.len() == 0{
+        println!("Couldn't parse content path: path is empty");
+        return ApiResult::new_error(ApiError::BadRequest("Couldn't parse content path".to_string()));
+    }
+
+    let project_storage = Arc::clone(project_storage);
+
+    let project = match project_storage.get_project(&project_id, settings).await {
+        Ok(project) => project,
+        Err(_) => {
+            println!("Couldn't get project with id {}", project_id);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let mut project = project.write().unwrap();
+
+    let section = crate::data_storage::get_section_by_path_mut(&mut project, &path);
+
+    match section{
+        Ok(section) => {
+            let mut index = None;
+            for (i, child) in section.children.iter().enumerate(){
+                match child{
+                    crate::projects::SectionContent::ContentBlock(block) => {
+                        if block.id.unwrap_or_default() == content_block_id{
+                            index = Some(i);
+                            break;
+                        }
+                    },
+                    _ => {},
+                }
+            }
+
+            if let Some(index) = index{
+                section.children.remove(index);
+                ApiResult::new_data(())
+            }else{
+                ApiResult::new_error(ApiError::NotFound)
+            }
+        },
+        Err(e) => ApiResult::new_error(e)
+    }
+}
+
 /// POST /api/projects/<project_id>/sections/<content_path>/content_blocks
 /// Add a new content block to a section
 #[post("/api/projects/<project_id>/sections/<content_path>/content_blocks", data = "<content_block>")]
@@ -1538,6 +1615,138 @@ pub async fn update_contentblock(project_id: String, content_block_id: String, c
     }
 }
 
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq, Default)]
+struct PatchContentBlock{
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "::serde_with::rust::double_option")]
+    #[bincode(with_serde)]
+    pub id: Option<Option<uuid::Uuid>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "::serde_with::rust::double_option")]
+    #[bincode(with_serde)]
+    pub revision_id: Option<Option<uuid::Uuid>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "::serde_with::rust::double_option")]
+    pub content: Option<Option<PatchInnerContentBlock>>,
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "::serde_with::rust::double_option")]
+    pub css_classes: Option<Option<Vec<String>>>,
+}
+impl Patch<PatchContentBlock, ContentBlock> for ContentBlock{
+    fn patch(&mut self, patch: PatchContentBlock) -> ContentBlock {
+        let new_block = self.clone();
+
+        if let Some(id) = patch.id{
+            self.id = id;
+        }
+        if let Some(revision_id) = patch.revision_id{
+            self.revision_id = revision_id;
+        }
+        if let Some(content) = patch.content{
+            match content{
+                Some(content) => {
+                    match self.content{
+                        Some(ref mut inner_content) => {
+                            let new = inner_content.patch(content);
+                            self.content = Some(new);
+                        },
+                        None => { //TODO: do not panic
+                            panic!("Content block has no content, but patch has content");
+                        }
+                    }
+                },
+                None => {
+                    self.content = None;
+                }
+
+            }
+        }
+        if let Some(css_classes) = patch.css_classes{
+            self.css_classes = css_classes;
+        }
+        self.clone()
+    }
+}
+
+/// PATCH /api/projects/<project_id>/sections/<content_path>/content_blocks/<content_block_id>
+/// Update a content block by patching it
+#[patch("/api/projects/<project_id>/sections/<content_path>/content_blocks/<content_block_id>", data = "<content_block_patch>")]
+pub async fn patch_contentblock(project_id: String, content_block_id: String, content_path: String, content_block_patch: Json<PatchContentBlock>, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<ContentBlock>> {
+    let project_id = match uuid::Uuid::parse_str(&project_id) {
+        Ok(project_id) => project_id,
+        Err(e) => {
+            println!("Couldn't parse project id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let content_block_id = match uuid::Uuid::parse_str(&content_block_id) {
+        Ok(content_block_id) => content_block_id,
+        Err(e) => {
+            println!("Couldn't parse content block id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let mut path = vec![];
+
+    for part in content_path.split(":") {
+        match uuid::Uuid::parse_str(part) {
+            Ok(part) => path.push(part),
+            Err(e) => {
+                println!("Couldn't parse content path: {}", e);
+                return ApiResult::new_error(ApiError::BadRequest("Couldn't parse content path".to_string()));
+            }
+        }
+    }
+
+    if path.len() == 0 {
+        println!("Couldn't parse content path: path is empty");
+        return ApiResult::new_error(ApiError::BadRequest("Couldn't parse content path".to_string()));
+    }
+
+    let project_storage = Arc::clone(project_storage);
+
+    let project = match project_storage.get_project(&project_id, settings).await {
+        Ok(project) => project,
+        Err(_) => {
+            println!("Couldn't get project with id {}", project_id);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let mut project = project.write().unwrap();
+
+    let section = crate::data_storage::get_section_by_path_mut(&mut project, &path);
+
+    match section {
+        Ok(section) => {
+            for child in section.children.iter_mut() {
+                match child {
+                    crate::projects::SectionContent::ContentBlock(block) => {
+                        if block.id.unwrap_or_default() == content_block_id {
+                            if block.content.is_none(){
+                                return ApiResult::new_error(ApiError::BadRequest("Content block has no content. Can't patch.".to_string()));
+                            }
+                            let mut new_block_data = block.patch(content_block_patch.into_inner());
+
+                            // Check blockdata
+                            if new_block_data.id.is_none(){
+                                return ApiResult::new_error(ApiError::BadRequest("Content block id is missing".to_string()));
+                            }
+                            //TODO: check if revision_id is none
+
+                            *block = new_block_data.clone();
+                            return ApiResult::new_data(new_block_data);
+                        }
+                    },
+                    _ => {},
+                }
+            }
+            ApiResult::new_error(
+                ApiError::NotFound
+            )
+        },
+        Err(e) => ApiResult::new_error(e)
+    }
+}
+
 #[derive(Deserialize)]
 pub struct MoveContentBlock{
     pub content_block_id: uuid::Uuid,
@@ -1620,7 +1829,7 @@ pub async fn move_contentblock(project_id: String, content_path: String, move_da
             for (i, block) in section.children.iter().enumerate(){
                 if let crate::projects::SectionContent::ContentBlock(block) = block{
                     if block.id.unwrap_or_default() == insert_after{
-                        insert_pos = Some(i);
+                        insert_pos = Some(i+1);
                         break;
                     }
                 }
@@ -1639,7 +1848,7 @@ pub async fn move_contentblock(project_id: String, content_path: String, move_da
             return ApiResult::new_error(ApiError::NotFound);
         }
     };
-    section.children.insert(insert_pos+1, block);
+    section.children.insert(insert_pos, block);
     ApiResult::new_data(())
 
 }

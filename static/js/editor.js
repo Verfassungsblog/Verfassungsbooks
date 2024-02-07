@@ -1034,34 +1034,47 @@ var Editor;
                 button.addEventListener("click", Editor.Sidebar.show_content_block_settings_sidebar);
             }
         }
+        // @ts-ignore
         function content_block_edit_bar_handler(e) {
-            let action = e.target.getAttribute("data-action");
-            let selection = window.getSelection();
-            let range = selection.getRangeAt(0); // TODO: handle multiple ranges
-            function checkIfFormatted(node, type) {
-                while (node != null && node.nodeName !== "BODY") {
-                    if (node.nodeName === "SPAN" && node.classList.contains("formatted_text_" + type)) {
-                        return node; // Gibt den gefundenen <span> zurück
+            return __awaiter(this, void 0, void 0, function* () {
+                let action = e.target.getAttribute("data-action");
+                let selection = window.getSelection();
+                let range = selection.getRangeAt(0); // TODO: handle multiple ranges
+                function checkIfFormatted(node, type) {
+                    // Check if next parent is .inner_content_block
+                    if (node.parentNode.classList.contains("inner_content_block")) {
+                        // Check if the first child is a span with the class formatted_text_bold
+                        if (node.firstChild.nodeName === "SPAN" && node.firstChild.classList.contains("formatted_text_" + type)) {
+                            return node.firstChild; // Gibt den gefundenen <span> zurück
+                        }
                     }
-                    node = node.parentNode;
+                    while (node != null && node.nodeName !== "BODY") {
+                        if (node.nodeName === "SPAN" && node.classList.contains("formatted_text_" + type)) {
+                            return node; // Gibt den gefundenen <span> zurück
+                        }
+                        node = node.parentNode;
+                    }
+                    return null;
                 }
-                return null;
-            }
-            let formattedNode = checkIfFormatted(range.startContainer, "bold");
-            if (formattedNode) {
-                // Wenn bereits formatiert, <span> entfernen
-                let parent = formattedNode.parentNode;
-                while (formattedNode.firstChild) {
-                    parent.insertBefore(formattedNode.firstChild, formattedNode);
+                let formattedNode = checkIfFormatted(range.startContainer, action);
+                if (formattedNode) {
+                    // Wenn bereits formatiert, <span> entfernen
+                    let parent = formattedNode.parentNode;
+                    while (formattedNode.firstChild) {
+                        parent.insertBefore(formattedNode.firstChild, formattedNode);
+                    }
+                    parent.removeChild(formattedNode);
+                    yield content_block_input_handler(e.target);
+                    return;
                 }
-                parent.removeChild(formattedNode);
-                return;
-            }
-            let new_element = document.createElement("span");
-            new_element.classList.add("formatted_text");
-            new_element.classList.add("formatted_text_bold");
-            range.surroundContents(new_element);
-            selection.removeAllRanges();
+                let new_element = document.createElement("span");
+                new_element.classList.add("formatted_text");
+                new_element.classList.add("formatted_text_" + action);
+                range.surroundContents(new_element);
+                selection.removeAllRanges();
+                console.log(e.target);
+                yield content_block_input_handler(e.target);
+            });
         }
         // @ts-ignore
         function content_block_move_down_handler(e) {
@@ -1124,12 +1137,19 @@ var Editor;
         // @ts-ignore
         function content_block_input_handler(input) {
             return __awaiter(this, void 0, void 0, function* () {
+                let changed = null;
+                if (input.target) {
+                    changed = input.target;
+                }
+                else {
+                    changed = input;
+                }
                 // Only store the content block in the to upload list if it's not already there
                 // @ts-ignore
-                if (pending_content_block_changes.includes(input.target)) {
+                if (pending_content_block_changes.includes(changed)) {
                     return;
                 }
-                pending_content_block_changes.push(input.target);
+                pending_content_block_changes.push(changed);
                 if (typing_timer) {
                     clearTimeout(typing_timer);
                 }
@@ -1157,7 +1177,9 @@ var Editor;
         }
         function clean_content_block_input(block) {
             let input = block.getElementsByClassName("content_block_input_trigger")[0];
-            input.innerHTML = input.innerHTML.replace("\n", "");
+            if (input) {
+                input.innerHTML = input.innerHTML.replace("\n", "");
+            }
         }
         // @ts-ignore
         function content_block_change_handler(e) {
@@ -1278,32 +1300,47 @@ var Editor;
                     console.error("No block type specified");
                     return;
                 }
+                let block = null;
                 if (block_type === "paragraph") {
-                    let paragraph = {
+                    block = {
                         content: {
                             Paragraph: {
                                 contents: []
                             }
                         },
-                        css_class: null,
+                        css_classes: null,
                         id: null,
                         revision_id: null
                     };
-                    try {
-                        let res = yield send_add_new_content_block(globalThis.section_path, paragraph);
-                        console.log(res);
-                        // @ts-ignore
-                        let html = Handlebars.templates.editor_content_block(Editor.ContentBlockParser.contentblock_from_api(res));
-                        document.getElementById("section_content_blocks_inner").innerHTML += html;
-                        add_content_block_handlers();
-                    }
-                    catch (e) {
-                        console.error(e);
-                        Tools.show_alert("Failed to add new paragraph.", "danger");
-                    }
+                }
+                else if (block_type === "heading") {
+                    block = {
+                        content: {
+                            Heading: {
+                                level: 1,
+                                contents: []
+                            }
+                        },
+                        css_classes: null,
+                        id: null,
+                        revision_id: null
+                    };
                 }
                 else {
                     Tools.show_alert("Block type not implemented.", "warning");
+                    return;
+                }
+                try {
+                    let res = yield send_add_new_content_block(globalThis.section_path, block);
+                    console.log(res);
+                    // @ts-ignore
+                    let html = Handlebars.templates.editor_content_block(Editor.ContentBlockParser.contentblock_from_api(res));
+                    document.getElementById("section_content_blocks_inner").innerHTML += html;
+                    add_content_block_handlers();
+                }
+                catch (e) {
+                    console.error(e);
+                    Tools.show_alert("Failed to add new Block.", "danger");
                 }
             });
         }
@@ -1812,6 +1849,13 @@ var Editor;
                 }
                 content = { Paragraph: { contents: contents } };
             }
+            else if (data.content.Heading) {
+                let contents = [];
+                for (let heading of data.content.Heading.contents) {
+                    contents.push(add_extra_fields(heading));
+                }
+                content = { Heading: { level: data.content.Heading.level, contents: contents } };
+            }
             else {
                 console.error("Unknown content type: ", data.content);
                 throw new Error("Unknown content type: " + data.content);
@@ -1820,7 +1864,7 @@ var Editor;
                 id: data.id,
                 revision_id: data.revision_id,
                 content: content,
-                css_class: data.css_class
+                css_classes: data.css_class
             };
             //TODO: Add extra fields for other types
             return res;
@@ -1830,7 +1874,7 @@ var Editor;
             //TODO: Clean up unnecessary splits into multiple text elements (e.g. after formatting got removed)
             let res = {
                 content: undefined,
-                css_class: null,
+                css_classes: null,
                 id: block.getAttribute("data-block-id") || null,
                 revision_id: null
             };
@@ -1851,6 +1895,25 @@ var Editor;
                     paragraph_contents.pop();
                 }
                 res.content = { Paragraph: { contents: paragraph_contents } };
+                return res;
+            }
+            else if (type === "heading") {
+                let input = block.getElementsByClassName("content_block_heading_input")[0];
+                if (input === null) {
+                    throw new Error("Heading block does not contain a heading input");
+                }
+                let level = parseInt(input.getAttribute("data-level"));
+                let inner_content = input.childNodes;
+                let heading_text_contents = [];
+                // @ts-ignore
+                for (let node of inner_content) {
+                    heading_text_contents = heading_text_contents.concat(parse_node(node));
+                }
+                // Remove last line break
+                if (heading_text_contents.length > 0 && heading_text_contents[heading_text_contents.length - 1].LineBreak) {
+                    heading_text_contents.pop();
+                }
+                res.content = { Heading: { level: level, contents: heading_text_contents } };
                 return res;
             }
             else {
@@ -1941,9 +2004,11 @@ var Editor;
 (function (Editor) {
     let Sidebar;
     (function (Sidebar) {
+        var current_content_block_settings_shown = null;
         // @ts-ignore
         function build_sidebar() {
             return __awaiter(this, void 0, void 0, function* () {
+                current_content_block_settings_shown = null;
                 let data = {};
                 let get_content_promise = send_get_contents();
                 let get_metadata_promise = Editor.ProjectOverview.load_project_metadata(globalThis.project_id);
@@ -1971,17 +2036,142 @@ var Editor;
             });
         }
         Sidebar.build_sidebar = build_sidebar;
+        // @ts-ignore
         function show_content_block_settings_sidebar(caller) {
-            let content_block = caller.target.closest(".content_block");
-            let id = content_block.getAttribute("data-block-id");
-            console.log("Showing settings for content block " + id);
-            let sidebar = document.getElementById("editor-sidebar");
-            // @ts-ignore
-            sidebar.innerHTML = Handlebars.templates.editor_sidebar_content_block_settings();
-            // Add back listener:
-            document.getElementById("editor_sidebar_content_block_settings_back").addEventListener("click", build_sidebar);
+            return __awaiter(this, void 0, void 0, function* () {
+                let content_block = caller.target.closest(".content_block");
+                let id = content_block.getAttribute("data-block-id");
+                if (current_content_block_settings_shown !== id) {
+                    current_content_block_settings_shown = id;
+                }
+                else { // We already have the settings for this content block shown, so we do nothing
+                    return;
+                }
+                let data = yield send_get_content_block(globalThis.section_path, id);
+                if (data.content.hasOwnProperty("Heading")) {
+                    let level = data.content["Heading"]["level"];
+                    data.content["Heading"]["level_extra"] = {};
+                    data.content["Heading"]["level_extra"]["level" + level] = true;
+                }
+                let sidebar = document.getElementById("editor-sidebar");
+                // @ts-ignore
+                sidebar.innerHTML = Handlebars.templates.editor_sidebar_content_block_settings(data);
+                // Add back listener:
+                document.getElementById("editor_sidebar_content_block_settings_back").addEventListener("click", build_sidebar);
+                // @ts-ignore
+                document.getElementById("editor_sidebar_content_block_settings_delete").addEventListener("click", function () {
+                    return __awaiter(this, void 0, void 0, function* () {
+                        try {
+                            yield send_delete_content_block(globalThis.section_path, id);
+                            // Remove content block from section view
+                            content_block.remove();
+                            yield build_sidebar();
+                        }
+                        catch (e) {
+                            console.error(e);
+                            Tools.show_alert("Failed to delete content block", "danger");
+                        }
+                    });
+                });
+                // Add update listeners:
+                if (data.content.hasOwnProperty("Heading")) {
+                    // @ts-ignore
+                    document.getElementById("editor_sidebar_content_block_settings_heading_level_select").addEventListener("change", function () {
+                        return __awaiter(this, void 0, void 0, function* () {
+                            let new_level = parseInt(document.getElementById("editor_sidebar_content_block_settings_heading_level_select").value);
+                            console.log(new_level);
+                            try {
+                                let block = {
+                                    content: {
+                                        Heading: {
+                                            level: new_level,
+                                        }
+                                    }
+                                };
+                                yield patch_content_block(globalThis.section_path, id, block);
+                                // Change level of heading in section view
+                                let input = content_block.getElementsByClassName("content_block_heading_input")[0];
+                                input.outerHTML = input.outerHTML.replace(/<h[1-6]/, "<h" + new_level);
+                                input.setAttribute("data-level", new_level.toString());
+                                Tools.show_alert("Updated content block", "success");
+                            }
+                            catch (e) {
+                                console.error(e);
+                                Tools.show_alert("Failed to update content block", "danger");
+                            }
+                        });
+                    });
+                }
+            });
         }
         Sidebar.show_content_block_settings_sidebar = show_content_block_settings_sidebar;
+        function patch_content_block(section_path, block_id, patch_data) {
+            return __awaiter(this, void 0, void 0, function* () {
+                const response = yield fetch(`/api/projects/${globalThis.project_id}/sections/${section_path}/content_blocks/${block_id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(patch_data)
+                });
+                if (!response.ok) {
+                    throw new Error(`Failed to patch content block: ${response.status}`);
+                }
+                else {
+                    let response_data = yield response.json();
+                    if (response_data.hasOwnProperty("error")) {
+                        throw new Error(`Failed to patch content block: ${response_data["error"]}`);
+                    }
+                    else {
+                        return response_data.data;
+                    }
+                }
+            });
+        }
+        function send_get_content_block(section_path, block_id) {
+            return __awaiter(this, void 0, void 0, function* () {
+                const response = yield fetch(`/api/projects/${globalThis.project_id}/sections/${section_path}/content_blocks/${block_id}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                });
+                if (!response.ok) {
+                    throw new Error(`Failed to get content block: ${response.status}`);
+                }
+                else {
+                    let response_data = yield response.json();
+                    if (response_data.hasOwnProperty("error")) {
+                        throw new Error(`Failed to get content block: ${response_data["error"]}`);
+                    }
+                    else {
+                        return response_data.data;
+                    }
+                }
+            });
+        }
+        function send_delete_content_block(section_path, block_id) {
+            return __awaiter(this, void 0, void 0, function* () {
+                const response = yield fetch(`/api/projects/${globalThis.project_id}/sections/${section_path}/content_blocks/${block_id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                });
+                if (!response.ok) {
+                    throw new Error(`Failed to delete content block: ${response.status}`);
+                }
+                else {
+                    let response_data = yield response.json();
+                    if (response_data.hasOwnProperty("error")) {
+                        throw new Error(`Failed to delete content block: ${response_data["error"]}`);
+                    }
+                    else {
+                        return response_data.data;
+                    }
+                }
+            });
+        }
         function add_toc_listeners() {
             // @ts-ignore
             for (let toc_item of document.getElementsByClassName("editor_sidebar_contents_section")) {

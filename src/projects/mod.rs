@@ -1,3 +1,4 @@
+use crate::projects::api::Patch;
 use serde_derive::{Deserialize, Serialize};
 use chrono::NaiveDateTime;
 use bincode::{Encode, Decode};
@@ -234,12 +235,11 @@ impl ContentBlock{
     }
 }
 
-/// Enum to differentiate between different content blocks
 #[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
-pub enum InnerContentBlock{
+enum PatchInnerContentBlock{
     Paragraph(Paragraph),
     Image, //TODO: implement
-    Headline(Headline),
+    Heading(PatchHeading),
     List, //TODO: implement
     Blockquote, //TODO: implement
     CustomHTML(String),
@@ -247,9 +247,95 @@ pub enum InnerContentBlock{
     Table //TODO: implement
 }
 
+impl Patch<PatchInnerContentBlock, InnerContentBlock> for InnerContentBlock{
+    fn patch(&mut self, patch: PatchInnerContentBlock) -> InnerContentBlock {
+        match patch{
+            PatchInnerContentBlock::Heading(patch) => {
+                match self{
+                    InnerContentBlock::Heading(heading) => InnerContentBlock::Heading(heading.patch(patch)),
+                    _ => self.clone(),
+                }
+            },
+            PatchInnerContentBlock::CustomHTML(html) => {
+                match self{
+                    InnerContentBlock::CustomHTML(_) => InnerContentBlock::CustomHTML(html),
+                    _ => self.clone(),
+                }
+            },
+            PatchInnerContentBlock::HorizontalRule => {
+                match self{
+                    InnerContentBlock::HorizontalRule => InnerContentBlock::HorizontalRule,
+                    _ => self.clone(),
+                }
+            },
+
+            PatchInnerContentBlock::Paragraph(paragraph) => {
+                match self{
+                    InnerContentBlock::Paragraph(_) => InnerContentBlock::Paragraph(paragraph),
+                    _ => self.clone(),
+                }
+            }
+            PatchInnerContentBlock::Image => {
+                match self{
+                    InnerContentBlock::Image => InnerContentBlock::Image,
+                    _ => self.clone(),
+                }
+            }
+            PatchInnerContentBlock::List => {
+                match self{
+                    InnerContentBlock::List => InnerContentBlock::List,
+                    _ => self.clone(),
+                }
+            }
+            PatchInnerContentBlock::Blockquote => {
+                match self{
+                    InnerContentBlock::Blockquote => InnerContentBlock::Blockquote,
+                    _ => self.clone(),
+                }
+            }
+            PatchInnerContentBlock::Table => {
+                match self{
+                    InnerContentBlock::Table => InnerContentBlock::Table,
+                    _ => self.clone(),
+                }
+            }
+        }
+    }
+}
+
+/// Enum to differentiate between different content blocks
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
+pub enum InnerContentBlock{
+    Paragraph(Paragraph),
+    Image, //TODO: implement
+    Heading(Heading),
+    List, //TODO: implement
+    Blockquote, //TODO: implement
+    CustomHTML(String),
+    HorizontalRule,
+    Table //TODO: implement
+}
+
+impl Patch<PatchHeading, Heading> for Heading{
+    fn patch(&mut self, patch: PatchHeading) -> Heading {
+        let level = patch.level.unwrap_or_else(|| self.level);
+        let contents = patch.contents.unwrap_or_else(|| self.contents.clone());
+        Heading{
+            level,
+            contents,
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
+struct PatchHeading{
+    pub level: Option<u8>,
+    pub contents: Option<Vec<TextElement>>,
+}
+
 /// Headline Content Block, contains the level and the contents
 #[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
-pub struct Headline{
+pub struct Heading {
     /// Level of the headline (e.g. h1, h2, ...)
     pub level: u8,
     /// Contents of the headline as TextElements

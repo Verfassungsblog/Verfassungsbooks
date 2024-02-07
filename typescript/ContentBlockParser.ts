@@ -40,15 +40,21 @@ namespace Editor{
             contents: Array<TextElement>;
         }
 
+        interface Heading{
+            level: number;
+            contents: Array<TextElement>;
+        }
+
         interface InnerContentBlock{
-            Paragraph?: Paragraph
+            Paragraph?: Paragraph,
+            Heading?: Heading
         }
 
         export interface ContentBlock{
             id: string | null;
             revision_id: string | null;
             content: InnerContentBlock;
-            css_class: Array<string> | null;
+            css_classes: Array<string> | null;
         }
 
 
@@ -117,7 +123,14 @@ namespace Editor{
                     contents.push(add_extra_fields(paragraph));
                 }
                 content = {Paragraph: {contents: contents}};
-            }else{
+            }else if(data.content.Heading){
+                   let contents = [];
+                    for(let heading of data.content.Heading.contents){
+                        contents.push(add_extra_fields(heading));
+                    }
+                    content = {Heading: {level: data.content.Heading.level, contents: contents}};
+            }
+            else{
                 console.error("Unknown content type: ", data.content);
                 throw new Error("Unknown content type: " + data.content);
             }
@@ -126,7 +139,7 @@ namespace Editor{
                 id: data.id,
                 revision_id: data.revision_id,
                 content: content,
-                css_class: data.css_class
+                css_classes: data.css_class
             }
 
             //TODO: Add extra fields for other types
@@ -138,7 +151,7 @@ namespace Editor{
             //TODO: Clean up unnecessary splits into multiple text elements (e.g. after formatting got removed)
             let res : ContentBlock = {
                 content: undefined,
-                css_class: null,
+                css_classes: null,
                 id: block.getAttribute("data-block-id") || null,
                 revision_id: null
             }
@@ -166,6 +179,29 @@ namespace Editor{
 
                 res.content = {Paragraph: {contents: paragraph_contents}};
                 return res
+            }else if(type === "heading") {
+                let input = block.getElementsByClassName("content_block_heading_input")[0];
+
+                if(input === null){
+                    throw new Error("Heading block does not contain a heading input");
+                }
+
+                let level = parseInt(input.getAttribute("data-level"));
+                let inner_content = input.childNodes;
+                let heading_text_contents: Array<TextElement> = [];
+
+                // @ts-ignore
+                for(let node of inner_content){
+                    heading_text_contents = heading_text_contents.concat(parse_node(node));
+                }
+
+                // Remove last line break
+                if(heading_text_contents.length > 0 && heading_text_contents[heading_text_contents.length-1].LineBreak){
+                    heading_text_contents.pop();
+                }
+
+                res.content = {Heading: {level: level, contents: heading_text_contents}};
+                return res;
             }else{
                 console.error("Unknown block type to parse: ", type);
                 throw new Error("Unknown block type to parse: " + type);

@@ -2,6 +2,7 @@
 namespace Editor{
     export namespace SectionView{
 
+        import ContentBlock = Editor.ContentBlockParser.ContentBlock;
         declare var section_data: object | null;
         declare var typing_timer: number | null;
         declare var pending_content_block_changes: Array<HTMLElement>;
@@ -152,13 +153,22 @@ namespace Editor{
             }
         }
 
-        function content_block_edit_bar_handler(e){
+        // @ts-ignore
+        async function content_block_edit_bar_handler(e){
             let action = e.target.getAttribute("data-action");
 
             let selection = window.getSelection();
             let range = selection.getRangeAt(0); // TODO: handle multiple ranges
 
             function checkIfFormatted(node, type) {
+                // Check if next parent is .inner_content_block
+                if(node.parentNode.classList.contains("inner_content_block")){
+                    // Check if the first child is a span with the class formatted_text_bold
+                    if(node.firstChild.nodeName === "SPAN" && node.firstChild.classList.contains("formatted_text_"+type)){
+                        return node.firstChild; // Gibt den gefundenen <span> zurück
+                    }
+                }
+
                 while (node != null && node.nodeName !== "BODY") {
                     if (node.nodeName === "SPAN" && node.classList.contains("formatted_text_"+type)) {
                         return node; // Gibt den gefundenen <span> zurück
@@ -168,7 +178,7 @@ namespace Editor{
                 return null;
             }
 
-            let formattedNode = checkIfFormatted(range.startContainer, "bold");
+            let formattedNode = checkIfFormatted(range.startContainer, action);
             if (formattedNode) {
                 // Wenn bereits formatiert, <span> entfernen
                 let parent = formattedNode.parentNode;
@@ -176,14 +186,17 @@ namespace Editor{
                     parent.insertBefore(formattedNode.firstChild, formattedNode);
                 }
                 parent.removeChild(formattedNode);
+                await content_block_input_handler(e.target);
                 return;
             }
 
             let new_element = document.createElement("span");
             new_element.classList.add("formatted_text");
-            new_element.classList.add("formatted_text_bold");
+            new_element.classList.add("formatted_text_"+action);
             range.surroundContents(new_element);
             selection.removeAllRanges();
+            console.log(e.target);
+            await content_block_input_handler(e.target);
         }
 
         // @ts-ignore
@@ -243,12 +256,18 @@ namespace Editor{
 
         // @ts-ignore
         async function content_block_input_handler(input){
+            let changed = null;
+            if(input.target){
+                changed = input.target;
+            }else{
+                changed = input;
+            }
             // Only store the content block in the to upload list if it's not already there
             // @ts-ignore
-            if(pending_content_block_changes.includes(input.target)){
+            if(pending_content_block_changes.includes(changed)){
                 return;
             }
-            pending_content_block_changes.push(input.target);
+            pending_content_block_changes.push(changed);
             if (typing_timer) {
                 clearTimeout(typing_timer);
             }
@@ -274,7 +293,9 @@ namespace Editor{
 
         function clean_content_block_input(block){
             let input = block.getElementsByClassName("content_block_input_trigger")[0];
-            input.innerHTML = input.innerHTML.replace("\n", "");
+            if(input){
+                input.innerHTML = input.innerHTML.replace("\n", "");
+            }
         }
 
         // @ts-ignore
@@ -382,32 +403,48 @@ namespace Editor{
                 console.error("No block type specified");
                 return;
             }
+            let block : ContentBlock | null = null;
+
             if (block_type === "paragraph") {
-                let paragraph: Editor.ContentBlockParser.ContentBlock = {
+                block = {
                     content: {
                         Paragraph: {
                             contents: [
                             ]
                         }
                     },
-                    css_class: null,
+                    css_classes: null,
                     id: null,
                     revision_id: null
                 }
-                try {
-                    let res = await send_add_new_content_block(globalThis.section_path, paragraph);
-                    console.log(res);
-                    // @ts-ignore
-                    let html = Handlebars.templates.editor_content_block(ContentBlockParser.contentblock_from_api(res));
-                    document.getElementById("section_content_blocks_inner").innerHTML += html;
-                    add_content_block_handlers();
-
-                } catch (e) {
-                    console.error(e);
-                    Tools.show_alert("Failed to add new paragraph.", "danger");
+            }else if(block_type === "heading"){
+                block = {
+                    content: {
+                        Heading: {
+                            level: 1,
+                            contents: []
+                        }
+                    },
+                    css_classes: null,
+                    id: null,
+                    revision_id: null
                 }
             }else{
                 Tools.show_alert("Block type not implemented.", "warning");
+                return;
+            }
+
+            try {
+                let res = await send_add_new_content_block(globalThis.section_path, block);
+                console.log(res);
+                // @ts-ignore
+                let html = Handlebars.templates.editor_content_block(ContentBlockParser.contentblock_from_api(res));
+                document.getElementById("section_content_blocks_inner").innerHTML += html;
+                add_content_block_handlers();
+
+            } catch (e) {
+                console.error(e);
+                Tools.show_alert("Failed to add new Block.", "danger");
             }
         }
 

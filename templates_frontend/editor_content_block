@@ -1,7 +1,11 @@
 <div class="content_block"
      {{#if content.Paragraph}}
      data-block-type="paragraph"
-    {{/if}} data-block-id="{{id}}">
+    {{/if}}
+    {{#if content.Heading}}
+    data-block-type="heading"
+    {{/if}}
+data-block-id="{{id}}">
 <div class="content_block_ctls">
     <!-- Label-->
     <span class="content_block_ctls_type"><svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20"><path d="M160-200v-60h386v60H160Zm0-167v-60h640v60H160Zm0-166v-60h640v60H160Zm0-167v-60h640v60H160Z"></path></svg></span>
@@ -13,6 +17,9 @@
     <div class="inner_content_block">
     {{#if content.Paragraph}}
     {{> editor_content_block_paragraph content.Paragraph}}
+    {{/if}}
+    {{#if content.Heading}}
+    {{> editor_content_block_heading content.Heading}}
     {{/if}}
     </div>
 </div>

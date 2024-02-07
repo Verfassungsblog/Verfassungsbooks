@@ -1,8 +1,11 @@
 /// <reference path="Editor.ts" />
 namespace Editor{
     export namespace Sidebar{
+        var current_content_block_settings_shown = null;
+
         // @ts-ignore
         export async function build_sidebar(){
+            current_content_block_settings_shown = null;
             let data = {};
             let get_content_promise = send_get_contents();
             let get_metadata_promise = Editor.ProjectOverview.load_project_metadata(globalThis.project_id);
@@ -32,16 +35,128 @@ namespace Editor{
             document.getElementById("editor_sidebar_project_title").addEventListener("click", ProjectOverview.show_overview);
         }
 
-        export function show_content_block_settings_sidebar(caller){
+        // @ts-ignore
+        export async function show_content_block_settings_sidebar(caller){
             let content_block = caller.target.closest(".content_block");
             let id = content_block.getAttribute("data-block-id");
-            console.log("Showing settings for content block "+id);
+
+            if(current_content_block_settings_shown !== id) {
+                current_content_block_settings_shown = id;
+            }else{ // We already have the settings for this content block shown, so we do nothing
+                return;
+            }
+
+            let data = await send_get_content_block(globalThis.section_path, id);
+
+            if(data.content.hasOwnProperty("Heading")){
+                let level = data.content["Heading"]["level"];
+                data.content["Heading"]["level_extra"] = {};
+                data.content["Heading"]["level_extra"]["level"+level] = true;
+            }
+
             let sidebar = document.getElementById("editor-sidebar");
             // @ts-ignore
-            sidebar.innerHTML = Handlebars.templates.editor_sidebar_content_block_settings();
+            sidebar.innerHTML = Handlebars.templates.editor_sidebar_content_block_settings(data);
 
             // Add back listener:
             document.getElementById("editor_sidebar_content_block_settings_back").addEventListener("click", build_sidebar);
+            // @ts-ignore
+            document.getElementById("editor_sidebar_content_block_settings_delete").addEventListener("click", async function (){
+                try{
+                    await send_delete_content_block(globalThis.section_path, id);
+                    // Remove content block from section view
+                    content_block.remove();
+                    await build_sidebar();
+                }catch (e) {
+                    console.error(e);
+                    Tools.show_alert("Failed to delete content block", "danger");
+                }
+            });
+
+            // Add update listeners:
+            if(data.content.hasOwnProperty("Heading")){
+                // @ts-ignore
+                document.getElementById("editor_sidebar_content_block_settings_heading_level_select").addEventListener("change", async function (){
+                    let new_level = parseInt((<HTMLSelectElement>document.getElementById("editor_sidebar_content_block_settings_heading_level_select")).value);
+                    console.log(new_level);
+                    try{
+                        let block =  {
+                            content: {
+                                Heading: {
+                                    level: new_level,
+                                }
+                            }
+                        }
+                        await patch_content_block(globalThis.section_path, id, block);
+                        // Change level of heading in section view
+                        let input = content_block.getElementsByClassName("content_block_heading_input")[0];
+                        input.outerHTML = input.outerHTML.replace(/<h[1-6]/, "<h"+new_level);
+                        input.setAttribute("data-level", new_level.toString());
+                        Tools.show_alert("Updated content block", "success");
+                    }catch (e) {
+                        console.error(e);
+                        Tools.show_alert("Failed to update content block", "danger");
+                    }
+                });
+            }
+        }
+
+        async function patch_content_block(section_path, block_id, patch_data){
+            const response = await fetch(`/api/projects/${globalThis.project_id}/sections/${section_path}/content_blocks/${block_id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(patch_data)
+            });
+            if(!response.ok){
+                throw new Error(`Failed to patch content block: ${response.status}`);
+            }else{
+                let response_data = await response.json();
+                if(response_data.hasOwnProperty("error")) {
+                    throw new Error(`Failed to patch content block: ${response_data["error"]}`);
+                }else{
+                    return response_data.data;
+                }
+            }
+        }
+
+        async function send_get_content_block(section_path, block_id){
+            const response = await fetch(`/api/projects/${globalThis.project_id}/sections/${section_path}/content_blocks/${block_id}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+            });
+            if(!response.ok){
+                throw new Error(`Failed to get content block: ${response.status}`);
+            }else{
+                let response_data = await response.json();
+                if(response_data.hasOwnProperty("error")) {
+                    throw new Error(`Failed to get content block: ${response_data["error"]}`);
+                }else{
+                    return response_data.data;
+                }
+            }
+        }
+
+        async function send_delete_content_block(section_path, block_id){
+            const response = await fetch(`/api/projects/${globalThis.project_id}/sections/${section_path}/content_blocks/${block_id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+            });
+            if(!response.ok){
+                throw new Error(`Failed to delete content block: ${response.status}`);
+            }else{
+                let response_data = await response.json();
+                if(response_data.hasOwnProperty("error")) {
+                    throw new Error(`Failed to delete content block: ${response_data["error"]}`);
+                }else{
+                    return response_data.data;
+                }
+            }
         }
 
         function add_toc_listeners(){
