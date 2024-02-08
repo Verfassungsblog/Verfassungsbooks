@@ -429,6 +429,18 @@ namespace Editor{
                     id: null,
                     revision_id: null
                 }
+            }else if(block_type === "list") {
+                block = {
+                    id: null,
+                    revision_id: null,
+                    css_classes: null,
+                    content: {
+                        List: {
+                            list_type: "Unordered",
+                            items: []
+                        }
+                    }
+                }
             }else{
                 Tools.show_alert("Block type not implemented.", "warning");
                 return;
@@ -441,7 +453,6 @@ namespace Editor{
                 let html = Handlebars.templates.editor_content_block(ContentBlockParser.contentblock_from_api(res));
                 document.getElementById("section_content_blocks_inner").innerHTML += html;
                 add_content_block_handlers();
-
             } catch (e) {
                 console.error(e);
                 Tools.show_alert("Failed to add new Block.", "danger");

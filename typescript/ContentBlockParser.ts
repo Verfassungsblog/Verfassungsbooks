@@ -45,9 +45,30 @@ namespace Editor{
             contents: Array<TextElement>;
         }
 
+        interface ListType{
+            Unordered?: boolean;
+            Ordered?: boolean;
+        }
+
+        interface TextElementOrList{
+            TextElement?: TextElement;
+            List?: List;
+        }
+
+        interface ListItem{
+            contents: Array<TextElementOrList>;
+        }
+
+        interface List{
+            items: Array<ListItem>;
+            list_type: string;
+            list_type_extra?: ListType;
+        }
+
         interface InnerContentBlock{
             Paragraph?: Paragraph,
-            Heading?: Heading
+            Heading?: Heading,
+            List?: List,
         }
 
         export interface ContentBlock{
@@ -57,6 +78,25 @@ namespace Editor{
             css_classes: Array<string> | null;
         }
 
+        function add_extra_fields_for_list(block: List): List{
+            if(block.list_type === "Unordered"){
+                block.list_type_extra = {Unordered: true};
+            }else if(block.list_type === "Ordered"){
+                block.list_type_extra = {Ordered: true};
+            }
+            let items = [];
+            for(let item of block.items){
+                for(let content of item.contents){
+                    if(content.TextElement){
+                        content.TextElement = add_extra_fields(content.TextElement);
+                    }else if(content.List){
+                        content.List = add_extra_fields_for_list(content.List);
+                    }
+                }
+            }
+
+            return block;
+        }
 
         function add_extra_fields(block: TextElement): TextElement{
             if(block.String){
@@ -129,6 +169,8 @@ namespace Editor{
                         contents.push(add_extra_fields(heading));
                     }
                     content = {Heading: {level: data.content.Heading.level, contents: contents}};
+            }else if(data.content.List){
+                content = {List: add_extra_fields_for_list(data.content.List)};
             }
             else{
                 console.error("Unknown content type: ", data.content);
@@ -202,10 +244,77 @@ namespace Editor{
 
                 res.content = {Heading: {level: level, contents: heading_text_contents}};
                 return res;
+            }else if(type === "list") {
+                let input = block.getElementsByClassName("content_block_list_input")[0];
+
+                if(input === null){
+                    throw new Error("Heading block does not contain a list input");
+                }
+
+                let list_type = input.getAttribute("data-type");
+                let list_entries: ListItem[] = [];
+
+                // @ts-ignore
+                for(let item of input.getElementsByTagName("li")){
+                    let list_entry = parse_list_entry(item);
+
+                    // Only add list entry if it contains content
+                    if(list_entry.contents.length > 0){
+                        // Only add list entry if it isn't just a single line break
+                        if(!(list_entry.contents.length === 1 && list_entry.contents[0].TextElement.LineBreak)) {
+                            list_entries.push(parse_list_entry(item));
+                        }
+                    }
+                }
+
+                res.content = {List: {items: list_entries, list_type: list_type}};
+                return res;
             }else{
                 console.error("Unknown block type to parse: ", type);
                 throw new Error("Unknown block type to parse: " + type);
             }
+        }
+
+        function parse_list_entry(entry: HTMLElement): ListItem{
+            let children = entry.childNodes;
+            let list_entry: ListItem = {contents: []};
+
+            // @ts-ignore
+            for(let node of children){
+                // Check if node is another ul or ol
+                if (node.nodeType === Node.ELEMENT_NODE) {
+                    let el = node as HTMLElement;
+
+                    //Check if entry is a list -> parse recursively
+                    if(el.tagName === 'UL'){
+                        let new_list : List = {items: [], list_type: "Unordered"};
+                        // @ts-ignore
+                        for(let item of el.getElementsByTagName("li")){
+                            new_list.items.push(parse_list_entry(item));
+                        }
+
+                        list_entry.contents.push({List: new_list});
+                        continue;
+                    }else if(el.tagName === 'OL'){
+                        let new_list : List = {items: [], list_type: "Ordered"};
+                        // @ts-ignore
+                        for(let item of el.getElementsByTagName("li")){
+                            new_list.items.push(parse_list_entry(item));
+                        }
+
+                        list_entry.contents.push({List: new_list});
+                        continue;
+                    }
+                }
+
+                // If node is not a list, parse it as a text element and add it to the list entry
+                let entry_content = parse_node(node);
+                for(let content of entry_content){
+                    list_entry.contents.push({TextElement: content});
+                }
+            }
+
+            return list_entry;
         }
 
         function parse_node(node: Node): Array<TextElement>{

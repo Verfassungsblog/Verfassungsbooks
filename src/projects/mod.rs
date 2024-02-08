@@ -240,7 +240,7 @@ enum PatchInnerContentBlock{
     Paragraph(Paragraph),
     Image, //TODO: implement
     Heading(PatchHeading),
-    List, //TODO: implement
+    List(PatchList), //TODO: implement
     Blockquote, //TODO: implement
     CustomHTML(String),
     HorizontalRule,
@@ -281,9 +281,9 @@ impl Patch<PatchInnerContentBlock, InnerContentBlock> for InnerContentBlock{
                     _ => self.clone(),
                 }
             }
-            PatchInnerContentBlock::List => {
+            PatchInnerContentBlock::List(list) => {
                 match self{
-                    InnerContentBlock::List => InnerContentBlock::List,
+                    InnerContentBlock::List(list_old) => InnerContentBlock::List(list_old.patch(list)),
                     _ => self.clone(),
                 }
             }
@@ -309,7 +309,7 @@ pub enum InnerContentBlock{
     Paragraph(Paragraph),
     Image, //TODO: implement
     Heading(Heading),
-    List, //TODO: implement
+    List(List),
     Blockquote, //TODO: implement
     CustomHTML(String),
     HorizontalRule,
@@ -333,6 +333,23 @@ struct PatchHeading{
     pub contents: Option<Vec<TextElement>>,
 }
 
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
+struct PatchList{
+    pub items: Option<Vec<ListItem>>,
+    pub list_type: Option<ListType>,
+}
+
+impl Patch<PatchList, List> for List{
+    fn patch(&mut self, patch: PatchList) -> List {
+        let items = patch.items.unwrap_or_else(|| self.items.clone());
+        let list_type = patch.list_type.unwrap_or_else(|| self.list_type.clone());
+        List{
+            items,
+            list_type,
+        }
+    }
+}
+
 /// Headline Content Block, contains the level and the contents
 #[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub struct Heading {
@@ -340,6 +357,31 @@ pub struct Heading {
     pub level: u8,
     /// Contents of the headline as TextElements
     pub contents: Vec<TextElement>
+}
+
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
+pub enum ListType{
+    Unordered,
+    Ordered,
+}
+
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
+pub enum TextElementOrList{
+    List(List),
+    TextElement(TextElement),
+}
+
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
+pub struct ListItem{
+    /// A list item can contain text elements and other (nested) lists
+    pub contents: Vec<TextElementOrList>,
+}
+
+/// List
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
+pub struct List{
+    pub items: Vec<ListItem>,
+    pub list_type: ListType,
 }
 
 /// Paragraph Content Block holding TextElements

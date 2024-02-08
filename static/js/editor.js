@@ -1326,6 +1326,19 @@ var Editor;
                         revision_id: null
                     };
                 }
+                else if (block_type === "list") {
+                    block = {
+                        id: null,
+                        revision_id: null,
+                        css_classes: null,
+                        content: {
+                            List: {
+                                list_type: "Unordered",
+                                items: []
+                            }
+                        }
+                    };
+                }
                 else {
                     Tools.show_alert("Block type not implemented.", "warning");
                     return;
@@ -1778,6 +1791,26 @@ var Editor;
             NoteType["Footnote"] = "Footnote";
             NoteType["Endnote"] = "Endnote";
         })(NoteType || (NoteType = {}));
+        function add_extra_fields_for_list(block) {
+            if (block.list_type === "Unordered") {
+                block.list_type_extra = { Unordered: true };
+            }
+            else if (block.list_type === "Ordered") {
+                block.list_type_extra = { Ordered: true };
+            }
+            let items = [];
+            for (let item of block.items) {
+                for (let content of item.contents) {
+                    if (content.TextElement) {
+                        content.TextElement = add_extra_fields(content.TextElement);
+                    }
+                    else if (content.List) {
+                        content.List = add_extra_fields_for_list(content.List);
+                    }
+                }
+            }
+            return block;
+        }
         function add_extra_fields(block) {
             if (block.String) {
                 return block;
@@ -1856,6 +1889,9 @@ var Editor;
                 }
                 content = { Heading: { level: data.content.Heading.level, contents: contents } };
             }
+            else if (data.content.List) {
+                content = { List: add_extra_fields_for_list(data.content.List) };
+            }
             else {
                 console.error("Unknown content type: ", data.content);
                 throw new Error("Unknown content type: " + data.content);
@@ -1916,12 +1952,69 @@ var Editor;
                 res.content = { Heading: { level: level, contents: heading_text_contents } };
                 return res;
             }
+            else if (type === "list") {
+                let input = block.getElementsByClassName("content_block_list_input")[0];
+                if (input === null) {
+                    throw new Error("Heading block does not contain a list input");
+                }
+                let list_type = input.getAttribute("data-type");
+                let list_entries = [];
+                // @ts-ignore
+                for (let item of input.getElementsByTagName("li")) {
+                    let list_entry = parse_list_entry(item);
+                    // Only add list entry if it contains content
+                    if (list_entry.contents.length > 0) {
+                        // Only add list entry if it isn't just a single line break
+                        if (!(list_entry.contents.length === 1 && list_entry.contents[0].TextElement.LineBreak)) {
+                            list_entries.push(parse_list_entry(item));
+                        }
+                    }
+                }
+                res.content = { List: { items: list_entries, list_type: list_type } };
+                return res;
+            }
             else {
                 console.error("Unknown block type to parse: ", type);
                 throw new Error("Unknown block type to parse: " + type);
             }
         }
         ContentBlockParser.parse_contentblock_from_html = parse_contentblock_from_html;
+        function parse_list_entry(entry) {
+            let children = entry.childNodes;
+            let list_entry = { contents: [] };
+            // @ts-ignore
+            for (let node of children) {
+                // Check if node is another ul or ol
+                if (node.nodeType === Node.ELEMENT_NODE) {
+                    let el = node;
+                    //Check if entry is a list -> parse recursively
+                    if (el.tagName === 'UL') {
+                        let new_list = { items: [], list_type: "Unordered" };
+                        // @ts-ignore
+                        for (let item of el.getElementsByTagName("li")) {
+                            new_list.items.push(parse_list_entry(item));
+                        }
+                        list_entry.contents.push({ List: new_list });
+                        continue;
+                    }
+                    else if (el.tagName === 'OL') {
+                        let new_list = { items: [], list_type: "Ordered" };
+                        // @ts-ignore
+                        for (let item of el.getElementsByTagName("li")) {
+                            new_list.items.push(parse_list_entry(item));
+                        }
+                        list_entry.contents.push({ List: new_list });
+                        continue;
+                    }
+                }
+                // If node is not a list, parse it as a text element and add it to the list entry
+                let entry_content = parse_node(node);
+                for (let content of entry_content) {
+                    list_entry.contents.push({ TextElement: content });
+                }
+            }
+            return list_entry;
+        }
         function parse_node(node) {
             console.log("Parsing node: ");
             console.log(node);

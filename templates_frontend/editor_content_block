@@ -5,6 +5,9 @@
     {{#if content.Heading}}
     data-block-type="heading"
     {{/if}}
+    {{#if content.List}}
+    data-block-type="list"
+    {{/if}}
 data-block-id="{{id}}">
 <div class="content_block_ctls">
     <!-- Label-->
@@ -20,6 +23,9 @@ data-block-id="{{id}}">
     {{/if}}
     {{#if content.Heading}}
     {{> editor_content_block_heading content.Heading}}
+    {{/if}}
+    {{#if content.List}}
+        {{> editor_content_block_list content.List}}
     {{/if}}
     </div>
 </div>
