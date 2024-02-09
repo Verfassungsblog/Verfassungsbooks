@@ -1040,7 +1040,11 @@ var Editor;
                 let action = e.target.getAttribute("data-action");
                 let selection = window.getSelection();
                 let range = selection.getRangeAt(0); // TODO: handle multiple ranges
+                console.log("RANGE:");
+                console.log(range);
                 function checkIfFormatted(node, type) {
+                    console.log("Checking if node is formatted: ");
+                    console.log(node);
                     // Check if next parent is .inner_content_block
                     if (node.parentNode.classList.contains("inner_content_block")) {
                         // Check if the first child is a span with the class formatted_text_bold
@@ -1053,11 +1057,14 @@ var Editor;
                             return node; // Gibt den gefundenen <span> zurück
                         }
                         node = node.parentNode;
+                        console.log("Checking if node is formatted: ");
+                        console.log(node);
                     }
                     return null;
                 }
                 let formattedNode = checkIfFormatted(range.startContainer, action);
-                if (formattedNode) {
+                let formattedNodeEnd = checkIfFormatted(range.endContainer, action);
+                if (formattedNode || formattedNodeEnd) {
                     // Wenn bereits formatiert, <span> entfernen
                     let parent = formattedNode.parentNode;
                     while (formattedNode.firstChild) {
@@ -1336,6 +1343,26 @@ var Editor;
                                 list_type: "Unordered",
                                 items: []
                             }
+                        }
+                    };
+                }
+                else if (block_type === "hr") {
+                    block = {
+                        id: null,
+                        revision_id: null,
+                        css_classes: null,
+                        content: {
+                            HorizontalRule: {}
+                        }
+                    };
+                }
+                else if (block_type === "custom_html") {
+                    block = {
+                        id: null,
+                        revision_id: null,
+                        css_classes: null,
+                        content: {
+                            CustomHTML: ""
                         }
                     };
                 }
@@ -1892,6 +1919,21 @@ var Editor;
             else if (data.content.List) {
                 content = { List: add_extra_fields_for_list(data.content.List) };
             }
+            else if (data.content.HorizontalRule) {
+                content = { HorizontalRule: {} };
+            }
+            else if (data.content.hasOwnProperty("CustomHTML")) {
+                if (data.content.CustomHTML === "") {
+                    content = { CustomHTML: " " };
+                }
+                else {
+                    content = { CustomHTML: data.content.CustomHTML.replace(/&/g, "&amp;")
+                            .replace(/</g, "&lt;")
+                            .replace(/>/g, "&gt;")
+                            .replace(/"/g, "&quot;")
+                            .replace(/'/g, "&#039;").replace("\n", "<br>") };
+                }
+            }
             else {
                 console.error("Unknown content type: ", data.content);
                 throw new Error("Unknown content type: " + data.content);
@@ -1971,6 +2013,15 @@ var Editor;
                     }
                 }
                 res.content = { List: { items: list_entries, list_type: list_type } };
+                return res;
+            }
+            else if (type === "custom_html") {
+                let custom_html = block.getElementsByClassName("content_block_custom_html_input")[0];
+                if (custom_html === null) {
+                    throw new Error("Custom HTML block does not contain a custom html input");
+                }
+                let content = new DOMParser().parseFromString(custom_html.innerHTML.replace("<br>", "\n"), "text/html").documentElement.textContent;
+                res.content = { CustomHTML: content };
                 return res;
             }
             else {

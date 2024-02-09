@@ -69,6 +69,8 @@ namespace Editor{
             Paragraph?: Paragraph,
             Heading?: Heading,
             List?: List,
+            HorizontalRule?: any,
+            CustomHTML?: string
         }
 
         export interface ContentBlock{
@@ -171,6 +173,18 @@ namespace Editor{
                     content = {Heading: {level: data.content.Heading.level, contents: contents}};
             }else if(data.content.List){
                 content = {List: add_extra_fields_for_list(data.content.List)};
+            }else if(data.content.HorizontalRule){
+                content = {HorizontalRule: {}};
+            }else if(data.content.hasOwnProperty("CustomHTML")){
+                if(data.content.CustomHTML === ""){
+                    content = {CustomHTML: " "};
+                }else {
+                    content = {CustomHTML: data.content.CustomHTML.replace(/&/g, "&amp;")
+                            .replace(/</g, "&lt;")
+                            .replace(/>/g, "&gt;")
+                            .replace(/"/g, "&quot;")
+                            .replace(/'/g, "&#039;").replace("\n", "<br>")};
+                }
             }
             else{
                 console.error("Unknown content type: ", data.content);
@@ -269,7 +283,20 @@ namespace Editor{
 
                 res.content = {List: {items: list_entries, list_type: list_type}};
                 return res;
-            }else{
+            }else if(type === "custom_html"){
+                let custom_html = block.getElementsByClassName("content_block_custom_html_input")[0];
+
+                if(custom_html === null){
+                    throw new Error("Custom HTML block does not contain a custom html input");
+                }
+
+                let content = new DOMParser().parseFromString(custom_html.innerHTML.replace("<br>", "\n"), "text/html").documentElement.textContent;
+
+                res.content = {CustomHTML: content};
+                return res;
+            }
+
+            else{
                 console.error("Unknown block type to parse: ", type);
                 throw new Error("Unknown block type to parse: " + type);
             }

@@ -160,7 +160,13 @@ namespace Editor{
             let selection = window.getSelection();
             let range = selection.getRangeAt(0); // TODO: handle multiple ranges
 
+            console.log("RANGE:");
+            console.log(range);
+
             function checkIfFormatted(node, type) {
+                console.log("Checking if node is formatted: ");
+                console.log(node);
+
                 // Check if next parent is .inner_content_block
                 if(node.parentNode.classList.contains("inner_content_block")){
                     // Check if the first child is a span with the class formatted_text_bold
@@ -174,12 +180,16 @@ namespace Editor{
                         return node; // Gibt den gefundenen <span> zurück
                     }
                     node = node.parentNode;
+                    console.log("Checking if node is formatted: ");
+                    console.log(node);
                 }
                 return null;
             }
 
             let formattedNode = checkIfFormatted(range.startContainer, action);
-            if (formattedNode) {
+            let formattedNodeEnd = checkIfFormatted(range.endContainer, action);
+
+            if (formattedNode || formattedNodeEnd) {
                 // Wenn bereits formatiert, <span> entfernen
                 let parent = formattedNode.parentNode;
                 while (formattedNode.firstChild) {
@@ -441,7 +451,26 @@ namespace Editor{
                         }
                     }
                 }
-            }else{
+            }else if(block_type === "hr"){
+                block = {
+                    id: null,
+                    revision_id: null,
+                    css_classes: null,
+                    content: {
+                        HorizontalRule: {}
+                    }
+                }
+            }else if(block_type === "custom_html"){
+                block = {
+                    id: null,
+                    revision_id: null,
+                    css_classes: null,
+                    content: {
+                        CustomHTML: ""
+                    }
+                }
+            }
+            else{
                 Tools.show_alert("Block type not implemented.", "warning");
                 return;
             }

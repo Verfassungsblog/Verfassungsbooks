@@ -16,6 +16,12 @@
                 <option value="6" {{#if content.Heading.level_extra.level6}}selected="true"{{/if}}>6</option>
             </select>
         {{/if}}
+        {{#if content.List}}
+            <h2>List</h2>
+        {{/if}}
+        {{#if content.HorizontalRule}}
+            <h2>Horizontal Rule</h2>
+        {{/if}}
         <button class="btn btn-danger btn-sm mt-2" id="editor_sidebar_content_block_settings_delete">Delete Block</button>
     </div>
 </div>

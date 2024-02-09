@@ -351,3 +351,9 @@ label{
 .formatted_text_bold{
     font-weight: bold;
 }
+.formatted_text_italic{
+    font-style: italic;
+}
+.formatted_text_underline{
+    text-decoration: underline;
+}

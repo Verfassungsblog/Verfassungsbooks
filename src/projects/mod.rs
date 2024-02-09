@@ -243,7 +243,7 @@ enum PatchInnerContentBlock{
     List(PatchList), //TODO: implement
     Blockquote, //TODO: implement
     CustomHTML(String),
-    HorizontalRule,
+    HorizontalRule(HorizontalRule),
     Table //TODO: implement
 }
 
@@ -262,9 +262,9 @@ impl Patch<PatchInnerContentBlock, InnerContentBlock> for InnerContentBlock{
                     _ => self.clone(),
                 }
             },
-            PatchInnerContentBlock::HorizontalRule => {
+            PatchInnerContentBlock::HorizontalRule(hr) => {
                 match self{
-                    InnerContentBlock::HorizontalRule => InnerContentBlock::HorizontalRule,
+                    InnerContentBlock::HorizontalRule(_) => InnerContentBlock::HorizontalRule(hr),
                     _ => self.clone(),
                 }
             },
@@ -312,7 +312,7 @@ pub enum InnerContentBlock{
     List(List),
     Blockquote, //TODO: implement
     CustomHTML(String),
-    HorizontalRule,
+    HorizontalRule(HorizontalRule),
     Table //TODO: implement
 }
 
@@ -357,6 +357,10 @@ pub struct Heading {
     pub level: u8,
     /// Contents of the headline as TextElements
     pub contents: Vec<TextElement>
+}
+
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
+pub struct HorizontalRule{
 }
 
 #[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]

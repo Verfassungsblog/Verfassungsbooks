@@ -8,6 +8,12 @@
     {{#if content.List}}
     data-block-type="list"
     {{/if}}
+    {{#if content.HorizontalRule}}
+    data-block-type="hr"
+    {{/if}}
+    {{#if content.CustomHTML}}
+    data-block-type="custom_html"
+    {{/if}}
 data-block-id="{{id}}">
 <div class="content_block_ctls">
     <!-- Label-->
@@ -26,6 +32,12 @@ data-block-id="{{id}}">
     {{/if}}
     {{#if content.List}}
         {{> editor_content_block_list content.List}}
+    {{/if}}
+    {{#if content.HorizontalRule}}
+    <hr>
+    {{/if}}
+    {{#if content.CustomHTML}}
+        {{> editor_content_block_custom_html content.CustomHTML}}
     {{/if}}
     </div>
 </div>
