@@ -1,6 +1,0 @@
-{{#if note_type.Footnote}}
-<span class="footnote">{{#each content}}{{> editor_content_block_textelement}}{{/each}}</span>
-{{/if}}
-{{#if note_type.Endnote}}
-<span class="endnote">{{#each content}}{{> editor_content_block_textelement}}{{/each}}</span>
-{{/if}}

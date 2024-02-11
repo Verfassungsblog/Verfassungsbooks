@@ -7,9 +7,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-/// <reference path="Editor.ts" />
+/// <reference path="Editor-old.ts" />
 var Editor;
-/// <reference path="Editor.ts" />
+/// <reference path="Editor-old.ts" />
 (function (Editor) {
     let ProjectOverview;
     (function (ProjectOverview) {
@@ -895,9 +895,9 @@ var Editor;
         }
     })(ProjectOverview = Editor.ProjectOverview || (Editor.ProjectOverview = {}));
 })(Editor || (Editor = {}));
-/// <reference path="Editor.ts" />
+/// <reference path="Editor-old.ts" />
 var Editor;
-/// <reference path="Editor.ts" />
+/// <reference path="Editor-old.ts" />
 (function (Editor) {
     let SectionView;
     (function (SectionView) {
@@ -991,16 +991,20 @@ var Editor;
                     for (let button of document.getElementsByClassName("new_block_selection")) {
                         button.addEventListener("click", new_block_selection_handler);
                     }
+                    // @ts-ignore
+                    window.show_new_editor();
                     // Load content blocks
-                    let content_blocks = yield send_get_content_blocks(globalThis.section_path);
+                    /*let content_blocks = await send_get_content_blocks(globalThis.section_path);
                     console.log(content_blocks);
-                    for (let block of content_blocks) {
+                    for(let block of content_blocks){
                         // @ts-ignore
-                        let html = Handlebars.templates.editor_content_block(Editor.ContentBlockParser.contentblock_from_api(block));
+                        let html = Handlebars.templates.editor_content_block(ContentBlockParser.contentblock_from_api(block));
                         document.getElementById("section_content_blocks_inner").innerHTML += html;
                         clean_content_block_input(document.getElementById("section_content_blocks_inner").lastChild);
                     }
+    
                     add_content_block_handlers();
+                     */
                 }
                 catch (e) {
                     console.error(e);
@@ -2142,9 +2146,82 @@ var Editor;
         }
     })(ContentBlockParser = Editor.ContentBlockParser || (Editor.ContentBlockParser = {}));
 })(Editor || (Editor = {}));
-/// <reference path="Editor.ts" />
+var Tools;
+(function (Tools) {
+    function hide_all(class_name) {
+        // @ts-ignore
+        for (let element of document.getElementsByClassName(class_name)) {
+            element.classList.add("hide");
+        }
+    }
+    Tools.hide_all = hide_all;
+    function start_loading_spinner() {
+        let loading_spinner = document.getElementById("loading_spinner");
+        if (loading_spinner !== null) {
+            loading_spinner.style.display = "block";
+        }
+    }
+    Tools.start_loading_spinner = start_loading_spinner;
+    function stop_loading_spinner() {
+        let loading_spinner = document.getElementById("loading_spinner");
+        if (loading_spinner !== null) {
+            loading_spinner.style.display = "none";
+        }
+    }
+    Tools.stop_loading_spinner = stop_loading_spinner;
+    function show_alert(message, type = "danger|warning|success|info|primary|secondary|light|dark") {
+        let id = Math.floor(Math.random() * 100000000);
+        // @ts-ignore
+        let alert_html = Handlebars.templates.alert_tmpl({ "message": message, "type": type, "id": id });
+        //Insert alert as first element of body
+        document.body.insertAdjacentHTML("afterbegin", alert_html);
+        let alert = document.getElementById("alert_" + id);
+        alert.getElementsByClassName("alert-close")[0].addEventListener("click", function () {
+            alert.remove();
+        });
+        setTimeout(() => {
+            if (alert !== null) {
+                alert.remove();
+            }
+        }, 5000);
+    }
+    Tools.show_alert = show_alert;
+})(Tools || (Tools = {}));
+/// <reference path="ProjectOverview.ts" />
+/// <reference path="SectionView.ts" />
+/// <reference path="./ContentBlockParser.ts" />
+/// <reference path="Sidebar.ts" />
+/// <reference path="./General.ts" />
 var Editor;
-/// <reference path="Editor.ts" />
+/// <reference path="ProjectOverview.ts" />
+/// <reference path="SectionView.ts" />
+/// <reference path="./ContentBlockParser.ts" />
+/// <reference path="Sidebar.ts" />
+/// <reference path="./General.ts" />
+(function (Editor) {
+    // @ts-ignore
+    function init() {
+        return __awaiter(this, void 0, void 0, function* () {
+            let project_id = extract_project_id_from_url();
+            globalThis.project_id = project_id;
+            Editor.ProjectOverview.show_overview();
+        });
+    }
+    Editor.init = init;
+    function extract_project_id_from_url() {
+        let url = new URL(window.location.href);
+        return url.pathname.split("/")[2];
+    }
+})(Editor || (Editor = {}));
+// @ts-ignore
+window.addEventListener("load", function () {
+    return __awaiter(this, void 0, void 0, function* () {
+        yield Editor.init();
+    });
+});
+/// <reference path="Editor-old.ts" />
+var Editor;
+/// <reference path="Editor-old.ts" />
 (function (Editor) {
     let Sidebar;
     (function (Sidebar) {
@@ -2432,7 +2509,6 @@ var Editor;
         // @ts-ignore
         function add_section_btn_lstnr() {
             return __awaiter(this, void 0, void 0, function* () {
-                //TODO: Add section to sidebar visually
                 let title = document.getElementById("editor_sidebar_section_name").value || null;
                 if (title === null) {
                     Tools.show_alert("Please enter a title", "danger");
@@ -2441,6 +2517,7 @@ var Editor;
                 let data = {
                     "Section": {
                         "children": [],
+                        "sub_sections": [],
                         "visible_in_toc": true,
                         "css_classes": [],
                         "metadata": {
@@ -2552,76 +2629,3 @@ var Editor;
         }
     })(Sidebar = Editor.Sidebar || (Editor.Sidebar = {}));
 })(Editor || (Editor = {}));
-var Tools;
-(function (Tools) {
-    function hide_all(class_name) {
-        // @ts-ignore
-        for (let element of document.getElementsByClassName(class_name)) {
-            element.classList.add("hide");
-        }
-    }
-    Tools.hide_all = hide_all;
-    function start_loading_spinner() {
-        let loading_spinner = document.getElementById("loading_spinner");
-        if (loading_spinner !== null) {
-            loading_spinner.style.display = "block";
-        }
-    }
-    Tools.start_loading_spinner = start_loading_spinner;
-    function stop_loading_spinner() {
-        let loading_spinner = document.getElementById("loading_spinner");
-        if (loading_spinner !== null) {
-            loading_spinner.style.display = "none";
-        }
-    }
-    Tools.stop_loading_spinner = stop_loading_spinner;
-    function show_alert(message, type = "danger|warning|success|info|primary|secondary|light|dark") {
-        let id = Math.floor(Math.random() * 100000000);
-        // @ts-ignore
-        let alert_html = Handlebars.templates.alert_tmpl({ "message": message, "type": type, "id": id });
-        //Insert alert as first element of body
-        document.body.insertAdjacentHTML("afterbegin", alert_html);
-        let alert = document.getElementById("alert_" + id);
-        alert.getElementsByClassName("alert-close")[0].addEventListener("click", function () {
-            alert.remove();
-        });
-        setTimeout(() => {
-            if (alert !== null) {
-                alert.remove();
-            }
-        }, 5000);
-    }
-    Tools.show_alert = show_alert;
-})(Tools || (Tools = {}));
-/// <reference path="ProjectOverview.ts" />
-/// <reference path="SectionView.ts" />
-/// <reference path="ContentBlockParser.ts" />
-/// <reference path="Sidebar.ts" />
-/// <reference path="General.ts" />
-var Editor;
-/// <reference path="ProjectOverview.ts" />
-/// <reference path="SectionView.ts" />
-/// <reference path="ContentBlockParser.ts" />
-/// <reference path="Sidebar.ts" />
-/// <reference path="General.ts" />
-(function (Editor) {
-    // @ts-ignore
-    function init() {
-        return __awaiter(this, void 0, void 0, function* () {
-            let project_id = extract_project_id_from_url();
-            globalThis.project_id = project_id;
-            Editor.ProjectOverview.show_overview();
-        });
-    }
-    Editor.init = init;
-    function extract_project_id_from_url() {
-        let url = new URL(window.location.href);
-        return url.pathname.split("/")[2];
-    }
-})(Editor || (Editor = {}));
-// @ts-ignore
-window.addEventListener("load", function () {
-    return __awaiter(this, void 0, void 0, function* () {
-        yield Editor.init();
-    });
-});

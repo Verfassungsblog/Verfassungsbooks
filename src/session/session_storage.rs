@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::ops::Add;
 use std::sync::RwLock;
 use std::time::{Duration, SystemTime};
-use serde_derive::Deserialize;
+use rocket::serde::Deserialize;
 use crate::session::session_guard::Session;
 
 #[derive(Deserialize)]

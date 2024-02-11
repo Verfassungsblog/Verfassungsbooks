@@ -1,4 +1,4 @@
-///<reference path="General.ts"/>
+///<reference path="./General.ts"/>
 namespace Persons {
     // @ts-ignore
     export function init_person_form(){

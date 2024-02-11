@@ -357,3 +357,12 @@ label{
 .formatted_text_underline{
     text-decoration: underline;
 }
+.ce-block__content,
+.ce-toolbar__content {
+    max-width: unset !important;
+}
+#section_content_blocks_inner{
+    padding-left: 50px;
+    padding-right: 50px;
+    overflow-wrap: anywhere;
+}

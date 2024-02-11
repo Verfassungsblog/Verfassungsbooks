@@ -1,9 +1,0 @@
-<div class="content_block_textelement_edit_bar">
-    <button type="button" class="btn btn-outline-primary btn-sm textelement_edit_bar_btn" data-action="bold">Bold</button>
-</div>
-{{#if list_type_extra.Ordered}}
-    {{> editor_content_block_list_ordered}}
-{{/if}}
-{{#if list_type_extra.Unordered}}
-    {{> editor_content_block_list_unordered}}
-{{/if}}

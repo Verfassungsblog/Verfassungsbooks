@@ -1,4 +1,5 @@
-/// <reference path="Editor.ts" />
+/// <reference path="Editor-old.ts" />
+
 namespace Editor{
     export namespace SectionView{
 
@@ -107,8 +108,11 @@ namespace Editor{
                     button.addEventListener("click", new_block_selection_handler);
                 }
 
+                // @ts-ignore
+                window.show_new_editor();
+
                 // Load content blocks
-                let content_blocks = await send_get_content_blocks(globalThis.section_path);
+                /*let content_blocks = await send_get_content_blocks(globalThis.section_path);
                 console.log(content_blocks);
                 for(let block of content_blocks){
                     // @ts-ignore
@@ -116,7 +120,10 @@ namespace Editor{
                     document.getElementById("section_content_blocks_inner").innerHTML += html;
                     clean_content_block_input(document.getElementById("section_content_blocks_inner").lastChild);
                 }
+
                 add_content_block_handlers();
+                 */
+
             }catch (e) {
                 console.error(e);
                 Tools.show_alert("Couldn't load section. Check your network connection.", "danger");

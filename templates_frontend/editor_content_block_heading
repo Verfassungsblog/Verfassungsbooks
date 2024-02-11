@@ -1,2 +1,0 @@
-{{> editor_textelement_edit_bar}}
-<h{{level}} contenteditable="true" class="content_block_input_trigger content_block_heading_input" data-level="{{level}}">{{#each this.contents}}{{> editor_content_block_textelement this}}​{{/each}}</h{{level}}>

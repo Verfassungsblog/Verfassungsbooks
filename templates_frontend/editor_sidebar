@@ -7,7 +7,7 @@
     <div id="editor_sidebar_contents">
         {{#each contents}}
             {{#if this.Section}}
-                {{> editor_sidebar_section}}
+                {{> editor_sidebar_section this.Section}}
             {{/if}}
             {{#if this.Toc}}
                 Toc

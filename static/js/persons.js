@@ -48,9 +48,9 @@ var Tools;
     }
     Tools.show_alert = show_alert;
 })(Tools || (Tools = {}));
-///<reference path="General.ts"/>
+///<reference path="./General.ts"/>
 var Persons;
-///<reference path="General.ts"/>
+///<reference path="./General.ts"/>
 (function (Persons) {
     // @ts-ignore
     function init_person_form() {

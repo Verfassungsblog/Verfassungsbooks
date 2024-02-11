@@ -13,9 +13,8 @@ build = "build.rs"
 rocket = { version = "=0.5.0", features = ["secrets", "json"] }
 dotenvy = "0.15"
 config = "0.13.1"
-serde = { version = "1.0.192", features = ["rc"] }
+serde = { version = "1.0.192", features = ["rc", "derive"] }
 serde_json = { version = "1.0", features = ["raw_value"] }
-serde_derive = "1.0.192"
 rand = "0.8.5"
 rocket_dyn_templates = { version = "=0.1.0", features = ["handlebars"] }
 argon2 = "0.5.2"

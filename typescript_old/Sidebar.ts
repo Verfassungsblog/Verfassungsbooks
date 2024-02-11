@@ -1,4 +1,4 @@
-/// <reference path="Editor.ts" />
+/// <reference path="Editor-old.ts" />
 namespace Editor{
     export namespace Sidebar{
         var current_content_block_settings_shown = null;
@@ -286,7 +286,6 @@ namespace Editor{
 
         // @ts-ignore
         async function add_section_btn_lstnr(){
-            //TODO: Add section to sidebar visually
             let title = (<HTMLInputElement>document.getElementById("editor_sidebar_section_name")).value || null;
             if(title === null){
                 Tools.show_alert("Please enter a title", "danger");
@@ -295,6 +294,7 @@ namespace Editor{
             let data = {
                 "Section": {
                     "children": [],
+                    "sub_sections": [],
                     "visible_in_toc": true,
                     "css_classes": [],
                     "metadata": {

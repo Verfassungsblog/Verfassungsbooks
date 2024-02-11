@@ -1,2 +1,0 @@
-{{> editor_textelement_edit_bar}}
-<p contenteditable="true" class="content_block_input_trigger">{{#each this.contents}}{{> editor_content_block_textelement this}}​{{/each}}</p>

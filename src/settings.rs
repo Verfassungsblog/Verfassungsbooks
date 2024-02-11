@@ -1,6 +1,6 @@
 use config::{Config, ConfigError, Environment, File};
-use serde_derive::Deserialize;
 use std::env;
+use serde::Deserialize;
 
 /// Stores settings read from config files.
 #[derive(Debug, Deserialize, Clone)]

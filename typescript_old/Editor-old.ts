@@ -1,8 +1,9 @@
 /// <reference path="ProjectOverview.ts" />
 /// <reference path="SectionView.ts" />
-/// <reference path="ContentBlockParser.ts" />
+/// <reference path="./ContentBlockParser.ts" />
 /// <reference path="Sidebar.ts" />
-/// <reference path="General.ts" />
+/// <reference path="./General.ts" />
+
 namespace Editor{
     declare var project_id: string;
     declare var section_id: string | null;

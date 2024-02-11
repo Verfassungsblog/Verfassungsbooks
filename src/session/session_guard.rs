@@ -1,7 +1,7 @@
 use rocket::{Request, State};
 use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome};
-use serde_derive::{Deserialize, Serialize};
+use rocket::serde::{Deserialize, Serialize};
 use crate::session::errors::LoginError;
 use crate::session::session_storage::SessionStorage;
 

@@ -1,7 +1,0 @@
-<div class="content_block_textelement_edit_bar">
-    <button type="button" class="btn btn-outline-primary btn-sm textelement_edit_bar_btn" data-action="bold">Bold</button>
-    <button type="button" class="btn btn-outline-primary btn-sm textelement_edit_bar_btn" data-action="italic">Italic</button>
-    <button type="button" class="btn btn-outline-primary btn-sm textelement_edit_bar_btn" data-action="underline">Underline</button>
-    <button type="button" class="btn btn-outline-primary btn-sm textelement_edit_bar_footnote_btn">Footnote</button>
-    <button type="button" class="btn btn-outline-primary btn-sm textelement_edit_bar_endnote_btn">Endnote</button>
-</div>

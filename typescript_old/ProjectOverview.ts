@@ -1,4 +1,4 @@
-/// <reference path="Editor.ts" />
+/// <reference path="Editor-old.ts" />
 namespace Editor{
     export namespace ProjectOverview{
         export function show_overview() {

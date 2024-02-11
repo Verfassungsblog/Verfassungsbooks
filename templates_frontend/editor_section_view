@@ -81,27 +81,4 @@
     <div id="section_content_blocks_inner">
         
     </div>
-    <label>Add new Block:</label>
-    <div class="section_content_blocks_add_new_block">
-        <div data-type="paragraph" class="new_block_selection">
-            <svg xmlns="http://www.w3.org/2000/svg" height="50" viewBox="0 -960 960 960" width="50"><path d="M160-200v-60h386v60H160Zm0-167v-60h640v60H160Zm0-166v-60h640v60H160Zm0-167v-60h640v60H160Z"/></svg>
-            <span class="new_block_selection_label">Paragraph</span>
-        </div>
-        <div data-type="heading" class="new_block_selection">
-            <svg xmlns="http://www.w3.org/2000/svg" height="50" viewBox="0 -960 960 960" width="50"><path d="M430-160v-540H200v-100h560v100H530v540H430Z"/></svg>
-            <span class="new_block_selection_label">Heading</span>
-        </div>
-        <div data-type="list" class="new_block_selection">
-            <svg xmlns="http://www.w3.org/2000/svg" height="50" viewBox="0 -960 960 960" width="50"><path d="M377-198v-60h463v60H377Zm0-252v-60h463v60H377Zm0-253v-60h463v60H377ZM189-161q-28.05 0-48.025-19Q121-199 121-227.5t19.5-48q19.5-19.5 48-19.5t47.5 19.975Q255-255.05 255-227q0 27.225-19.387 46.613Q216.225-161 189-161Zm0-252q-28.05 0-48.025-19.681Q121-452.362 121-480t19.975-47.319Q160.95-547 189-547q27.225 0 46.613 19.681Q255-507.638 255-480t-19.387 47.319Q216.225-413 189-413Zm-1-253q-27.637 0-47.319-19.681Q121-705.362 121-733t19.681-47.319Q160.363-800 188-800q27.637 0 47.319 19.681Q255-760.638 255-733t-19.681 47.319Q215.637-666 188-666Z"/></svg>
-            <span class="new_block_selection_label">List</span>
-        </div>
-        <div data-type="hr" class="new_block_selection">
-            <svg xmlns="http://www.w3.org/2000/svg" height="50" viewBox="0 -960 960 960" width="50"><path d="M160-450v-60h640v60H160Z"/></svg>
-            <span class="new_block_selection_label">Horizontal Rule</span>
-        </div>
-        <div data-type="custom_html" class="new_block_selection">
-            <svg xmlns="http://www.w3.org/2000/svg" height="50" viewBox="0 -960 960 960" width="50"><path d="M320-242 80-482l242-242 43 43-199 199 197 197-43 43Zm318 2-43-43 199-199-197-197 43-43 240 240-242 242Z"/></svg>
-            <span class="new_block_selection_label">Custom HTML</span>
-        </div>
-    </div>
 </div>

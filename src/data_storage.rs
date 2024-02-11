@@ -5,7 +5,7 @@ use std::sync::atomic::AtomicBool;
 use std::time::SystemTime;
 use serde::{Deserialize, Serialize};
 use bincode::{Encode, Decode};
-use crate::projects::{Person, ProjectMetadata, ProjectSettings, Section, SectionContent, SectionOrToc};
+use crate::projects::{Person, ProjectMetadata, ProjectSettings, Section, SectionOrToc};
 use crate::projects::api::ApiError;
 use crate::settings::Settings;
 
@@ -594,7 +594,7 @@ impl ProjectData{
             if let SectionOrToc::Section(section) = section {
                 // Check if this is the parent section
                 if section.id == Some(*parent_section_id) {
-                    section.children.insert(0, SectionContent::Section(section_to_insert));
+                    section.sub_sections.insert(0, section_to_insert);
                     return Ok(());
                 }else{
                     // Check if one of the children is the parent section
@@ -661,13 +661,11 @@ pub fn get_section_by_path_mut<'a>(
     for &part in path.iter().skip(1) {
         let mut found_section = None;
 
-        for child in &mut current_section.children {
-            if let SectionContent::Section(section) = child {
+        for section in &mut current_section.sub_sections {
                 if section.id.unwrap_or_default() == part {
                     found_section = Some(section);
                     break;
                 }
-            }
         }
 
         match found_section {
@@ -712,14 +710,12 @@ pub fn get_section_by_path<'a>(project: &'a RwLockReadGuard<ProjectData>, path: 
 
         // Search for next section in the current sections children
         let mut found = false;
-        for child in current_section.children.iter(){
-            if let SectionContent::Section(section) = child{
+        for section in current_section.sub_sections.iter(){
                 if section.id.unwrap_or_default() == *part{
                     current_section = section;
                     found = true;
                     break;
                 }
-            }
         }
         if !found {
             println!("Couldn't find section with id {}", part);

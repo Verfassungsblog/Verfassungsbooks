@@ -1,7 +1,9 @@
+use std::fmt;
 use crate::projects::api::Patch;
-use serde_derive::{Deserialize, Serialize};
 use chrono::NaiveDateTime;
 use bincode::{Encode, Decode};
+use serde::{Serialize, Deserialize, Deserializer};
+use serde::de::{MapAccess, Visitor};
 
 /// Enum to differentiate between real sections and the position of the table of contents
 #[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
@@ -101,8 +103,10 @@ pub struct Section{
     pub id: Option<uuid::Uuid>,
     /// Additional classes to style the Section
     pub css_classes: Vec<String>,
-    /// Holds all contents of the section (either another section or a content block)
-    pub children: Vec<SectionContent>,
+    /// Holds all subsections
+    pub sub_sections: Vec<Section>,
+    // Holds all content blocks
+    pub children: Vec<NewContentBlock>,
     /// If true, the section is visible in the table of contents
     pub visible_in_toc: bool,
     /// Metadata of the section
@@ -110,27 +114,22 @@ pub struct Section{
 }
 
 impl Section{
-    pub fn clone_without_contentblock_content(&self) -> Section {
+    pub fn clone_without_contentblocks(&self) -> Section {
         let mut new_section = self.clone();
-        new_section.children = new_section.children.iter_mut().map(|child| child.clone_without_contentblock_content()).collect();
+        new_section.children = vec![];
         new_section
     }
 
     pub fn clone_without_subsections(&self) -> Section {
         let mut new_section = self.clone();
-        new_section.children = new_section.children.iter_mut().map(|child| match child{
-            SectionContent::Section(section) => SectionContent::Section(section.clone_without_subsections()),
-            SectionContent::ContentBlock(_) => child.clone(),
-        }).collect();
+        new_section.sub_sections = vec![];
         new_section
     }
 
     pub fn insert_child_section_as_child(&mut self, parent_section_id: &uuid::Uuid, new_section: &Section) -> Option<()>{
-        for (i, child) in self.children.iter_mut().enumerate(){
-            match child{
-                SectionContent::Section(section) => {
+        for (i, section) in self.sub_sections.iter_mut().enumerate(){
                     if section.id == Some(*parent_section_id){
-                        section.children.push(SectionContent::Section(new_section.clone()));
+                        section.sub_sections.push(new_section.clone());
                         return Some(())
                     }else{
                         match section.insert_child_section_as_child(parent_section_id, new_section){
@@ -140,19 +139,14 @@ impl Section{
                             None => {},
                         }
                     }
-                },
-                SectionContent::ContentBlock(_) => {},
-            }
         }
         None
     }
 
     pub fn insert_child_section_after(&mut self, section_id: &uuid::Uuid, new_section: &Section) -> Option<()>{
-        for (i, child) in self.children.iter_mut().enumerate(){
-            match child{
-                SectionContent::Section(section) => {
+        for (i, section) in self.sub_sections.iter_mut().enumerate(){
                     if section.id == Some(*section_id){
-                        self.children.insert(i+1, SectionContent::Section(new_section.clone()));
+                        self.sub_sections.insert(i+1,new_section.clone());
                         return Some(())
                     }else{
                         match section.insert_child_section_after(section_id, new_section){
@@ -162,18 +156,13 @@ impl Section{
                             None => {},
                         }
                     }
-                },
-                SectionContent::ContentBlock(_) => {},
-            }
         }
         None
     }
 
     pub fn remove_child_section(&mut self, section_id: &uuid::Uuid) -> Option<Section>{
         let mut index = None;
-        for (i, child) in self.children.iter_mut().enumerate(){
-            match child{
-                SectionContent::Section(section) => {
+        for (i, section) in self.sub_sections.iter_mut().enumerate(){
                     if section.id == Some(*section_id){
                         index = Some(i);
                     }else{
@@ -183,36 +172,14 @@ impl Section{
                             },
                             None => {},
                         }
-                    }
-                },
-                SectionContent::ContentBlock(_) => {},
             }
         }
         match index{
             Some(index) => {
-                let section = self.children.remove(index);
-                match section{
-                    SectionContent::Section(section) => Some(section),
-                    SectionContent::ContentBlock(_) => None,
-                }
+                let section = self.sub_sections.remove(index);
+                Some(section)
             },
             None => None,
-        }
-    }
-}
-
-/// Enum to differentiate between real content blocks and another nested section
-#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
-pub enum SectionContent{
-    Section(Section),
-    ContentBlock(ContentBlock),
-}
-
-impl SectionContent{
-    pub fn clone_without_contentblock_content(&mut self) -> SectionContent{
-        match self{
-            SectionContent::Section(_) => self.clone(),
-            SectionContent::ContentBlock(content_block) => SectionContent::ContentBlock(content_block.clone_without_contentblock_content()),
         }
     }
 }
@@ -581,6 +548,236 @@ pub enum IdentifierType{
     ROR,
     GND,
     Other(String),
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+pub struct NewContentBlockEditorJSFormat{
+    pub id: String,
+    #[serde(rename = "type")]
+    pub block_type: String,
+    pub data: BlockDataEditorJSFormat,
+    pub tunes: BlockTuneEditorJSFormat
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+pub struct BlockDataEditorJSFormat{
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub text: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub level: Option<u8>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub items: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub html: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub style: Option<String>
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+pub struct BlockTuneEditorJSFormat{
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub footnotes: Option<Vec<Footnote>>,
+}
+
+#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
+pub struct Footnote{
+    pub id: String,
+    pub content: String,
+    pub superscript: u16,
+}
+
+#[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone, PartialEq)]
+pub struct NewContentBlock{
+    pub id: String,
+    pub block_type: BlockType,
+    pub data: BlockData,
+    pub tunes: BlockTune,
+    #[bincode(with_serde)]
+    pub revision_id: Option<uuid::Uuid>,
+}
+
+impl From<BlockTuneEditorJSFormat> for BlockTune{
+
+    fn from(value: BlockTuneEditorJSFormat) -> Self {
+        if let Some(footnotes) = value.footnotes{
+            return BlockTune::Footnotes{footnotes}
+        }
+
+        return BlockTune::None
+    }
+}
+
+impl From<BlockTune> for BlockTuneEditorJSFormat{
+    fn from(value: BlockTune) -> Self {
+        match value{
+            BlockTune::Footnotes {footnotes} => {
+                BlockTuneEditorJSFormat{
+                    footnotes: Some(footnotes)
+                }
+            }
+            BlockTune::None => {
+                BlockTuneEditorJSFormat{
+                    footnotes: None,
+                }
+            }
+        }
+    }
+}
+
+impl TryFrom<NewContentBlockEditorJSFormat> for NewContentBlock{
+    type Error = String;
+
+    fn try_from(value: NewContentBlockEditorJSFormat) -> Result<Self, Self::Error> {
+        match value.block_type.as_str(){
+            "paragraph" => {
+               let text = value.data.text.ok_or("Missing field 'text' in paragraph block".to_string())?;
+                Ok(NewContentBlock {
+                     id: value.id,
+                     block_type: BlockType::Paragraph,
+                     data: BlockData::Paragraph { text },
+                     tunes: BlockTune::from(value.tunes),
+                     revision_id: None,
+                })
+            },
+            "header" => {
+                let level = value.data.level.ok_or("Missing field 'level' in header block".to_string())?;
+                let text = value.data.text.ok_or("Missing field 'text' in header block".to_string())?;
+
+                Ok(NewContentBlock {
+                    id: value.id,
+                    block_type: BlockType::Heading,
+                    data: BlockData::Heading { text, level },
+                    tunes: BlockTune::from(value.tunes),
+                    revision_id: None,
+                })
+            },
+            "raw" => {
+                let html = value.data.html.ok_or("Missing field 'html' in raw block".to_string())?;
+
+                Ok(NewContentBlock {
+                    id: value.id,
+                    block_type: BlockType::Heading,
+                    data: BlockData::Raw {html},
+                    tunes: BlockTune::from(value.tunes),
+                    revision_id: None,
+                })
+            },
+            "list" => {
+                let items = value.data.items.ok_or("Missing field 'items' in raw block".to_string())?;
+                let style = value.data.style.ok_or("Missing field 'style' in raw block".to_string())?;
+                Ok(NewContentBlock {
+                    id: value.id,
+                    block_type: BlockType::Heading,
+                    data: BlockData::List {style, items},
+                    tunes: BlockTune::from(value.tunes),
+                    revision_id: None,
+                })
+            },
+            _ => Err("Unknown block type".to_string()),
+        }
+    }
+}
+
+impl From<NewContentBlock> for NewContentBlockEditorJSFormat{
+
+    fn from(value: NewContentBlock) -> Self {
+        match value.data{
+            BlockData::Paragraph { text } => {
+                NewContentBlockEditorJSFormat {
+                    id: value.id,
+                    block_type: "paragraph".to_string(),
+                    data: BlockDataEditorJSFormat {
+                        text: Some(text),
+                        level: None,
+                        items: None,
+                        html: None,
+                        style: None,
+                    },
+                    tunes: BlockTuneEditorJSFormat::from(value.tunes),
+                }
+            },
+            BlockData::Heading { text, level } => {
+                NewContentBlockEditorJSFormat {
+                    id: value.id,
+                    block_type: "header".to_string(),
+                    data: BlockDataEditorJSFormat {
+                        text: Some(text),
+                        level: Some(level),
+                        items: None,
+                        html: None,
+                        style: None,
+                    },
+                    tunes: BlockTuneEditorJSFormat::from(value.tunes),
+                }
+            },
+            BlockData::Raw {html} => {
+                NewContentBlockEditorJSFormat {
+                    id: value.id,
+                    block_type: "raw".to_string(),
+                    data: BlockDataEditorJSFormat {
+                        text: None,
+                        level: None,
+                        items: None,
+                        html: Some(html),
+                        style: None,
+                    },
+                    tunes: BlockTuneEditorJSFormat::from(value.tunes),
+                }
+            },
+            BlockData::List {items, style} => {
+                NewContentBlockEditorJSFormat {
+                    id: value.id,
+                    block_type: "list".to_string(),
+                    data: BlockDataEditorJSFormat {
+                        text: None,
+                        level: None,
+                        items: Some(items),
+                        html: None,
+                        style: Some(style),
+                    },
+                    tunes: BlockTuneEditorJSFormat::from(value.tunes),
+                }
+            }
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone, PartialEq)]
+pub enum BlockType{
+    Paragraph,
+    Heading,
+    Raw
+}
+
+#[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone, PartialEq)]
+pub enum BlockTune {
+    Footnotes{footnotes: Vec<Footnote>},
+    None
+}
+
+#[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone, PartialEq)]
+pub enum BlockData{
+    Paragraph{text: String},
+    Heading{text: String, level: u8},
+    Raw{html: String},
+    List{style: String, items: Vec<String>}
+}
+
+/// Test function to test the deserialization of a content block
+#[test]
+pub fn test_deserialize_and_serialize_content_block(){
+    let json = r#"{
+        "id": "123",
+        "type": "header",
+        "data": {
+            "text": "Test",
+            "level": 1
+        }
+    }"#;
+    let content_block: NewContentBlockEditorJSFormat = serde_json::from_str(json).unwrap();
+    let content_block: NewContentBlock = content_block.try_into().unwrap();
+    let new: NewContentBlockEditorJSFormat = content_block.try_into().unwrap();
+    assert_eq!(json.parse::<serde_json::Value>().unwrap(), serde_json::to_string(&new).unwrap().parse::<serde_json::Value>().unwrap());
 }
 
 pub mod create;
