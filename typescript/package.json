@@ -1,0 +1,28 @@
+{
+  "name": "typescript",
+  "version": "1.0.0",
+  "description": "",
+  "main": "webpack.config.js",
+  "scripts": {
+    "build": "webpack --mode production"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@editorjs/editorjs": "^2.29.0",
+    "@editorjs/footnotes": "^1.1.0",
+    "@types/editorjs__header": "^2.6.3",
+    "editorjs-inline-tool": "^0.4.0",
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.3.3",
+    "webpack": "^5.90.1",
+    "webpack-cli": "^5.1.4"
+  },
+  "dependencies": {
+    "@editorjs/header": "^2.8.1",
+    "@editorjs/list": "^1.9.0",
+    "@editorjs/raw": "^2.5.0",
+    "handlebars": "^4.7.8"
+  }
+}
