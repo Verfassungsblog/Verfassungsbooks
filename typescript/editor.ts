@@ -2,13 +2,11 @@ import EditorJS from "@editorjs/editorjs";
 import Header from '@editorjs/header';
 // @ts-ignore
 import RawTool from '@editorjs/raw';
+import {NoteTool} from "./NoteTool";
 // @ts-ignore
 import List from "@editorjs/list";
 import * as API from "./api_requests";
 import * as Tools from "./tools";
-
-const FootnotesTune = require('@editorjs/footnotes');
-
 let typing_timer: number | null = null;
 let editor: EditorJS | null = null;
 
@@ -26,30 +24,30 @@ export async function show_editor(){
                 list: {
                     class: List,
                     inlineToolbar: true,
-                    tunes: ['footnotes'],
                     config: {
                         defaultStyle: 'unordered'
                     }
                 },
-                footnotes: {
-                    class: FootnotesTune,
-                },
-                paragraph: {
-                    tunes: ['footnotes'],
-                },
+                note: NoteTool
             },
-            data: {blocks: data}
+            data: {blocks: data},
+            onChange: (api, event) => {
+                save_changes();
+            }
         });
 
         await editor.isReady;
         document.getElementById("section_content_blocks_inner").addEventListener("input", typing_handler);
+
+        // Make all existing notes clickable
+        NoteTool.add_all_show_note_settings_listeners();
     }catch(e){
         console.error(e);
         Tools.show_alert("Couldn't load content.", "danger");
     }
 }
 
-async function save_changes(){
+export async function save_changes(){
     let data = await editor.save();
     console.log(data);
 
@@ -72,7 +70,7 @@ function typing_handler(){
     // @ts-ignore
     typing_timer = setTimeout(async function(){
         await save_changes();
-    }, 1000);
+    }, 500);
 }
 
 window.addEventListener("load", async function(){

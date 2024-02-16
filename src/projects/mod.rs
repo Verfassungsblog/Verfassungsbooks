@@ -556,7 +556,6 @@ pub struct NewContentBlockEditorJSFormat{
     #[serde(rename = "type")]
     pub block_type: String,
     pub data: BlockDataEditorJSFormat,
-    pub tunes: BlockTuneEditorJSFormat
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
@@ -591,7 +590,6 @@ pub struct NewContentBlock{
     pub id: String,
     pub block_type: BlockType,
     pub data: BlockData,
-    pub tunes: BlockTune,
     #[bincode(with_serde)]
     pub revision_id: Option<uuid::Uuid>,
 }
@@ -635,7 +633,6 @@ impl TryFrom<NewContentBlockEditorJSFormat> for NewContentBlock{
                      id: value.id,
                      block_type: BlockType::Paragraph,
                      data: BlockData::Paragraph { text },
-                     tunes: BlockTune::from(value.tunes),
                      revision_id: None,
                 })
             },
@@ -647,7 +644,6 @@ impl TryFrom<NewContentBlockEditorJSFormat> for NewContentBlock{
                     id: value.id,
                     block_type: BlockType::Heading,
                     data: BlockData::Heading { text, level },
-                    tunes: BlockTune::from(value.tunes),
                     revision_id: None,
                 })
             },
@@ -658,7 +654,6 @@ impl TryFrom<NewContentBlockEditorJSFormat> for NewContentBlock{
                     id: value.id,
                     block_type: BlockType::Heading,
                     data: BlockData::Raw {html},
-                    tunes: BlockTune::from(value.tunes),
                     revision_id: None,
                 })
             },
@@ -669,7 +664,6 @@ impl TryFrom<NewContentBlockEditorJSFormat> for NewContentBlock{
                     id: value.id,
                     block_type: BlockType::Heading,
                     data: BlockData::List {style, items},
-                    tunes: BlockTune::from(value.tunes),
                     revision_id: None,
                 })
             },
@@ -693,7 +687,6 @@ impl From<NewContentBlock> for NewContentBlockEditorJSFormat{
                         html: None,
                         style: None,
                     },
-                    tunes: BlockTuneEditorJSFormat::from(value.tunes),
                 }
             },
             BlockData::Heading { text, level } => {
@@ -707,7 +700,6 @@ impl From<NewContentBlock> for NewContentBlockEditorJSFormat{
                         html: None,
                         style: None,
                     },
-                    tunes: BlockTuneEditorJSFormat::from(value.tunes),
                 }
             },
             BlockData::Raw {html} => {
@@ -721,7 +713,6 @@ impl From<NewContentBlock> for NewContentBlockEditorJSFormat{
                         html: Some(html),
                         style: None,
                     },
-                    tunes: BlockTuneEditorJSFormat::from(value.tunes),
                 }
             },
             BlockData::List {items, style} => {
@@ -735,7 +726,6 @@ impl From<NewContentBlock> for NewContentBlockEditorJSFormat{
                         html: None,
                         style: Some(style),
                     },
-                    tunes: BlockTuneEditorJSFormat::from(value.tunes),
                 }
             }
         }
