@@ -1,6 +1,5 @@
-use std::time::SystemTime;
 use crate::data_storage::DataStorage;
-use crate::projects::{InnerContentBlock, PatchInnerContentBlock, SectionMetadata, NewContentBlock, NewContentBlockEditorJSFormat};
+use crate::projects::{SectionMetadata, NewContentBlock, NewContentBlockEditorJSFormat};
 use crate::projects::SectionOrToc;
 use rocket::serde::json::Json;
 use std::sync::Arc;
@@ -9,7 +8,7 @@ use chrono::NaiveDateTime;
 use rocket::State;
 use serde::{Deserialize, Serialize};
 use crate::data_storage::ProjectStorage;
-use crate::projects::{Identifier, Keyword, ContentBlock, Language, License, ProjectMetadata, ProjectSettings, Section};
+use crate::projects::{Identifier, Keyword, Language, License, ProjectMetadata, ProjectSettings, Section};
 use crate::session::session_guard::Session;
 use crate::settings::Settings;
 
