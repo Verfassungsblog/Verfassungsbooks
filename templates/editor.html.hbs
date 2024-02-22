@@ -15,9 +15,9 @@
                 <li class="nav-item">
                     <a class="nav-link active p-0" aria-current="page" href="/">Verfassungsbooks</a>
                 </li>
-
             </ul>
         </div>
+        <button class="btn btn-sm btn-success" id="editor_render_project_btn">Render Project</button>
     </div>
 </nav>
 <div class="container-fluid editor">
@@ -26,8 +26,17 @@
             <div id="editor-sidebar">
             </div>
         </div>
-        <div class="col col-8 col-xl-10 editor-details">
+        <div class="col col-8 col-xl-10" id="editor-main-col">
+            <div class="row d-flex">
+                <div class="editor-details">
 
+                </div>
+                <div id="editor-render-preview" class="hide">
+                    <div style="overflow-y:scroll;" id="test">
+                        Loading Preview...
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

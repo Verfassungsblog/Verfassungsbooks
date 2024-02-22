@@ -37,3 +37,42 @@ export async function send_get_content_blocks(project_id: string, section_path: 
         }
     }
 }
+
+
+export async function send_render_project(project_id: string){
+    const response = await fetch(`/api/projects/`+project_id+`/render`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    });
+    if(!response.ok){
+        throw new Error(`Failed to render project: ${response.status}`);
+    }else{
+        let response_data = await response.json();
+        if(response_data.hasOwnProperty("error")) {
+            throw new Error(`Failed to render project: ${response_data["error"]}`);
+        }else{
+            return response_data;
+        }
+    }
+}
+
+export async function send_get_rendering_status(render_id: string){
+    const response = await fetch(`/api/renderings/`+render_id+`/status`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    });
+    if(!response.ok){
+        throw new Error(`Failed to render project: ${response.status}`);
+    }else{
+        let response_data = await response.json();
+        if(response_data.hasOwnProperty("error")) {
+            throw new Error(`Failed to render project: ${response_data["error"]}`);
+        }else{
+            return response_data;
+        }
+    }
+}

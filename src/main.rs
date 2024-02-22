@@ -23,6 +23,8 @@ pub mod persons;
 pub mod data_storage;
 pub mod utils;
 
+pub mod export;
+
 #[macro_use] extern crate rocket;
 
 /// This is the catch-all route that redirects all 401 errors to the login page.
@@ -76,6 +78,13 @@ async fn rocket() -> _ {
         println!("Created new default admin user 'default@default' with password '{}'", password);
     }
 
+    // Clear temp directory
+    let path = format!("{}/temp", settings.data_path);
+    let temp_dir = std::path::Path::new(&path);
+    if temp_dir.exists(){
+        std::fs::remove_dir_all(temp_dir).unwrap();
+    }
+
     println!("Loading data storage...");
     let data_storage = Arc::new(data_storage::DataStorage::load_from_disk(&settings).await.unwrap());
     println!("Loading project storage...");
@@ -90,15 +99,19 @@ async fn rocket() -> _ {
     // Start seperate thread for auto-saving
     data_storage::save_data_worker(data_storage.clone(), project_storage.clone(), settings.clone()).await;
 
+    println!("Starting rendering worker...");
+    let rendering_manager = export::rendering_manager::RenderingManager::start(settings.clone(), data_storage.clone()).await;
+
     println!("Starting web server...");
     rocket::build()
         .register("/", catchers![forward_to_login])
         .attach(Template::fairing())
         .mount("/css", rocket::fs::FileServer::from("static/css"))
         .mount("/js", rocket::fs::FileServer::from("static/js"))
-        .mount("/", routes![utils::lobid_proxy::search_gnd, session::logout::logout_page, session::login::login_page, session::login::process_login_form, projects::create::show_create_project, projects::create::process_create_project, projects::list::list_projects, projects::editor::show_editor, projects::api::get_project_metadata, projects::api::get_project_settings, projects::api::set_project_metadata, projects::api::set_project_settings, projects::api::add_author_to_project, projects::api::add_editor_to_project, projects::api::remove_editor_from_project, projects::api::remove_author_from_project, projects::api::add_keyword_to_project, projects::api::remove_keyword_from_project, projects::api::add_identifier_to_project, projects::api::remove_identifier_from_project, projects::api::update_identifier_in_project, persons::list::list_persons, persons::create::show_create_person, persons::api::create_person, persons::api::get_person, persons::api::update_person, persons::api::search_persons, projects::api::patch_project_metadata, projects::api::get_project_contents, projects::api::add_content, projects::api::move_content_after, projects::api::move_content_child_of, projects::api::get_section, projects::api::update_section, projects::api::delete_section, projects::api::get_content_blocks_in_section, projects::api::set_content_blocks_in_section])
+        .mount("/", routes![utils::lobid_proxy::search_gnd, session::logout::logout_page, session::login::login_page, session::login::process_login_form, projects::create::show_create_project, projects::create::process_create_project, projects::list::list_projects, projects::editor::show_editor, projects::api::get_project_metadata, projects::api::get_project_settings, projects::api::set_project_metadata, projects::api::set_project_settings, projects::api::add_author_to_project, projects::api::add_editor_to_project, projects::api::remove_editor_from_project, projects::api::remove_author_from_project, projects::api::add_keyword_to_project, projects::api::remove_keyword_from_project, projects::api::add_identifier_to_project, projects::api::remove_identifier_from_project, projects::api::update_identifier_in_project, persons::list::list_persons, persons::create::show_create_person, persons::api::create_person, persons::api::get_person, persons::api::update_person, persons::api::search_persons, projects::api::patch_project_metadata, projects::api::get_project_contents, projects::api::add_content, projects::api::move_content_after, projects::api::move_content_child_of, projects::api::get_section, projects::api::update_section, projects::api::delete_section, projects::api::get_content_blocks_in_section, projects::api::set_content_blocks_in_section, projects::api::render_project, projects::api::get_rendering_status, export::download::download_rendering])
         .manage(SessionStorage::new())
         .manage(settings)
         .manage(data_storage)
         .manage(project_storage)
+        .manage(rendering_manager)
 }

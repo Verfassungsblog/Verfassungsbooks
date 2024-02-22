@@ -1,0 +1,44 @@
+<div id="metadata_page">
+    <div id="metadata_page_inner">
+        {{#if metadata.identifiers}}
+            <p>
+            {{#each metadata.identifiers}}
+                {{name}} {{value}}<br>
+            {{/each}}
+            </p>
+        {{/if}}
+        {{#if metadata.edition}}
+            <p>{{metadata.edition}} Edition</p>
+        {{/if}}
+        <p>Verfassungsbooks</p>
+        <p>Verfassungsblog gGmbH<br>
+            Elbestraße 28<br>
+            12045 Berlin<br>
+            <a href="https://verfassungsblog.de">verfassungsblog.de</a><br>
+            <a href="mailto:info@verfassungsblog.de">info@verfassungsblog.de</a>
+        </p>
+        {{#if metadata.license}}
+            {{#if metadata.license.CC0}}
+                <p>This work is marked with CC0 1.0. To view a copy of this license, visit <a href="http://creativecommons.org/publicdomain/zero/1.0/">http://creativecommons.org/publicdomain/zero/1.0/</a>.</p>
+            {{/if}}
+            {{#if metadata.license.CC_BY_4}}
+                <p>This work is licensed under CC BY 4.0. To view a copy of this license, visit <a href="http://creativecommons.org/licenses/by/4.0/">http://creativecommons.org/licenses/by/4.0/</a>.</p>
+            {{/if}}
+            {{#if metadata.license.CC_BY_SA_4}}
+                <p>This work is licensed under CC BY-SA 4.0. To view a copy of this license, visit <a href="http://creativecommons.org/licenses/by-sa/4.0/">http://creativecommons.org/licenses/by-sa/4.0/</a>.</p>
+            {{/if}}
+            {{#if metadata.license.CC_BY_ND_4}}
+                <p>This work is licensed under CC BY-ND 4.0. To view a copy of this license, visit <a href="http://creativecommons.org/licenses/by-nd/4.0/">http://creativecommons.org/licenses/by-nd/4.0/</a>.</p>
+            {{/if}}
+            {{#if metadata.license.CC_BY_NC_4}}
+                <p>This work is licensed under CC BY-NC 4.0. To view a copy of this license, visit <a href="http://creativecommons.org/licenses/by-nc/4.0/">http://creativecommons.org/licenses/by-nc/4.0/</a>.</p>
+            {{/if}}
+            {{#if metadata.license.CC_BY_NC_SA_4}}
+                <p>This work is licensed under CC BY-NC-SA 4.0. To view a copy of this license, visit <a href="http://creativecommons.org/licenses/by-nc-sa/4.0/">http://creativecommons.org/licenses/by-nc-sa/4.0/</a>.</p>
+            {{/if}}
+            {{#if metadata.license.CC_BY_NC_ND_4}}
+                <p>This work is licensed under CC BY-NC-ND 4.0. To view a copy of this license, visit <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/">http://creativecommons.org/licenses/by-nc-nd/4.0/</a>.</p>
+            {{/if}}
+        {{/if}}
+    </div>
+</div>

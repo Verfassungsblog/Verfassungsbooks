@@ -69,7 +69,16 @@ impl DataStorage{
         }
     }
 
-    /// Check if user exists
+    /// Get person by id
+    /// Returns a [Person] as [Arc<RwLock<Person>>] if the person exists
+    pub fn get_person(&self, uuid: &uuid::Uuid) -> Option<Arc<RwLock<Person>>>{
+        match self.data.read().unwrap().persons.get(uuid){
+            None => None,
+            Some(data) => Some(Arc::clone(data))
+        }
+    }
+
+    /// Check if person exists
     pub fn person_exists(&self, uuid: &uuid::Uuid) -> bool{
         self.data.read().unwrap().persons.contains_key(uuid)
     }
@@ -778,7 +787,7 @@ pub async fn save_data_worker(data_storage: Arc<DataStorage>, project_storage: A
 mod tests {
     use std::thread;
     use rocket::serde::json::Json;
-    use crate::projects::{ContentBlock, InnerContentBlock, Paragraph, TextElement, TextFormat};
+    use crate::projects::{InnerContentBlock, Paragraph, TextElement, TextFormat};
     use super::*;
     #[test]
     fn setup_test_environment() {
@@ -922,41 +931,6 @@ mod tests {
             settings: None,
             sections: vec![],
         };
-    }
-
-    #[rocket::tokio::test]
-    async fn test2(){
-        setup_test_environment();
-        let test_project = ProjectData{
-            name: "Test Project Old".to_string(),
-            description: None,
-            template_id: Default::default(),
-            last_interaction: 0,
-            metadata: None,
-            settings: None,
-            sections: vec![],
-        };
-
-
-        let content_block = ContentBlock{
-            id: None,
-            revision_id: None,
-            content: Some(InnerContentBlock::Paragraph(Paragraph{
-                contents: vec![
-                    TextElement::FormattedText(crate::projects::FormattedText{
-                        contents: vec![
-                            TextElement::String("Test".to_string())
-                        ],
-                        format: TextFormat::Bold,
-                    }),
-                    TextElement::LineBreak(crate::projects::LineBreak{}),
-                ],
-                alignment: None,
-            })),
-            css_classes: None,
-        };
-
-        println!("{}", serde_json::to_string(&content_block).unwrap());
     }
 
 }

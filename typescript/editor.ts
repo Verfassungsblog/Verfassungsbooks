@@ -7,10 +7,13 @@ import {NoteTool} from "./NoteTool";
 import List from "@editorjs/list";
 import * as API from "./api_requests";
 import * as Tools from "./tools";
+import * as RenderPDF from "./RenderPDF";
+
 let typing_timer: number | null = null;
 let editor: EditorJS | null = null;
 
 export async function show_editor(){
+    document.getElementById("editor_render_project_btn").addEventListener("click", RenderPDF.render_project_listener);
     try {
         // @ts-ignore
         let data = (await API.send_get_content_blocks(globalThis.project_id, globalThis.section_path)).data;

@@ -15,6 +15,7 @@ pub struct Settings{
     /// How long should the app wait for a file lock in ms
     pub file_lock_timeout: u64,
     pub backup_to_file_interval: u64,
+    pub max_rendering_threads : u64,
 }
 
 impl Settings{

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title></title>
+    <link rel="stylesheet" href="book.css">
+</head>
+<body>
+<!-- Metadata Page -->
+{{> metadata}}
+
+<!-- Titlepage -->
+{{> titlepage}}
+
+<!-- TOC -->
+<nav role="doc-toc">
+    <h1>Table of Contents</h1>
+    <ol>
+        {{#each data}}
+            <li><a href="#{{id}}">{{metadata.title}}</a></li>
+        {{/each}}
+    </ol>
+</nav>
+
+<!-- Content -->
+{{#each data}}
+    <h1 id="{{id}}">{{metadata.title}}</h1>
+    {{#if metadata.subtitle}}<h2>{{metadata.subtitle}}</h2>{{/if}}
+    {{#each authors}}
+        {{first_names}} {{last_names}}
+    {{/each}}
+    <hr>
+    {{#each children}}
+        {{{html}}}
+    {{/each}}
+{{/each}}
+</body>
+</html>

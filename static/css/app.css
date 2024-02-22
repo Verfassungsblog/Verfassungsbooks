@@ -112,8 +112,18 @@ h3 {
 }
 
 .editor-details{
-   margin-top: 10px;
-   margin-bottom: 10px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    overflow-y: auto;
+    height: calc(100vh - 70px);
+    width: auto;
+    flex-grow: 1;
+}
+#editor-render-preview{
+    overflow-y: auto;
+    height: calc(100vh - 70px);
+    width: min-content;
+    margin: auto;
 }
 #editor_sidebar_contents{
     padding-bottom: 25px;
@@ -135,7 +145,7 @@ h3 {
     margin-left: 20px;
 }
 .editor{
-    height: calc(100vh - 40px);
+    height: calc(100vh - 47px);
     min-height: 100%;
 }
 .editor_section_view_metadata{
@@ -222,7 +232,6 @@ label{
     background-color: var(--light-gray);
 }
 .search_result_list{
-    position: absolute;
     margin-top: 1px;
     list-style-type: none;
     background-color: white;

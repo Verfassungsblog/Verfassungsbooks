@@ -8,6 +8,7 @@ use chrono::NaiveDateTime;
 use rocket::State;
 use serde::{Deserialize, Serialize};
 use crate::data_storage::ProjectStorage;
+use crate::export::rendering_manager::{RenderingManager, RenderingStatus};
 use crate::projects::{Identifier, Keyword, Language, License, ProjectMetadata, ProjectSettings, Section};
 use crate::session::session_guard::Session;
 use crate::settings::Settings;
@@ -1387,5 +1388,57 @@ pub async fn set_content_blocks_in_section(project_id: String, content_path: Str
             ApiResult::new_data(())
         },
         Err(e) => ApiResult::new_error(e)
+    }
+}
+
+/// POST /api/projects/<project_id>/render
+/// Renders project
+#[post("/api/projects/<project_id>/render")]
+pub async fn render_project(project_id: String, project_storage: &State<Arc<ProjectStorage>>, _session: Session, rendering_manager: &State<Arc<RenderingManager>>, settings: &State<Settings>) -> Json<ApiResult<(uuid::Uuid)>>{
+    let project_id = match uuid::Uuid::parse_str(&project_id) {
+        Ok(project_id) => project_id,
+        Err(e) => {
+            eprintln!("Couldn't parse project id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let project_storage = Arc::clone(project_storage);
+
+    let project_entry = match project_storage.get_project(&project_id, settings).await{
+        Ok(project_entry) => project_entry.clone(),
+        Err(_) => {
+            eprintln!("Couldn't get project with id {}", project_id);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let project = project_entry.read().unwrap().clone();
+
+    // TODO: Check if all authors and editors still exist, if not, remove them from the metadata and save the project
+
+    // Add to render queue
+    let render_id = rendering_manager.add_rendering_request(project);
+
+    ApiResult::new_data(render_id)
+}
+
+/// GET /api/renderings/<render_id>/status
+/// Get status of rendering
+#[get("/api/renderings/<render_id>/status")]
+pub async fn get_rendering_status(render_id: String, rendering_manager: &State<Arc<RenderingManager>>, _session: Session) -> Json<ApiResult<RenderingStatus>>{
+    let render_id = match uuid::Uuid::parse_str(&render_id) {
+        Ok(render_id) => render_id,
+        Err(e) => {
+            eprintln!("Couldn't parse render id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let status = rendering_manager.get_rendering_request_status(render_id);
+
+    match status{
+        Some(status) => ApiResult::new_data(status),
+        None => ApiResult::new_error(ApiError::NotFound)
     }
 }
