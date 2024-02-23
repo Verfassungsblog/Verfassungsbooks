@@ -45,6 +45,11 @@ async fn rocket() -> _ {
         //Create empty DataStorage
         println!("Creating empty data storage...");
         let mut data_storage = data_storage::DataStorage::new();
+        data_storage.insert_template(data_storage::ProjectTemplate{
+            id: uuid::Uuid::parse_str("b8d7844d-a7e3-470e-bea3-7b657bf1d6cf").unwrap(),
+            name: "default".to_string(),
+            description: "default project".to_string()
+        }, &settings).await.unwrap();
         //Create new admin user
         let salt = argon2::password_hash::SaltString::generate(&mut OsRng);
         const PASSWORD_CHARACTERS: [char; 92] = [
