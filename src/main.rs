@@ -39,7 +39,7 @@ fn forward_to_login<'r>() -> rocket::response::Redirect {
 async fn rocket() -> _ {
     let settings = Settings::new().unwrap();
     //Check if data directory exists, if not create it
-    if !std::path::Path::new(settings.data_path.as_str()).exists() {
+    if !std::path::Path::new(&format!("{}/projects", settings.data_path)).exists() {
         println!("Data directory does not exist, creating it...");
         std::fs::create_dir_all(format!("{}/projects", settings.data_path)).unwrap(); //Intentionally panic if directory creation fails
         //Create empty DataStorage
