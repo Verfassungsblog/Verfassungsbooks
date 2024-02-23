@@ -13,24 +13,39 @@
 <!-- Titlepage -->
 {{> titlepage}}
 
-<!-- TOC -->
-<nav role="doc-toc">
-    <h1>Table of Contents</h1>
-    <ol>
-        {{#each data}}
-            <li><a href="#{{id}}">{{metadata.title}}</a></li>
-        {{/each}}
-    </ol>
-</nav>
-
 <!-- Content -->
 {{#each data}}
-    <h1 id="{{id}}">{{metadata.title}}</h1>
-    {{#if metadata.subtitle}}<h2>{{metadata.subtitle}}</h2>{{/if}}
-    {{#each authors}}
-        {{first_names}} {{last_names}}
-    {{/each}}
-    <hr>
+    {{#if @first}} <!-- Vorwort -->
+        <h1>{{metadata.title}}</h1>
+    <div class="chapter" lang="en">
+        {{#each children}}
+            {{{html}}}
+        {{/each}}
+    </div>
+        <!-- TOC -->
+        <nav role="doc-toc">
+            <h1>Table of Contents</h1>
+            <ol>
+                {{#each ../data}}
+                    <li><a href="#{{id}}">{{metadata.title}}</a></li>
+                {{/each}}
+            </ol>
+        </nav>
+    {{/if}}
+
+    <!-- Beginn eines Kapitels -->
+    <div class="chapter_titlepage">
+        <div class="chapter_titlepage_inner">
+        {{#if metadata.authors}}
+            {{#each metadata.authors}}
+                <span>{{first_names}} {{last_names}}</span>
+            {{/each}}
+        {{/if}}
+        <h1>{{metadata.title}}</h1>
+        {{#if metadata.subtitle}}<span class="chapter_titlepage_subtitle">{{metadata.subtitle}}</span>{{/if}}
+        </div>
+    </div>
+
     <div class="chapter" lang="en">
     {{#each children}}
         {{{html}}}
