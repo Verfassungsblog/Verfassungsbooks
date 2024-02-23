@@ -3,12 +3,14 @@ use std::path::Path;
 use std::process::Command;
 use std::sync::Arc;
 use handlebars::{DirectorySourceOptions, Handlebars, TemplateError};
+use hyphenation::{Hyphenator, Load, Standard};
 use regex::Regex;
+use rocket::form::validate::Contains;
 use rocket::State;
 use crate::data_storage::{DataStorage, ProjectData};
-use crate::export::{PreparedContentBlock, PreparedLicense, PreparedMetadata, PreparedProject, PreparedSection, PreparedSectionMetadata};
+use crate::export::{PreparedContentBlock, PreparedEndnote, PreparedLicense, PreparedMetadata, PreparedProject, PreparedSection, PreparedSectionMetadata};
 use crate::export::rendering_manager::RenderingError;
-use crate::projects::{BlockData, License, NewContentBlock, Section, SectionOrToc};
+use crate::projects::{BlockData, Language, License, NewContentBlock, Section, SectionOrToc};
 use crate::settings::Settings;
 
 pub fn render_project(prepared_project: PreparedProject, template_id: uuid::Uuid, temp_dir: &Path, settings: &Settings) -> Result<(), RenderingError>{
@@ -164,6 +166,17 @@ pub fn render_section(section: Section, data_storage: Arc<DataStorage>) -> Prepa
         editors.push(person);
     }
 
+    // Load hyphenation dictionary for the language
+    let dict = match &section.metadata.lang{
+        Some(lang) => {
+            match lang{
+                Language::DE => Standard::from_embedded(hyphenation::Language::German1996).unwrap(),
+                Language::EN => Standard::from_embedded(hyphenation::Language::EnglishGB).unwrap()
+            }
+        }
+        None => Standard::from_embedded(hyphenation::Language::EnglishGB).unwrap()
+    };
+
     let metadata = PreparedSectionMetadata{
         title: section.metadata.title,
         subtitle: section.metadata.subtitle,
@@ -181,7 +194,7 @@ pub fn render_section(section: Section, data_storage: Arc<DataStorage>) -> Prepa
     let mut endnote_storage: Vec<String> = vec![];
 
     for content_block in section.children{
-        content.push(render_content_block(content_block, &mut endnote_storage));
+        content.push(render_content_block(content_block, &mut endnote_storage, &dict));
     }
 
     let mut sub_sections = vec![];
@@ -191,7 +204,7 @@ pub fn render_section(section: Section, data_storage: Arc<DataStorage>) -> Prepa
 
     let mut endnotes = vec![];
     for i in 0..endnote_storage.len(){
-        endnotes.push((i+1, endnote_storage.get(i).unwrap().clone()))
+        endnotes.push(PreparedEndnote{ num: i+1, content: endnote_storage.get(i).unwrap().clone() })
     }
 
     PreparedSection{
@@ -204,13 +217,13 @@ pub fn render_section(section: Section, data_storage: Arc<DataStorage>) -> Prepa
     }
 }
 
-pub fn render_content_block(block: NewContentBlock, endnote_storage: &mut Vec<String>) -> PreparedContentBlock{
+pub fn render_content_block(block: NewContentBlock, endnote_storage: &mut Vec<String>, dict: &Standard) -> PreparedContentBlock{
     let data: String = match block.data{
         BlockData::Paragraph {text} => {
-            format!("<p>{}</p>", render_text(text, endnote_storage))
+            format!("<p>{}</p>", render_text(text, endnote_storage, dict))
         }
         BlockData::Heading { text , level} => {
-            format!("<h{}>{}</h{}>", level, render_text(text, endnote_storage), level)
+            format!("<h{}>{}</h{}>", level, render_text(text, endnote_storage, dict), level)
         }
         BlockData::Raw { html } => {
             html
@@ -218,13 +231,16 @@ pub fn render_content_block(block: NewContentBlock, endnote_storage: &mut Vec<St
         BlockData::List { style, items} => {
             let mut res = String::new();
             for item in items{
-                res.push_str(&format!("<li>{}</li>", render_text(item, endnote_storage)));
+                res.push_str(&format!("<li>{}</li>", render_text(item, endnote_storage, dict)));
             }
             if style == "ordered"{
                 format!("<ol>{}</ol>", res)
             }else{
                 format!("<ul>{}</ul>", res)
             }
+        },
+        BlockData::Quote{text, caption, alignment} => {
+            format!("<blockquote class=\"align-{}\"><p>{}</p><footer>{}</footer></blockquote>", alignment, render_text(text, endnote_storage, dict), render_text(caption, endnote_storage, dict))
         }
     };
     PreparedContentBlock{
@@ -234,21 +250,81 @@ pub fn render_content_block(block: NewContentBlock, endnote_storage: &mut Vec<St
     }
 }
 
-pub fn render_text(text: String, endnote_storage: &mut Vec<String>) -> String{
+pub fn render_text(text: String, endnote_storage: &mut Vec<String>, dict: &Standard) -> String{
     let re: Regex = Regex::new(r#"<span(?:[^>]*?\bnote-type="([^"]+)")?(?:[^>]*?\bnote-content="([^"]+)")?[^>]*>.*?</span>"#).unwrap(); //TODO: DO NOT RECOMPILE REGEX, it's bad for performance
 
     let res = re.replace_all(&text, |caps: &regex::Captures| {
-        let note_type = caps.get(1).unwrap().as_str();
-        let note_content = caps.get(2).unwrap().as_str();
+        let note_type = match caps.get(1){
+            Some(note_type) => note_type.as_str(),
+            None => return String::new()
+        };
+        let note_content = match caps.get(2){
+            Some(note_content) => note_content.as_str(),
+            None => return String::new()
+        };
 
         if(note_type == "endnote"){
             endnote_storage.push(note_content.to_string());
-            return format!("<sup class=\"endnote\">[{}]</sup>", endnote_storage.len())
+            return format!("<sup class=\"endnote\"><a href=\"#note-{}\">[{}]</a></sup>", endnote_storage.len(), endnote_storage.len())
         }else if(note_type == "footnote"){
-            return format!("<span class=\"footnote\">{}</span>", note_content)
+            let uuid = uuid::Uuid::new_v4();
+            return format!("<a href=\"#footnote-{}\"><span class=\"footnote\"><span id=\"footnote-{}\">{}</span></span></a>", uuid, uuid, note_content)
         }else{
             String::new()
         }
     });
-    res.to_string()
+
+    let re2 = Regex::new(r#"<customstyle(?:[^>]*?\binline-style="([^"]*?)")?(?:[^>]*?\bclasses="([^"]*?)")?[^>]*>(.*?)</customstyle>"#).unwrap();
+    let binding = res.to_string();
+    let res2 = re2.replace_all(&binding, |caps: &regex::Captures| {
+        let inline_style = caps.get(1).map_or("", |m| m.as_str());
+        let classes = caps.get(2).map_or("", |m| m.as_str());
+        let content = caps.get(3).map_or("", |m| m.as_str());
+        format!(r#"<span class="{}" style="{}">{}</span>"#, classes, inline_style, content)
+    });
+
+    hyphenate_text(res2.to_string(), dict)
+}
+
+pub fn hyphenate_text(text: String, dict: &hyphenation::Standard) -> String{
+    let mut res = String::new();
+    let mut word_iter = text.split_whitespace().peekable();
+    while let Some(word) = word_iter.next(){
+        if word.starts_with("class=\"") || word.contains("<") || word.contains(">") || word.contains("="){
+            res.push_str(&format!("{} ", word));
+            continue
+        }
+        let hyphenated = dict.hyphenate(word);
+
+        let mut word_res = String::new();
+        let mut iter = hyphenated.into_iter().segments().peekable();
+        while let Some(segment) = iter.next(){
+            word_res.push_str(&segment);
+            if iter.peek().is_some(){
+                word_res.push('\u{00ad}');
+            }
+        }
+
+        res.push_str(&word_res);
+        if word_iter.peek().is_some(){
+            res.push(' ');
+        }
+    }
+    res
+}
+
+// Test hyphenation
+#[cfg(test)]
+mod tests {
+    use hyphenation::extended::Extended;
+    use hyphenation::{Load, Standard};
+    use super::*;
+
+    #[test]
+    fn test_hyphenation(){
+        let dict = Standard::from_embedded(hyphenation::Language::German1996).unwrap();
+        let text = "Grundstücksverkehrsgenehmigungszuständigkeitsübertragungsverordnung";
+        let hyphenated = hyphenate_text(text.to_string(), &dict);
+        assert_eq!(hyphenated, "Grund\u{ad}stücks\u{ad}ver\u{ad}kehrs\u{ad}ge\u{ad}neh\u{ad}mi\u{ad}gungs\u{ad}zu\u{ad}stän\u{ad}dig\u{ad}keits\u{ad}über\u{ad}tra\u{ad}gungs\u{ad}ver\u{ad}ord\u{ad}nung");
+    }
 }

@@ -99,7 +99,13 @@ pub struct PreparedSection{
     pub children: Vec<PreparedContentBlock>,
     pub metadata: PreparedSectionMetadata,
     pub visible_in_toc: bool,
-    pub endnotes: Vec<(usize, String)>
+    pub endnotes: Vec<PreparedEndnote>
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct PreparedEndnote{
+    pub num: usize,
+    pub content: String,
 }
 
 #[derive(Serialize, Deserialize)]

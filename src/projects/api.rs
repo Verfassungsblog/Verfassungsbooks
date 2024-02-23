@@ -5,6 +5,8 @@ use rocket::serde::json::Json;
 use std::sync::Arc;
 use bincode::{Decode, Encode};
 use chrono::NaiveDateTime;
+use rocket::form::Form;
+use rocket::fs::NamedFile;
 use rocket::State;
 use serde::{Deserialize, Serialize};
 use crate::data_storage::ProjectStorage;
@@ -1442,3 +1444,22 @@ pub async fn get_rendering_status(render_id: String, rendering_manager: &State<A
         None => ApiResult::new_error(ApiError::NotFound)
     }
 }
+
+struct ImageUpload{
+    image: NamedFile,
+}
+
+#[derive(Serialize, Deserialize, FromForm)]
+struct ImageUploadResponse{
+    success: bool,
+    // file: Option<TODO>
+}
+
+/*/// Upload image via multipart form
+/// Endpoint for EditorJS image upload
+/// POST /api/projects/<project_id>/uploads
+#[post("/api/projects/<project_id>/uploads", data = "<form>")]
+pub fn upload_to_project(project_id: String, form: Form<ImageUpload>, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> ImageUploadResponse {
+
+}*/
+//TODO: implement image upload

@@ -145,11 +145,15 @@ span.footnote {
 }
 
 .footnote::footnote-marker {
-    content: counter(footnote, lower-roman);
+    content: counter(footnote, decimal);
     font-size: 14pt;
     color: red;
     display: inline-block;
     width: 2em;
     padding-right: 1em;
     text-align: right;
+}
+.chapter{
+    hyphens: manual;
+    text-align: justify
 }

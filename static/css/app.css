@@ -91,7 +91,7 @@ h3 {
         min-height: initial;
     }
     .editor-details{
-        width: 100%;
+        width: min-content;
     }
 }
 
@@ -116,7 +116,7 @@ h3 {
     margin-bottom: 10px;
     overflow-y: auto;
     height: calc(100vh - 70px);
-    width: auto;
+    width: min-content;
     flex-grow: 1;
 }
 #editor-render-preview{
@@ -385,10 +385,23 @@ label{
     top: 40px;
     opacity: 0.9;
 }
+.custom-style-tool-settings{
+    position: absolute;
+    background-color: white;
+    z-index: 20;
+    width: 300px;
+    padding: 10px;
+    border-radius: 5px;
+    top: 40px;
+    opacity: 0.9;
+}
 .note{
     vertical-align: super;
     font-weight: bold;
     padding: 1px;
     cursor: pointer;
     font-style: italic;
+}
+customstyle{
+    border-bottom: 1px dotted var(--grey);
 }

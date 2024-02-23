@@ -31,9 +31,20 @@
         {{first_names}} {{last_names}}
     {{/each}}
     <hr>
+    <div class="chapter" lang="en">
     {{#each children}}
         {{{html}}}
     {{/each}}
+    {{#if endnotes}}
+        <span>Notes</span>
+        <ol>
+        {{#each endnotes}}
+            <li id="note-{{num}}">{{{content}}}</li>
+        {{/each}}
+        </ol>
+    {{/if}}
+
+    </div>
 {{/each}}
 </body>
 </html>

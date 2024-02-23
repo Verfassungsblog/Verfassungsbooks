@@ -3,16 +3,21 @@ import Header from '@editorjs/header';
 // @ts-ignore
 import RawTool from '@editorjs/raw';
 import {NoteTool} from "./NoteTool";
+const Quote:any = require('@editorjs/quote');
+const Undo: any = require('editorjs-undo');
+
 // @ts-ignore
 import List from "@editorjs/list";
 import * as API from "./api_requests";
 import * as Tools from "./tools";
 import * as RenderPDF from "./RenderPDF";
+import {CustomStyleTool} from "./CustomStyleTool";
 
 let typing_timer: number | null = null;
 let editor: EditorJS | null = null;
 
 export async function show_editor(){
+    let first_change = true;
     document.getElementById("editor_render_project_btn").addEventListener("click", RenderPDF.render_project_listener);
     try {
         // @ts-ignore
@@ -31,15 +36,26 @@ export async function show_editor(){
                         defaultStyle: 'unordered'
                     }
                 },
-                note: NoteTool
+                note: NoteTool,
+                quote: Quote,
+                custom_style_tool: CustomStyleTool,
             },
             data: {blocks: data},
             onChange: (api, event) => {
-                save_changes();
-            }
+                if(!first_change){ // Don't save the first change, as it's just the initial load
+                    save_changes();
+                }else{
+                    first_change = false;
+                }
+            },
+            onReady: () => {
+                const undo = new Undo({ editor });
+                undo.initialize({blocks: data});
+            },
         });
 
         await editor.isReady;
+
         document.getElementById("section_content_blocks_inner").addEventListener("input", typing_handler);
 
         // Make all existing notes clickable

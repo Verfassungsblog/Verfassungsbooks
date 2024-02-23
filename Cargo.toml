@@ -12,8 +12,8 @@ build = "build.rs"
 [dependencies]
 rocket = { version = "=0.5.0", features = ["secrets", "json"] }
 dotenvy = "0.15"
-config = "0.13.1"
-serde = { version = "1.0.192", features = ["rc", "derive"] }
+config = "0.14"
+serde = { version = "1.0.197", features = ["rc", "derive"] }
 serde_json = { version = "1.0", features = ["raw_value"] }
 rand = "0.8.5"
 rocket_dyn_templates = { version = "=0.1.0", features = ["handlebars"] }
@@ -25,6 +25,7 @@ bincode = { version = "2.0.0-rc.3", features = ["serde"] }
 tokio = { version = "1.35.0", features = ["full"] }
 async-trait = "0.1.74"
 reqwest = { version = "0.11.23", features=["json"] }
-serde_with = "3.5.0"
+serde_with = "3.6"
 regex = "1.10.3"
 handlebars = {version = "5.1.0", features = ["dir_source"]}
+hyphenation = {version = "0.8.4", features = ["embed_all"]}

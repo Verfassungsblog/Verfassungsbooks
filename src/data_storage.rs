@@ -787,7 +787,7 @@ pub async fn save_data_worker(data_storage: Arc<DataStorage>, project_storage: A
 mod tests {
     use std::thread;
     use rocket::serde::json::Json;
-    use crate::projects::{InnerContentBlock, Paragraph, TextElement, TextFormat};
+    use crate::projects::{Paragraph, TextElement, TextFormat};
     use super::*;
     #[test]
     fn setup_test_environment() {
@@ -801,6 +801,7 @@ mod tests {
             data_path: "test_data".to_string(),
             file_lock_timeout: 10,
             backup_to_file_interval: 120,
+            max_rendering_threads: 10,
         }
     }
     #[rocket::tokio::test]

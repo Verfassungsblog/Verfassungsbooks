@@ -470,6 +470,10 @@ pub struct BlockDataEditorJSFormat{
     #[serde(skip_serializing_if = "Option::is_none")]
     pub html: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub caption: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub alignment: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub style: Option<String>
 }
 
@@ -568,6 +572,17 @@ impl TryFrom<NewContentBlockEditorJSFormat> for NewContentBlock{
                     revision_id: None,
                 })
             },
+            "quote" => {
+                let text = value.data.text.ok_or("Missing field 'text' in quote block".to_string())?;
+                let caption = value.data.caption.ok_or("Missing field 'caption' in quote block".to_string())?;
+                let alignment = value.data.alignment.ok_or("Missing field 'alignment' in quote block".to_string())?;
+                Ok(NewContentBlock {
+                    id: value.id,
+                    block_type: BlockType::Heading,
+                    data: BlockData::Quote {text, caption, alignment},
+                    revision_id: None,
+                })
+            },
             _ => Err("Unknown block type".to_string()),
         }
     }
@@ -586,6 +601,8 @@ impl From<NewContentBlock> for NewContentBlockEditorJSFormat{
                         level: None,
                         items: None,
                         html: None,
+                        caption: None,
+                        alignment: None,
                         style: None,
                     },
                 }
@@ -599,6 +616,8 @@ impl From<NewContentBlock> for NewContentBlockEditorJSFormat{
                         level: Some(level),
                         items: None,
                         html: None,
+                        caption: None,
+                        alignment: None,
                         style: None,
                     },
                 }
@@ -612,6 +631,8 @@ impl From<NewContentBlock> for NewContentBlockEditorJSFormat{
                         level: None,
                         items: None,
                         html: Some(html),
+                        caption: None,
+                        alignment: None,
                         style: None,
                     },
                 }
@@ -625,10 +646,27 @@ impl From<NewContentBlock> for NewContentBlockEditorJSFormat{
                         level: None,
                         items: Some(items),
                         html: None,
+                        caption: None,
+                        alignment: None,
                         style: Some(style),
                     },
                 }
-            }
+            },
+            BlockData::Quote {text, caption, alignment} => {
+                NewContentBlockEditorJSFormat {
+                    id: value.id,
+                    block_type: "quote".to_string(),
+                    data: BlockDataEditorJSFormat {
+                        text: Some(text),
+                        level: None,
+                        items: None,
+                        html: None,
+                        caption: Some(caption),
+                        alignment: Some(alignment),
+                        style: None,
+                    },
+                }
+            },
         }
     }
 }
@@ -651,7 +689,8 @@ pub enum BlockData{
     Paragraph{text: String},
     Heading{text: String, level: u8},
     Raw{html: String},
-    List{style: String, items: Vec<String>}
+    List{style: String, items: Vec<String>},
+    Quote{text: String, caption: String, alignment: String}
 }
 
 /// Test function to test the deserialization of a content block
