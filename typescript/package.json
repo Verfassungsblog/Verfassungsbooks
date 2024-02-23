@@ -13,7 +13,6 @@
     "@editorjs/editorjs": "^2.29.0",
     "@editorjs/quote": "^2.6.0",
     "@types/editorjs__header": "^2.6.3",
-    "@types/pdfjs-dist": "^2.10.378",
     "editorjs-undo": "^2.0.26",
     "ts-loader": "^9.5.1",
     "typescript": "^5.3.3",

@@ -33,12 +33,12 @@ async function check_rendering_status(render_id: string){
         console.log("Rendering is running");
     }else if(status.data === "Finished"){
         console.log("Rendering finished");
-    }else if(status.data === "Failed"){
+    }else if(status.data.hasOwnProperty("Failed")){
         console.log("Rendering failed");
         console.log(status.data);
     }
 
-    if(status.data !== "Finished" && status.data !== "Failed") { //TODO: fix failed status
+    if(status.data !== "Finished" && status.data.hasOwnProperty("Failed")) { //TODO: fix failed status
         status_timer = setTimeout(check_rendering_status, 200, render_id);
     }else{
         status_timer = null;
