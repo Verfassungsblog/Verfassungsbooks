@@ -16,6 +16,7 @@ pub struct Settings{
     pub file_lock_timeout: u64,
     pub backup_to_file_interval: u64,
     pub max_rendering_threads : u64,
+    pub chromium_path: Option<String>
 }
 
 impl Settings{
