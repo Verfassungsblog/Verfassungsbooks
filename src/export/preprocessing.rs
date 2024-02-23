@@ -42,7 +42,16 @@ pub fn render_project(prepared_project: PreparedProject, template_id: uuid::Uuid
         return Err(RenderingError::ioError(e.to_string()));
     }
 
-    let output =  Command::new("vivliostyle").current_dir(temp_dir).args(&["build", "index.html", "-o", "output.pdf"]).output();
+    let mut args = vec!["build", "index.html", "-o", "output.pdf"];
+
+    let path = settings.chromium_path.clone();
+    let path_str = path.as_deref();
+    if let Some(path_str) = path_str {
+        args.push("--executable-browser");
+        args.push(path_str);
+    }
+
+    let output =  Command::new("vivliostyle").current_dir(temp_dir).args(args).output();
     match output{
         Ok(out) => {
             if out.status.success(){
