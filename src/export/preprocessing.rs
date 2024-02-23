@@ -101,6 +101,21 @@ pub fn prepare_project(project_data: ProjectData, data_storage: Arc<DataStorage>
         None
     };
 
+    let mut data = vec![];
+    for section in project_data.sections{
+        if let SectionOrToc::Section(section) = section{
+            data.push(render_section(section, data_storage.clone()))
+        }
+    }
+
+    for section in data.iter() {
+        add_remaining_authors_editors_from_section(section,&mut authors, &mut editors);
+    }
+
+    // Sort authors and editors by last name
+    authors.sort_by(|a, b| a.last_names.cmp(&b.last_names));
+    editors.sort_by(|a, b| a.last_names.cmp(&b.last_names));
+
     let metadata = PreparedMetadata{
         title: metadata.title,
         subtitle: metadata.subtitle,
@@ -122,18 +137,27 @@ pub fn prepare_project(project_data: ProjectData, data_storage: Arc<DataStorage>
         publisher: metadata.publisher,
     };
 
-    let mut data = vec![];
-    for section in project_data.sections{
-        if let SectionOrToc::Section(section) = section{
-            data.push(render_section(section, data_storage.clone()));
-        }
-    }
-
     Ok(PreparedProject{
         metadata,
         settings: project_data.settings,
         data,
     })
+}
+
+fn add_remaining_authors_editors_from_section(section: &PreparedSection, authors: &mut Vec<crate::projects::Person>, editors: &mut Vec<crate::projects::Person>){
+    for author in section.metadata.authors.iter(){
+        if !authors.contains(author){
+            authors.push(author.clone());
+        }
+    }
+    for editor in section.metadata.editors.iter(){
+        if !editors.contains(editor){
+            editors.push(editor.clone());
+        }
+    }
+    for sub_section in section.sub_sections.iter(){
+        add_remaining_authors_editors_from_section(sub_section, authors, editors);
+    }
 }
 
 pub fn render_section(section: Section, data_storage: Arc<DataStorage>) -> PreparedSection{
