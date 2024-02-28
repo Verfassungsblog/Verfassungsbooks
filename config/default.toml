@@ -7,5 +7,5 @@ file_lock_timeout = 1000
 backup_to_file_interval = 20
 # Maximum number of concurrent rendering processes
 max_rendering_threads = 10
-# Optional: Path to chromium executable, otherwise downloads chromium itself, which doesn't work for alpine.
+# Optional: Path to chromium executable, set to empty string to use included chromium, but it doesn't work for alpine.
 chromium_path = "/usr/bin/chromium-browser"
