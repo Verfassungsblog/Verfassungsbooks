@@ -16,7 +16,7 @@
 <!-- Content -->
 {{#each data}}
     {{#if @first}} <!-- Vorwort -->
-        <h1>{{metadata.title}}</h1>
+    <h1 id="{{id}}">{{metadata.title}}</h1>
     <div class="chapter" lang="en">
         {{#each children}}
             {{{html}}}
@@ -24,18 +24,18 @@
     </div>
         <!-- TOC -->
         <nav role="doc-toc">
-            <h1>Table of Contents</h1>
-            <ol>
+            <h1>Contents</h1>
+            <div class="toc">
                 {{#each ../data}}
-                    <li><a href="#{{id}}">{{metadata.title}}</a></li>
+                    <a href="#{{id}}">{{metadata.title}}</a>
                 {{/each}}
-            </ol>
+            </div>
         </nav>
-    {{/if}}
+    {{else}}
 
     <!-- Beginn eines Kapitels -->
     <div class="chapter_titlepage">
-        <div class="chapter_titlepage_inner">
+        <div class="chapter_titlepage_inner" id="{{id}}">
         {{#if metadata.authors}}
             {{#each metadata.authors}}
                 <span>{{first_names}} {{last_names}}</span>
@@ -43,6 +43,9 @@
         {{/if}}
         <h1>{{metadata.title}}</h1>
         {{#if metadata.subtitle}}<span class="chapter_titlepage_subtitle">{{metadata.subtitle}}</span>{{/if}}
+        {{#if metadata.web_url}}
+            {{qrcode metadata.web_url}}
+        {{/if}}
         </div>
     </div>
 
@@ -60,6 +63,7 @@
     {{/if}}
 
     </div>
+    {{/if}}
 {{/each}}
 </body>
 </html>

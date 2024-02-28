@@ -1,12 +1,16 @@
 use std::fs;
+use std::io::Cursor;
 use std::path::Path;
 use std::process::Command;
 use std::sync::Arc;
-use handlebars::{DirectorySourceOptions, Handlebars, TemplateError};
+use num_integer::Roots;
+use handlebars::{Context, DirectorySourceOptions, Handlebars, Helper, HelperResult, JsonRender, Output, RenderContext, RenderError, RenderErrorReason, TemplateError};
 use hyphenation::{Hyphenator, Load, Standard};
+use image::{GenericImage, ImageOutputFormat, Luma};
 use regex::Regex;
 use rocket::form::validate::Contains;
-use rocket::State;
+use qrcode::QrCode;
+use base64::prelude::*;
 use crate::data_storage::{DataStorage, ProjectData};
 use crate::export::{PreparedContentBlock, PreparedEndnote, PreparedLicense, PreparedMetadata, PreparedProject, PreparedSection, PreparedSectionMetadata};
 use crate::export::rendering_manager::RenderingError;
@@ -23,6 +27,9 @@ pub fn render_project(prepared_project: PreparedProject, template_id: uuid::Uuid
             return Err(RenderingError::ErrorLoadingTemplate(e.to_string()));
         }
     }
+
+    // Add custom handler for qr codes
+    handlebars.register_helper("qrcode", Box::new(handlebars_qrcode_helper));
 
     // Copy output folder contents to working folder
     if let Err(e) =  crate::utils::fs_copy_recursive::copy_dir_all(format!("{}/templates/{}/output", settings.data_path, template_id), temp_dir){
@@ -67,6 +74,35 @@ pub fn render_project(prepared_project: PreparedProject, template_id: uuid::Uuid
             Err(RenderingError::VivliostyleError(e.to_string()))
         }
     }
+}
+
+fn handlebars_qrcode_helper(h: &Helper, _: &Handlebars, _: &Context, rc: &mut RenderContext, out: &mut dyn Output) -> HelperResult{
+    let param = h.param(0).ok_or(RenderErrorReason::ParamNotFoundForIndex("qrcode", 0))?;
+
+    let val : String = param.value().render();
+
+    let qr_code = match QrCode::new(val.to_string()){
+        Ok(qr_code) => qr_code,
+        Err(e) => {
+            eprintln!("Couldn't create qr code: {}", e);
+            return Err(RenderError::from(RenderErrorReason::Other(format!("Couldn't create qr code: {}", e))));
+        }
+    };
+
+    let image = qr_code.render::<Luma<u8>>().build();
+    let image = image::DynamicImage::from(image);
+    let mut buf = Cursor::new(Vec::new());
+    match image.write_to(&mut buf, ImageOutputFormat::Jpeg(100)){
+        Ok(_) => {}
+        Err(e) => {
+            eprintln!("Couldn't write qr code to buffer: {}", e);
+            return Err(RenderError::from(RenderErrorReason::Other(format!("Couldn't write qr code to buffer: {}", e))));
+        }
+    }
+    let encoded_image = BASE64_STANDARD.encode(buf.get_ref());
+
+    out.write(&format!("<img class=\"qrcode\" src=\"data:image/jpeg;base64,{}\" alt=\"QR Code\" />", encoded_image))?;
+    Ok(())
 }
 
 pub fn prepare_project(project_data: ProjectData, data_storage: Arc<DataStorage>) -> Result<PreparedProject, RenderingError>{

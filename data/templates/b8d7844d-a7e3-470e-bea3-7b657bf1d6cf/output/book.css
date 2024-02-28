@@ -121,6 +121,23 @@ a{
     }
 }
 
+@page:left Footer {
+    @bottom-left {
+        content: counter(page) !important;
+        font-size: 8pt;
+        font-family: Antonio;
+    }
+}
+
+@page:right Footer{
+
+            @bottom-right {
+                content: counter(page) !important;
+                font-size: 8pt;
+                font-family:Antonio;
+            }
+}
+
 @page NoFooter {
     @bottom-center {
         content: "";
@@ -155,7 +172,8 @@ span.footnote {
 }
 .chapter{
     hyphens: manual;
-    text-align: justify
+    text-align: justify;
+    page: Footer;
 }
 
 h1{
@@ -171,17 +189,28 @@ h2{
     margin-top: 0.5em;
 }
 .chapter_titlepage{
-    page-break-before: always;
-    page-break-after: always;
+    break-before: right;
+    break-after: right;
     text-align: center;
-    page: NoFooter;
 }
 .chapter_titlepage_inner{
     margin-top: 2cm;
+    page: NoFooter;
 }
 .chapter_titlepage > h1{
     margin-top: 0.5cm;
 }
 .chapter_titlepage_subtitle{
     font-style: italic;
+}
+.toc a::after {
+    content: target-counter(attr(href url), page);
+}
+.qrcode{
+    position: absolute;
+    transform: rotate(45deg) translateX(-50%);
+    width: 100px;
+    height: 100px;
+    bottom: 0;
+    left: 50%;
 }
