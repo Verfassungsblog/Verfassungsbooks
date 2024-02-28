@@ -127,7 +127,7 @@ impl Section{
     }
 
     pub fn insert_child_section_as_child(&mut self, parent_section_id: &uuid::Uuid, new_section: &Section) -> Option<()>{
-        for (i, section) in self.sub_sections.iter_mut().enumerate(){
+        for section in self.sub_sections.iter_mut(){
                     if section.id == Some(*parent_section_id){
                         section.sub_sections.push(new_section.clone());
                         return Some(())

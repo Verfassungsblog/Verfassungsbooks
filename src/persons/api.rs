@@ -10,7 +10,7 @@ use crate::settings::Settings;
 /// POST /api/persons/
 /// Create a new person
 #[post("/api/persons", data = "<person>")]
-pub fn create_person(_session: Session, settings: &State<Settings>, data_storage: &State<Arc<DataStorage>>, person: Json<Person>) -> Json<ApiResult<Person>> {
+pub fn create_person(_session: Session, data_storage: &State<Arc<DataStorage>>, person: Json<Person>) -> Json<ApiResult<Person>> {
     let mut person = person.into_inner();
     let data_storage = Arc::clone(data_storage);
 
@@ -61,8 +61,8 @@ pub fn create_person(_session: Session, settings: &State<Settings>, data_storage
 /// PUT /api/persons/<id>
 /// Update specified person
 #[put("/api/persons/<id>", data = "<person>")]
-pub fn update_person(_session: Session, settings: &State<Settings>, data_storage: &State<Arc<DataStorage>>, person: Json<Person>, id: &str) -> Json<ApiResult<Person>> {
-    let mut person = person.into_inner();
+pub fn update_person(_session: Session, data_storage: &State<Arc<DataStorage>>, person: Json<Person>, id: &str) -> Json<ApiResult<Person>> {
+    let person = person.into_inner();
     let data_storage = Arc::clone(data_storage);
 
     // Check if id in url matches id in body
@@ -96,7 +96,7 @@ pub fn update_person(_session: Session, settings: &State<Settings>, data_storage
 // GET /api/persons/<id>
 /// Get a person by id
 #[get("/api/persons/<id>")]
-pub fn get_person(_session: Session, settings: &State<Settings>, data_storage: &State<Arc<DataStorage>>, id: String) -> Json<ApiResult<Person>> {
+pub fn get_person(_session: Session, data_storage: &State<Arc<DataStorage>>, id: String) -> Json<ApiResult<Person>> {
     let data_storage = Arc::clone(data_storage);
     let id = match uuid::Uuid::parse_str(&id) {
         Ok(id) => id,
@@ -127,7 +127,7 @@ pub fn get_person(_session: Session, settings: &State<Settings>, data_storage: &
 /// Returns
 /// * `Json<ApiResult<Vec<Person>>>` - Api Result with Json List of persons matching the query
 #[get("/api/persons?<query>&<limit>")]
-pub fn search_persons(_session: Session, settings: &State<Settings>, data_storage: &State<Arc<DataStorage>>, query: String, limit: Option<usize>) -> Json<ApiResult<Vec<Person>>> {
+pub fn search_persons(_session: Session, data_storage: &State<Arc<DataStorage>>, query: String, limit: Option<usize>) -> Json<ApiResult<Vec<Person>>> {
     let data_storage = Arc::clone(data_storage);
 
     let query = query.to_lowercase();
