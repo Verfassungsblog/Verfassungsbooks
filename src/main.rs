@@ -29,7 +29,7 @@ pub mod export;
 
 /// This is the catch-all route that redirects all 401 errors to the login page.
 #[catch(401)]
-fn forward_to_login<'r>() -> rocket::response::Redirect {
+fn forward_to_login<'r>() -> Redirect {
     Redirect::to("/login")
 }
 
@@ -96,6 +96,7 @@ async fn rocket() -> _ {
     let project_storage = Arc::new(data_storage::ProjectStorage::new());
     project_storage.load_from_directory(&settings).await.unwrap();
 
+    println!("Loaded Projects:");
     for project in project_storage.projects.read().unwrap().iter() {
         println!("Project: {:?}", project.1.name);
     };

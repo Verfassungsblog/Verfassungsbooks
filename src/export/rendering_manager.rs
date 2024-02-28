@@ -70,7 +70,7 @@ impl error::Error for RenderingError {
 
 impl RenderingManager{
     pub async fn start(settings: Settings, data_storage: Arc<DataStorage>) -> Arc<RenderingManager>{
-        let mut rendering_manager = RenderingManager{
+        let rendering_manager = RenderingManager{
             settings,
             data_storage,
             requests_archive: RwLock::new(HashMap::new()),
@@ -83,13 +83,13 @@ impl RenderingManager{
 
         // Start thread that checks for new rendering requests and starts them in a new thread
         tokio::spawn(async move {
-            let mut running_threads: Arc<AtomicU64> = Arc::new(AtomicU64::new(0));
+            let running_threads: Arc<AtomicU64> = Arc::new(AtomicU64::new(0));
 
             //TODO: kill hanging threads
             loop{
                 // Check if there are any new rendering requests
 
-                let mut rendering_requests_len = rendering_manager_cpy.rendering_requests.read().unwrap().len();
+                let rendering_requests_len = rendering_manager_cpy.rendering_requests.read().unwrap().len();
                 if rendering_requests_len > 0 && rendering_manager_cpy.settings.max_rendering_threads > running_threads.load(std::sync::atomic::Ordering::Relaxed){
                     println!("Starting new rendering thread for request...");
                     {

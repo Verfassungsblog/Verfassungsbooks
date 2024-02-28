@@ -114,7 +114,13 @@ pub struct PreparedSectionMetadata{
     pub web_url: Option<String>,
     pub identifiers: Vec<Identifier>,
     pub published: Option<String>,
-    pub lang: Option<Language>,
+    pub lang: PreparedLanguage,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct PreparedLanguage{
+    pub de: bool,
+    pub en: bool,
 }
 
 #[derive(Serialize, Deserialize)]

@@ -11,7 +11,7 @@ use rocket::form::validate::Contains;
 use qrcode::QrCode;
 use base64::prelude::*;
 use crate::data_storage::{DataStorage, ProjectData};
-use crate::export::{PreparedContentBlock, PreparedEndnote, PreparedLicense, PreparedMetadata, PreparedProject, PreparedSection, PreparedSectionMetadata};
+use crate::export::{PreparedContentBlock, PreparedEndnote, PreparedLanguage, PreparedLicense, PreparedMetadata, PreparedProject, PreparedSection, PreparedSectionMetadata};
 use crate::export::rendering_manager::RenderingError;
 use crate::projects::{BlockData, Language, NewContentBlock, Section, SectionOrToc};
 use crate::settings::Settings;
@@ -245,6 +245,16 @@ pub fn render_section(section: Section, data_storage: Arc<DataStorage>) -> Prepa
         None => Standard::from_embedded(hyphenation::Language::EnglishGB).unwrap()
     };
 
+    let lang = match section.metadata.lang{
+        Some(lang) => {
+            match lang{
+                Language::DE => PreparedLanguage{de: true, en: false},
+                Language::EN => PreparedLanguage{de: false, en: true}
+            }
+        }
+        None => PreparedLanguage{de: false, en: false}
+    };
+
     let metadata = PreparedSectionMetadata{
         title: section.metadata.title,
         subtitle: section.metadata.subtitle,
@@ -253,7 +263,7 @@ pub fn render_section(section: Section, data_storage: Arc<DataStorage>) -> Prepa
         web_url: section.metadata.web_url,
         identifiers: section.metadata.identifiers,
         published,
-        lang: section.metadata.lang,
+        lang,
     };
 
     let mut content = vec![];
