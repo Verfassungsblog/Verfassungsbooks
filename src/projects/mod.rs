@@ -1,9 +1,7 @@
-use std::fmt;
 use crate::projects::api::Patch;
 use chrono::NaiveDateTime;
 use bincode::{Encode, Decode};
-use serde::{Serialize, Deserialize, Deserializer};
-use serde::de::{MapAccess, Visitor};
+use serde::{Serialize, Deserialize};
 
 /// Enum to differentiate between real sections and the position of the table of contents
 #[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]

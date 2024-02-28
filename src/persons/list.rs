@@ -1,7 +1,6 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
-use rocket::request::FromRequest;
-use rocket::{Request, request, State};
+use rocket::State;
 use rocket_dyn_templates::Template;
 use crate::data_storage::DataStorage;
 use crate::projects::Person;

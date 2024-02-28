@@ -1,11 +1,10 @@
 use std::sync::{Arc, RwLock};
 use rocket::serde::json::Json;
 use rocket::State;
-use crate::data_storage::{DataStorage, ProjectStorage};
+use crate::data_storage::DataStorage;
 use crate::projects::api::{ApiError, ApiResult};
 use crate::projects::Person;
 use crate::session::session_guard::Session;
-use crate::settings::Settings;
 
 /// POST /api/persons/
 /// Create a new person

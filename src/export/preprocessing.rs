@@ -3,10 +3,9 @@ use std::io::Cursor;
 use std::path::Path;
 use std::process::Command;
 use std::sync::Arc;
-use num_integer::Roots;
-use handlebars::{Context, DirectorySourceOptions, Handlebars, Helper, HelperResult, JsonRender, Output, RenderContext, RenderError, RenderErrorReason, TemplateError};
+use handlebars::{Context, DirectorySourceOptions, Handlebars, Helper, HelperResult, JsonRender, Output, RenderContext, RenderError, RenderErrorReason};
 use hyphenation::{Hyphenator, Load, Standard};
-use image::{GenericImage, ImageOutputFormat, Luma};
+use image::{ImageOutputFormat, Luma};
 use regex::Regex;
 use rocket::form::validate::Contains;
 use qrcode::QrCode;
@@ -14,7 +13,7 @@ use base64::prelude::*;
 use crate::data_storage::{DataStorage, ProjectData};
 use crate::export::{PreparedContentBlock, PreparedEndnote, PreparedLicense, PreparedMetadata, PreparedProject, PreparedSection, PreparedSectionMetadata};
 use crate::export::rendering_manager::RenderingError;
-use crate::projects::{BlockData, Language, License, NewContentBlock, Section, SectionOrToc};
+use crate::projects::{BlockData, Language, NewContentBlock, Section, SectionOrToc};
 use crate::settings::Settings;
 
 pub fn render_project(prepared_project: PreparedProject, template_id: uuid::Uuid, temp_dir: &Path, settings: &Settings) -> Result<(), RenderingError>{
@@ -41,12 +40,12 @@ pub fn render_project(prepared_project: PreparedProject, template_id: uuid::Uuid
         Ok(res) => res,
         Err(e) => {
             eprintln!("Couldn't render template: {}", e);
-            return Err(RenderingError::ioError(e.to_string()));
+            return Err(RenderingError::IoError(e.to_string()));
         }
     };
     if let Err(e) =  fs::write(temp_dir.join("index.html"), res){
         eprintln!("Couldn't write rendered template to file: {}", e);
-        return Err(RenderingError::ioError(e.to_string()));
+        return Err(RenderingError::IoError(e.to_string()));
     }
 
     let mut args = vec!["build", "index.html", "-o", "output.pdf"];
@@ -332,10 +331,10 @@ pub fn render_text(text: String, endnote_storage: &mut Vec<String>, dict: &Stand
             None => return String::new()
         };
 
-        if(note_type == "endnote"){
+        if note_type == "endnote" {
             endnote_storage.push(note_content.to_string());
             return format!("<sup class=\"endnote\"><a href=\"#note-{}\">[{}]</a></sup>", endnote_storage.len(), endnote_storage.len())
-        }else if(note_type == "footnote"){
+        }else if note_type == "footnote" {
             let uuid = uuid::Uuid::new_v4();
             return format!("<a href=\"#footnote-{}\"><span class=\"footnote\"><span id=\"footnote-{}\">{}</span></span></a>", uuid, uuid, note_content)
         }else{

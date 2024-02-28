@@ -3,10 +3,8 @@ use std::{error, fmt, mem};
 use std::path::Path;
 use std::sync::{Arc, RwLock};
 use std::sync::atomic::AtomicU64;
-use handlebars::TemplateError;
 use serde::Serialize;
 use crate::data_storage::{DataStorage, ProjectData};
-use crate::export::PreparedProject;
 use crate::export::preprocessing::{prepare_project, render_project};
 use crate::settings::Settings;
 
@@ -41,7 +39,7 @@ pub enum RenderingError{
     ErrorLoadingTemplate(String),
     VivliostyleError(String),
     ErrorCopyingTemplate(String),
-    ioError(String),
+    IoError(String),
 }
 
 impl fmt::Display for RenderingError{
@@ -52,7 +50,7 @@ impl fmt::Display for RenderingError{
             RenderingError::ErrorLoadingTemplate(ref e) => write!(f, "Error loading template: {}", e),
             RenderingError::VivliostyleError(ref e) => write!(f, "Vivliostyle error: {}", e),
             RenderingError::ErrorCopyingTemplate(ref e) => write!(f, "Error copying template files: {}", e),
-            RenderingError::ioError(ref e) => write!(f, "I/O Error occurred: {}", e),
+            RenderingError::IoError(ref e) => write!(f, "I/O Error occurred: {}", e),
         }
     }
 }
@@ -65,7 +63,7 @@ impl error::Error for RenderingError {
             RenderingError::ErrorLoadingTemplate(_) => None,
             RenderingError::VivliostyleError(_) => None,
             RenderingError::ErrorCopyingTemplate(_) => None,
-            RenderingError::ioError(_) => None,
+            RenderingError::IoError(_) => None,
         }
     }
 }

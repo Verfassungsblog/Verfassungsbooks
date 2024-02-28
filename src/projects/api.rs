@@ -1396,7 +1396,7 @@ pub async fn set_content_blocks_in_section(project_id: String, content_path: Str
 /// POST /api/projects/<project_id>/render
 /// Renders project
 #[post("/api/projects/<project_id>/render")]
-pub async fn render_project(project_id: String, project_storage: &State<Arc<ProjectStorage>>, _session: Session, rendering_manager: &State<Arc<RenderingManager>>, settings: &State<Settings>) -> Json<ApiResult<(uuid::Uuid)>>{
+pub async fn render_project(project_id: String, project_storage: &State<Arc<ProjectStorage>>, _session: Session, rendering_manager: &State<Arc<RenderingManager>>, settings: &State<Settings>) -> Json<ApiResult<uuid::Uuid>>{
     let project_id = match uuid::Uuid::parse_str(&project_id) {
         Ok(project_id) => project_id,
         Err(e) => {
