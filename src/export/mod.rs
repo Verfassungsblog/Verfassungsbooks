@@ -13,8 +13,6 @@ pub struct PreparedProject{
     pub data: Vec<PreparedSection>,
 }
 
-//TODO: add identifiers from sub-sections to the top-level metadata
-
 #[derive(Serialize, Deserialize)]
 pub struct PreparedMetadata{
     /// Book Title
