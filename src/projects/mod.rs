@@ -1,4 +1,4 @@
-use crate::projects::api::Patch;
+use crate::projects::api::{UploadedImage, Patch};
 use chrono::NaiveDateTime;
 use bincode::{Encode, Decode};
 use serde::{Serialize, Deserialize};
@@ -472,7 +472,15 @@ pub struct BlockDataEditorJSFormat{
     #[serde(skip_serializing_if = "Option::is_none")]
     pub alignment: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub style: Option<String>
+    pub style: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file: Option<UploadedImage>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub withBorder: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub withBackground: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stretched: Option<bool>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
@@ -581,6 +589,19 @@ impl TryFrom<NewContentBlockEditorJSFormat> for NewContentBlock{
                     revision_id: None,
                 })
             },
+            "image" => {
+                let file = value.data.file.ok_or("Missing field 'file' in image block".to_string())?;
+                let caption = value.data.caption;
+                let with_border = value.data.withBorder.unwrap_or(false);
+                let with_background = value.data.withBackground.unwrap_or(false);
+                let stretched = value.data.stretched.unwrap_or(false);
+                Ok(NewContentBlock {
+                    id: value.id,
+                    block_type: BlockType::Heading,
+                    data: BlockData::Image {file, caption, with_border, with_background, stretched},
+                    revision_id: None,
+                })
+            }
             _ => Err("Unknown block type".to_string()),
         }
     }
@@ -602,6 +623,10 @@ impl From<NewContentBlock> for NewContentBlockEditorJSFormat{
                         caption: None,
                         alignment: None,
                         style: None,
+                        file: None,
+                        withBorder: None,
+                        withBackground: None,
+                        stretched: None,
                     },
                 }
             },
@@ -617,6 +642,10 @@ impl From<NewContentBlock> for NewContentBlockEditorJSFormat{
                         caption: None,
                         alignment: None,
                         style: None,
+                        file: None,
+                        withBorder: None,
+                        withBackground: None,
+                        stretched: None,
                     },
                 }
             },
@@ -632,6 +661,10 @@ impl From<NewContentBlock> for NewContentBlockEditorJSFormat{
                         caption: None,
                         alignment: None,
                         style: None,
+                        file: None,
+                        withBorder: None,
+                        withBackground: None,
+                        stretched: None,
                     },
                 }
             },
@@ -647,6 +680,10 @@ impl From<NewContentBlock> for NewContentBlockEditorJSFormat{
                         caption: None,
                         alignment: None,
                         style: Some(style),
+                        file: None,
+                        withBorder: None,
+                        withBackground: None,
+                        stretched: None,
                     },
                 }
             },
@@ -662,9 +699,32 @@ impl From<NewContentBlock> for NewContentBlockEditorJSFormat{
                         caption: Some(caption),
                         alignment: Some(alignment),
                         style: None,
+                        file: None,
+                        withBorder: None,
+                        withBackground: None,
+                        stretched: None,
                     },
                 }
             },
+            BlockData::Image {file, caption, with_border, with_background, stretched} => {
+                NewContentBlockEditorJSFormat {
+                    id: value.id,
+                    block_type: "image".to_string(),
+                    data: BlockDataEditorJSFormat {
+                        text: None,
+                        level: None,
+                        items: None,
+                        html: None,
+                        caption,
+                        alignment: None,
+                        style: None,
+                        file: Some(file),
+                        withBorder: Some(with_border),
+                        withBackground: Some(with_background),
+                        stretched: Some(stretched),
+                    },
+                }
+            }
         }
     }
 }
@@ -673,7 +733,10 @@ impl From<NewContentBlock> for NewContentBlockEditorJSFormat{
 pub enum BlockType{
     Paragraph,
     Heading,
-    Raw
+    Raw,
+    List,
+    Quote,
+    Image
 }
 
 #[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone, PartialEq)]
@@ -688,7 +751,8 @@ pub enum BlockData{
     Heading{text: String, level: u8},
     Raw{html: String},
     List{style: String, items: Vec<String>},
-    Quote{text: String, caption: String, alignment: String}
+    Quote{text: String, caption: String, alignment: String},
+    Image{file: UploadedImage, caption: Option<String>, with_border: bool, with_background: bool, stretched: bool},
 }
 
 /// Test function to test the deserialization of a content block

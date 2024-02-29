@@ -16,7 +16,7 @@ use crate::export::rendering_manager::RenderingError;
 use crate::projects::{BlockData, Language, NewContentBlock, Section, SectionOrToc};
 use crate::settings::Settings;
 
-pub fn render_project(prepared_project: PreparedProject, template_id: uuid::Uuid, temp_dir: &Path, settings: &Settings) -> Result<(), RenderingError>{
+pub fn render_project(prepared_project: PreparedProject, project_id: uuid::Uuid, template_id: uuid::Uuid, temp_dir: &Path, settings: &Settings) -> Result<(), RenderingError>{
     // Load templates
     let mut handlebars = Handlebars::new();
     match handlebars.register_templates_directory(Path::new(&format!("{}/templates/{}/templates", settings.data_path, template_id)), DirectorySourceOptions::default()){
@@ -34,6 +34,14 @@ pub fn render_project(prepared_project: PreparedProject, template_id: uuid::Uuid
     if let Err(e) =  crate::utils::fs_copy_recursive::copy_dir_all(format!("{}/templates/{}/output", settings.data_path, template_id), temp_dir){
         eprintln!("Couldn't copy template to output directory: {}", e);
         return Err(RenderingError::ErrorCopyingTemplate(e.to_string()));
+    }
+
+    // Copy uploads to working folder
+    if let Err(e) =  crate::utils::fs_copy_recursive::copy_dir_all(format!("{}/projects/{}/uploads", settings.data_path, project_id), temp_dir){
+        if e.kind() != std::io::ErrorKind::NotFound { // No uploads folder found, that's okay
+            eprintln!("Couldn't copy uploads to output directory: {}", e);
+            return Err(RenderingError::ErrorCopyingUploads(e.to_string()));
+        }
     }
 
     let res = match handlebars.render("main", &prepared_project){
@@ -319,6 +327,10 @@ pub fn render_content_block(block: NewContentBlock, endnote_storage: &mut Vec<St
         },
         BlockData::Quote{text, caption, alignment} => {
             format!("<blockquote class=\"align-{}\"><p>{}</p><footer>{}</footer></blockquote>", alignment, render_text(text, endnote_storage, dict), render_text(caption, endnote_storage, dict))
+        }
+        BlockData::Image {file, caption, with_border, with_background, stretched} => {
+            // We use filename since all images are copied from te uploads directory to our temporary working dir and file.url represents the public url
+            format!("<img src=\"{}\" alt=\"{}\" />", file.filename, caption.unwrap_or_default())
         }
     };
     PreparedContentBlock{

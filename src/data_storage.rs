@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fs;
 use std::path::Path;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::sync::atomic::AtomicBool;
@@ -338,9 +339,12 @@ impl ProjectStorage {
         for path in paths {
             match path {
                 Ok(entry) => {
+                    // Skip non directory entries
+                    if !entry.path().is_dir(){
+                        continue
+                    }
                     match entry.file_name().to_str() {
                         Some(uuid) => {
-                            let uuid = uuid.replace(".bincode", "");
                             match uuid.parse::<uuid::Uuid>() {
                                 Ok(uuid) => {
                                     println!("Loading project {}.", uuid);
@@ -407,7 +411,7 @@ impl ProjectStorage {
     async fn load_project_into_memory(&self, uuid: &uuid::Uuid, settings: &Settings) -> Result<(), ()> {
 
         // Try to load project file from disk
-        let path = format!("{}/projects/{}.bincode", settings.data_path, uuid);
+        let path = format!("{}/projects/{}/project.bincode", settings.data_path, uuid);
 
         println!("Aquiring file lock for project {}.", uuid);
         match self.wait_for_file_lock(uuid, settings).await{
@@ -523,8 +527,18 @@ impl ProjectStorage {
             },
             None => return Err(()),
         };
+        match fs::create_dir(format!("{}/projects/{}", settings.data_path, uuid)){
+            Ok(_) => {},
+            Err(e) => {
+                if e.kind() != std::io::ErrorKind::AlreadyExists {
+                    eprintln!("io error while creating project directory: {}", e);
+                    return Err(())
+                }
+            }
+        }
+
         // Encode project data with bincode and save to disk
-        let path = format!("{}/projects/{}.bincode", settings.data_path, uuid);
+        let path = format!("{}/projects/{}/project.bincode", settings.data_path, uuid);
 
         match self.wait_for_file_lock(&uuid, settings).await{
             Ok(_) => {},
@@ -534,6 +548,7 @@ impl ProjectStorage {
             }
         }
 
+        //TODO: do not use spawn_blocking, but use tokio fs functions
         let res = rocket::tokio::task::spawn_blocking(move || {
             let mut file = match std::fs::File::create(path) {
                 Ok(file) => file,
@@ -573,7 +588,7 @@ pub struct ProjectData{
     pub last_interaction: u64,
     pub metadata: Option<ProjectMetadata>,
     pub settings: Option<ProjectSettings>,
-    pub sections: Vec<SectionOrToc>,
+    pub sections: Vec<SectionOrToc>
 }
 
 impl ProjectData{
@@ -775,7 +790,7 @@ pub async fn save_data_worker(data_storage: Arc<DataStorage>, project_storage: A
             }
             for project_id in projects_to_save{
                 println!("Saving changed project {} to disk", project_id);
-                project_storage.save_project_to_disk(&project_id, &settings).await.unwrap();
+                project_storage.save_project_to_disk(&project_id, &settings).await.unwrap(); //TODO: shutdown if this fails to avoid data loss
             }
             last_save = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
             println!("Finished saving projects to disk");

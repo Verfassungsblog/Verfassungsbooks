@@ -6,7 +6,8 @@ use std::sync::Arc;
 use bincode::{Decode, Encode};
 use chrono::NaiveDateTime;
 use rocket::form::Form;
-use rocket::fs::NamedFile;
+use rocket::fs::{NamedFile, TempFile};
+use rocket::http::Status;
 use rocket::State;
 use serde::{Deserialize, Serialize};
 use crate::data_storage::ProjectStorage;
@@ -1420,7 +1421,7 @@ pub async fn render_project(project_id: String, project_storage: &State<Arc<Proj
     // TODO: Check if all authors and editors still exist, if not, remove them from the metadata and save the project
 
     // Add to render queue
-    let render_id = rendering_manager.add_rendering_request(project);
+    let render_id = rendering_manager.add_rendering_request(project, project_id);
 
     ApiResult::new_data(render_id)
 }
@@ -1445,21 +1446,101 @@ pub async fn get_rendering_status(render_id: String, rendering_manager: &State<A
     }
 }
 
-struct ImageUpload{
-    image: NamedFile,
+#[derive(FromForm)]
+struct ImageUpload<'a>{
+    image: TempFile<'a>,
 }
 
-#[derive(Serialize, Deserialize, FromForm)]
+#[derive(Serialize, Deserialize, Default)]
 struct ImageUploadResponse{
-    success: bool,
-    // file: Option<TODO>
+    success: u8,
+    file: Option<UploadedImage>
 }
 
-/*/// Upload image via multipart form
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Encode, Decode)]
+pub struct UploadedImage {
+    pub url: String,
+    pub filename: String,
+    //TODO: add more fields if neede here, e.g. height alignment etc.
+}
+
+
+/// Upload image via multipart form
 /// Endpoint for EditorJS image upload
 /// POST /api/projects/<project_id>/uploads
 #[post("/api/projects/<project_id>/uploads", data = "<form>")]
-pub fn upload_to_project(project_id: String, form: Form<ImageUpload>, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> ImageUploadResponse {
+pub async fn upload_to_project(project_id: String, form: Form<ImageUpload<'_>>, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ImageUploadResponse> {
+    let project_id = match uuid::Uuid::parse_str(&project_id) {
+        Ok(project_id) => project_id,
+        Err(e) => {
+            eprintln!("Couldn't parse project id: {}", e);
+            return Json(ImageUploadResponse::default());
+        },
+    };
 
-}*/
-//TODO: implement image upload
+    let project_storage = Arc::clone(project_storage);
+    let project = match project_storage.get_project(&project_id, settings).await{
+        Ok(project) => project,
+        Err(_) => {
+            eprintln!("Couldn't get project with id {}", project_id);
+            return Json(ImageUploadResponse::default());
+        },
+    };
+
+    //TODO: check if user has access to this project once we have user management
+
+    // Create projects upload directory if it doesn't exist
+    match tokio::fs::create_dir(format!("{}/projects/{}/uploads", settings.data_path, project_id)).await{
+        Ok(_) => {},
+        Err(e) => {
+            if e.kind() != std::io::ErrorKind::AlreadyExists{
+                eprintln!("Couldn't create folder for project uploads: {}", e);
+                return Json(ImageUploadResponse::default());
+            }
+        }
+    }
+
+    let mut image = form.into_inner().image;
+
+    // Extract file extension from Name:
+    //let extension = image.name().and_then(|name| name.split('.').last()); //TODO find working solution
+
+    // Generate new filename
+    let mut filename = uuid::Uuid::new_v4().to_string();
+    /*if let Some(extension) = extension{
+        filename = format!("{}.{}", filename, extension);
+    }*/
+
+    let filepath = format!("{}/projects/{}/uploads/{}", settings.data_path, project_id, filename);
+    match image.move_copy_to(&filepath).await{
+        Ok(_) => {
+            Json(ImageUploadResponse{
+                success: 1,
+                file: Some(UploadedImage {
+                    url: format!("/api/projects/{}/uploads/{}", project_id, filename),
+                    filename: filename,
+                })
+            })
+        },
+        Err(e) => {
+            eprintln!("Couldn't save image: {}", e);
+            Json(ImageUploadResponse::default())
+        }
+    }
+}
+
+#[get("/api/projects/<project_id>/uploads/<filename>")]
+pub async fn get_project_upload(project_id: String, filename: String, settings: &State<Settings>, _session: Session) -> Result<NamedFile, Status> {
+    let project_id = match uuid::Uuid::parse_str(&project_id) {
+        Ok(project_id) => project_id,
+        Err(e) => {
+            eprintln!("Couldn't parse project id: {}", e);
+            return Err(Status::NotFound);
+        },
+    };
+
+    let path = format!("{}/projects/{}/uploads/{}", settings.data_path, project_id, filename);
+
+    let file = NamedFile::open(path).await.map_err(|_| Status::NotFound)?;
+    Ok(file)
+}

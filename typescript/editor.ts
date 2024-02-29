@@ -5,9 +5,8 @@ import RawTool from '@editorjs/raw';
 import {NoteTool} from "./NoteTool";
 const Quote:any = require('@editorjs/quote');
 const Undo: any = require('editorjs-undo');
-
-// @ts-ignore
-import List from "@editorjs/list";
+const ImageTool: any = require('@editorjs/image');
+const List: any = require("@editorjs/list");
 import * as API from "./api_requests";
 import * as Tools from "./tools";
 import * as RenderPDF from "./RenderPDF";
@@ -24,6 +23,9 @@ export async function show_editor(){
         let data = (await API.send_get_content_blocks(globalThis.project_id, globalThis.section_path)).data;
         console.log(data);
 
+        // @ts-ignore
+        let by_file_upload_endpoint = '/api/projects/'+globalThis.project_id+'/uploads';
+
         editor = new EditorJS({
             holder: "section_content_blocks_inner",
             tools: {
@@ -39,6 +41,15 @@ export async function show_editor(){
                 note: NoteTool,
                 quote: Quote,
                 custom_style_tool: CustomStyleTool,
+                image: {
+                    class: ImageTool,
+                    config: {
+                        endpoints: {
+                            byFile: by_file_upload_endpoint,
+                            byUrl: '/api/fetch_image',
+                        }
+                    }
+                }
             },
             data: {blocks: data},
             onChange: (api, event) => {

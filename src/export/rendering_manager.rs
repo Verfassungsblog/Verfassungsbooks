@@ -22,6 +22,7 @@ pub enum RenderingStatus{
 pub struct RenderingRequest{
     pub rendering_id: uuid::Uuid,
     pub status: RenderingStatus,
+    pub project_id: uuid::Uuid,
     pub project_data: Option<ProjectData>,
 }
 
@@ -40,6 +41,7 @@ pub enum RenderingError{
     VivliostyleError(String),
     ErrorCopyingTemplate(String),
     IoError(String),
+    ErrorCopyingUploads(String),
 }
 
 impl fmt::Display for RenderingError{
@@ -51,6 +53,7 @@ impl fmt::Display for RenderingError{
             RenderingError::VivliostyleError(ref e) => write!(f, "Vivliostyle error: {}", e),
             RenderingError::ErrorCopyingTemplate(ref e) => write!(f, "Error copying template files: {}", e),
             RenderingError::IoError(ref e) => write!(f, "I/O Error occurred: {}", e),
+            RenderingError::ErrorCopyingUploads(ref e) => write!(f, "Error copying uploads: {}", e),
         }
     }
 }
@@ -64,6 +67,7 @@ impl error::Error for RenderingError {
             RenderingError::VivliostyleError(_) => None,
             RenderingError::ErrorCopyingTemplate(_) => None,
             RenderingError::IoError(_) => None,
+            RenderingError::ErrorCopyingUploads(_) => None
         }
     }
 }
@@ -131,10 +135,13 @@ impl RenderingManager{
         rendering_manager.clone()
     }
     fn render(rendering_manager: Arc<RenderingManager>, request_id: uuid::Uuid) -> Result<(), RenderingError>{
+        let mut project_id = uuid::Uuid::default();
+
         let project_data: ProjectData = { // Introduction of a new scope to drop the lock on the request
             let mut storage = rendering_manager.requests_archive.write().unwrap();
             let mut rendering_request = storage.get_mut(&request_id).unwrap().write().unwrap();
             rendering_request.status = RenderingStatus::Preparing;
+            project_id = rendering_request.project_id;
             match mem::take(&mut rendering_request.project_data) {
                 Some(project_data) => project_data,
                 None => {
@@ -165,7 +172,7 @@ impl RenderingManager{
         }
 
         // Render
-        match render_project(prepared_project, template_id, temp_dir, &rendering_manager.settings){
+        match render_project(prepared_project, project_id, template_id, temp_dir, &rendering_manager.settings){
             Ok(_) => {
                 Ok(())
             }
@@ -175,11 +182,12 @@ impl RenderingManager{
         }
     }
 
-    pub fn add_rendering_request(&self, project_data: ProjectData) -> uuid::Uuid{
+    pub fn add_rendering_request(&self, project_data: ProjectData, project_id: uuid::Uuid) -> uuid::Uuid{
         let rendering_id = uuid::Uuid::new_v4();
         let rendering_request = RenderingRequest{
             rendering_id,
             status: RenderingStatus::Queued,
+            project_id,
             project_data: Some(project_data),
         };
 

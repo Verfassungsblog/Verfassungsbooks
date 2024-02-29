@@ -1,7 +1,7 @@
 [default]
 address = "0.0.0.0"
 port = 8008
-limits = { form = "64 kB", json = "1 MiB" }
+limits = { form = "100 MiB", data-form = "100 MiB", file = "100 MiB", json = "1 MiB" }
 
 
 [debug]
