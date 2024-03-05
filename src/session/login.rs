@@ -55,7 +55,7 @@ pub fn process_login_form(form: Form<LoginForm>, data_storage: &State<Arc<DataSt
                 Ok(_) => {
                     // Login successful, remove old login attempts and generate session
                     data_storage.get_user(&form.email).unwrap().write().unwrap().login_attempts = Vec::new();
-                    let session = session_storage.generate_session(user.email.clone());
+                    let session = session_storage.generate_session(user.email.clone(), user.id.clone());
                     cookies.add_private(("session", session.id.clone()));
                     return Redirect::to("/");
                 }

@@ -1,7 +1,10 @@
 const path = require('path');
 
 module.exports = {
-    entry: './editor.ts', // Einstiegspunkt deines Frontends
+    entry: {
+        neditor: './editor.ts',
+        settings: './Settings.ts'
+    },
     devtool: 'inline-source-map',
     module: {
         rules: [
@@ -16,7 +19,7 @@ module.exports = {
         extensions: ['.tsx', '.ts', '.js'],
     },
     output: {
-        filename: 'bundle.js', // Name der gebündelten Datei
-        path: path.resolve(__dirname, '../static/js'), // Ausgabeverzeichnis
+        filename: '[name].js',
+        path: path.resolve(__dirname, '../static/js'),
     },
 };

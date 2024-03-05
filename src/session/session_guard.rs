@@ -8,6 +8,7 @@ use crate::session::session_storage::SessionStorage;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Session{
     pub id: String,
+    pub user_id: uuid::Uuid,
     pub valid_until: std::time::SystemTime,
     pub user_email: String,
 }

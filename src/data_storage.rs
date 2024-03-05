@@ -4,6 +4,8 @@ use std::path::Path;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::sync::atomic::AtomicBool;
 use std::time::SystemTime;
+use argon2::{Argon2, PasswordHasher};
+use argon2::password_hash::rand_core::OsRng;
 use serde::{Deserialize, Serialize};
 use bincode::{Encode, Decode};
 use crate::projects::{Person, ProjectMetadata, ProjectSettings, Section, SectionOrToc};
@@ -20,9 +22,9 @@ pub struct DataStorage{
 
 #[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
 pub struct InnerDataStorage{
-    /// Contains users, passwords and login attempts
+    /// HashMap with users, id as HashMap keys
     #[bincode(with_serde)]
-    pub login_data: HashMap<String, Arc<RwLock<User>>>,
+    pub login_data: HashMap<uuid::Uuid, Arc<RwLock<User>>>,
     #[bincode(with_serde)]
     pub persons: HashMap<uuid::Uuid, Arc<RwLock<Person>>>,
     #[bincode(with_serde)]
@@ -56,17 +58,18 @@ impl DataStorage{
     }
 
     /// inserts a new user into the [DataStorage]
-    pub async fn insert_user(&mut self, user: User, settings: &Settings) -> Result<(), ()>{
-        self.data.write().unwrap().login_data.insert(user.email.clone(), Arc::new(RwLock::new(user)));
+    pub async fn insert_user(&self, user: User, settings: &Settings) -> Result<(), ()>{
+        self.data.write().unwrap().login_data.insert(user.id.clone(), Arc::new(RwLock::new(user)));
         self.save_to_disk(settings).await?;
         Ok(())
     }
 
     /// returns a user from the [DataStorage] as [Arc<RwLock<User>>]
     pub fn get_user(&self, email: &String) -> Result<Arc<RwLock<User>>, ()>{
-        match self.data.read().unwrap().login_data.get(email){
+        let data = self.data.read().unwrap();
+        match data.login_data.values().find(|user| user.read().unwrap().email == *email){
+            Some(user) => Ok(Arc::clone(user)),
             None => Err(()),
-            Some(data) => Ok(data.clone())
         }
     }
 
@@ -753,10 +756,29 @@ pub fn get_section_by_path<'a>(project: &'a RwLockReadGuard<ProjectData>, path: 
 
 #[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
 pub struct User{
+    #[bincode(with_serde)]
+    pub id: uuid::Uuid,
     pub email: String,
+    pub name: String,
     pub password_hash: String,
     pub locked_until: Option<u64>,
     pub login_attempts: Vec<u64>
+}
+
+impl User{
+    pub fn new(email: String, name: String, password: String) -> Self{
+        let salt = argon2::password_hash::SaltString::generate(&mut OsRng);
+        let password_hash = Argon2::default().hash_password(&password.as_bytes(),&salt).unwrap().to_string();
+
+        User{
+            id: uuid::Uuid::new_v4(),
+            email,
+            name,
+            password_hash,
+            locked_until: None,
+            login_attempts: vec![],
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
@@ -817,6 +839,7 @@ mod tests {
             file_lock_timeout: 10,
             backup_to_file_interval: 120,
             max_rendering_threads: 10,
+            chromium_path: None,
         }
     }
     #[rocket::tokio::test]
