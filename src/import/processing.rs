@@ -1,7 +1,13 @@
+use std::io::{BufRead, Read};
 use std::sync::{Arc, RwLock};
+use bincode::de::read::Reader;
+use hayagriva::{io, Library};
+use hayagriva::io::BibLaTeXError;
 use rocket::fs::TempFile;
-use crate::data_storage::ProjectStorage;
+use rocket::http::ContentType;
+use crate::data_storage::{BibEntry, ProjectStorage};
 use crate::settings::Settings;
+use tokio::io::AsyncReadExt;
 
 pub struct ImportProcessor<'r>{
     pub settings: Settings,
@@ -20,6 +26,7 @@ pub enum ImportStatus{
 pub enum ImportError{
     UnknownFileType,
     UnsupportedFileType,
+    BibFileInvalid,
 }
 
 pub struct ImportJob<'r>{
@@ -28,6 +35,7 @@ pub struct ImportJob<'r>{
     pub length: usize,
     pub processed: usize,
     pub files_to_process: Vec<TempFile<'r>>,
+    pub bib_file: Option<TempFile<'r>>,
     pub status: ImportStatus,
 }
 
@@ -82,6 +90,38 @@ impl ImportProcessor<'_>{
             job.write().unwrap().processed += 1;
         }
     }
+
+    async fn import_bib_entries(&self, project_id: uuid::Uuid, bib_file: TempFile<'_>, settings: &Settings) -> Result<(), ImportError>{
+        let mut bib_file_content = String::new();
+        let mut bib_file = match bib_file.open().await{
+            Ok(bib_file) => bib_file,
+            Err(e) => {
+                println!("Error opening bib file: {}", e);
+                return Err(ImportError::BibFileInvalid);
+            }
+        };
+        if let Err(e) = bib_file.read_to_string(&mut bib_file_content).await{
+            println!("Error reading bib file: {}", e);
+            return Err(ImportError::BibFileInvalid);
+        }
+        let bib = match io::from_biblatex_str(&bib_file_content){
+            Ok(bib) => bib,
+            Err(e) => {
+                println!("Error parsing bib file: {}", e.iter().map(|e| e.to_string()).collect::<Vec<String>>().join(", "));
+                return Err(ImportError::BibFileInvalid);
+            }
+        };
+
+        let mut project_storage = self.project_storage.clone();
+        let mut project = project_storage.get_project(&project_id, settings).await.unwrap().clone();
+        for entry in bib.iter(){
+            let converted = BibEntry::from(entry);
+            project.write().unwrap().bibliography.insert(converted.key.clone(), converted);
+        }
+
+        Ok(())
+    }
+
 }
 
 pub fn convert_file(file: TempFile<'_>) -> Result<(), ImportError>{

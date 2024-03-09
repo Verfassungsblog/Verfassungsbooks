@@ -14,10 +14,9 @@
     </div>
 </div>
 <div id="wizard-pandoc-1" class="hide">
-    <p>Settings:</p>
-
-    <hr>
     <p>Please supply one file per Section.</p>
     <input type="file" class="form-control" id="wizard-pandoc-upload-input" multiple/>
+    <p>Optional bibliography</p>
+    <input type="file" class="form-control" id="wizard-pandoc-upload-bib-input"/>
     <button class="btn btn-primary mt-2 float-end" id="wizard-pandoc-upload-btn">Upload</button>
 </div>

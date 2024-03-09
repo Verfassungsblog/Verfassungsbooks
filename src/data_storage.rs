@@ -598,12 +598,16 @@ pub struct ProjectData{
     pub bibliography: HashMap<String, BibEntry>
 }
 
+
+/// Struct similar to [hayagriva::Entry], but without special serde annotations, since Bincode doesn't support these
+/// For convenience, the struct implements [From] and [Into] for [hayagriva::Entry] and reverse
 #[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
 pub struct BibEntry{
     pub key: String,
     #[bincode(with_serde)]
     pub entry_type: EntryType,
-    pub title: Option<String>,
+    #[bincode(with_serde)]
+    pub title: Option<FormatString>,
     #[bincode(with_serde)]
     pub authors: Vec<hayagriva::types::Person>,
     #[bincode(with_serde)]
@@ -612,9 +616,12 @@ pub struct BibEntry{
     pub editors: Vec<hayagriva::types::Person>,
     #[bincode(with_serde)]
     pub affiliated: Vec<PersonsWithRoles>,
-    pub publisher: Option<String>,
-    pub location: Option<String>,
-    pub organization: Option<String>,
+    #[bincode(with_serde)]
+    pub publisher: Option<FormatString>,
+    #[bincode(with_serde)]
+    pub location: Option<FormatString>,
+    #[bincode(with_serde)]
+    pub organization: Option<FormatString>,
     #[bincode(with_serde)]
     pub issue: Option<MaybeTyped<Numeric>>,
     #[bincode(with_serde)]
@@ -637,13 +644,67 @@ pub struct BibEntry{
     pub serial_numbers: Option<SerialNumber>,
     #[bincode(with_serde)]
     pub language: Option<unic_langid_impl::LanguageIdentifier>,
-    pub archive: Option<String>,
-    pub archive_location: Option<String>,
-    pub call_number: Option<String>,
-    pub note: Option<String>,
-    pub abstract_: Option<String>,
-    pub annote: Option<String>,
-    pub genre: Option<String>,
+    #[bincode(with_serde)]
+    pub archive: Option<FormatString>,
+    #[bincode(with_serde)]
+    pub archive_location: Option<FormatString>,
+    #[bincode(with_serde)]
+    pub call_number: Option<FormatString>,
+    #[bincode(with_serde)]
+    pub note: Option<FormatString>,
+    #[bincode(with_serde)]
+    pub abstract_: Option<FormatString>,
+    #[bincode(with_serde)]
+    pub annote: Option<FormatString>,
+    #[bincode(with_serde)]
+    pub genre: Option<FormatString>,
+}
+
+impl From<&hayagriva::Entry> for BibEntry{
+    fn from(value: &hayagriva::Entry) -> Self {
+        let authors = match value.authors(){
+            Some(authors) => Vec::from(authors),
+            None => vec![],
+        };
+        let editors = match value.editors(){
+            Some(editors) => Vec::from(editors),
+            None => vec![],
+        };
+        let affiliated = match value.affiliated(){
+            Some(affiliated) => Vec::from(affiliated),
+            None => vec![],
+        };
+        BibEntry{
+            key: value.key().to_string(),
+            entry_type: value.entry_type().clone(),
+            title: value.title().cloned(),
+            authors,
+            date: value.date().cloned(),
+            editors,
+            affiliated,
+            publisher: value.publisher().cloned(),
+            location: value.location().cloned(),
+            organization: value.organization().cloned(),
+            issue: value.issue().cloned(),
+            volume: value.volume().cloned(),
+            volume_total: value.volume_total().cloned(),
+            edition: value.edition().cloned(),
+            page_range: value.page_range().cloned(),
+            page_total: value.page_total().cloned(),
+            time_range: value.time_range().cloned(),
+            runtime: value.runtime().cloned(),
+            url: value.url().cloned(),
+            serial_numbers: value.serial_number().cloned(),
+            language: value.language().cloned(),
+            archive: value.archive().cloned(),
+            archive_location: value.archive_location().cloned(),
+            call_number: value.call_number().cloned(),
+            note: value.note().cloned(),
+            abstract_: value.abstract_().cloned(),
+            annote: value.annote().cloned(),
+            genre: value.genre().cloned(),
+        }
+    }
 }
 
 impl From<BibEntry> for hayagriva::Entry{

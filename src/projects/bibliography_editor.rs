@@ -128,7 +128,7 @@ pub mod api{
             if key.contains(&query){
                 res.push(entry.clone());
             }else if let Some(title) = entry.title.as_ref(){
-                if title.contains(&query){
+                if title.value.to_string().contains(&query){
                     res.push(entry.clone());
                 }
             }

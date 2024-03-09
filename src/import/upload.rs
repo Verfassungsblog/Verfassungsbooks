@@ -12,6 +12,7 @@ use crate::settings::Settings;
 #[derive(FromForm)]
 struct FileUpload<'r>{
     files: Vec<TempFile<'r>>,
+    bib_file: Option<TempFile<'r>>,
     project_id: String,
 }
 
