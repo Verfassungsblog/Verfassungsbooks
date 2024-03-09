@@ -1,6 +1,8 @@
+use std::collections::HashMap;
 use std::collections::BTreeMap;
 use crate::data_storage::{ProjectData, ProjectTemplate};
 use std::sync::Arc;
+use hayagriva::Library;
 use rocket::http::Status;
 use rocket::response::Redirect;
 use rocket::State;
@@ -50,6 +52,7 @@ pub async fn process_create_project(_session: Session, data: rocket::form::Form<
         metadata: None,
         settings: None,
         sections: vec![],
+        bibliography: HashMap::new(),
     };
 
     match project_storage.insert_project(project_data, settings).await{

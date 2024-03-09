@@ -1,0 +1,3 @@
+{{#each this}}
+<div data-key="{{this}}" class="bibeditor_sidebar_entry">{{this}}</div>
+{{/each}}

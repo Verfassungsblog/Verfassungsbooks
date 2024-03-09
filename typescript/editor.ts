@@ -11,6 +11,7 @@ import * as API from "./api_requests";
 import * as Tools from "./tools";
 import * as RenderPDF from "./RenderPDF";
 import {CustomStyleTool} from "./CustomStyleTool";
+import {CitationTool} from "./CitationTool";
 
 let typing_timer: number | null = null;
 let editor: EditorJS | null = null;
@@ -41,12 +42,13 @@ export async function show_editor(){
                 note: NoteTool,
                 quote: Quote,
                 custom_style_tool: CustomStyleTool,
+                citation: CitationTool,
                 image: {
                     class: ImageTool,
                     config: {
                         endpoints: {
                             byFile: by_file_upload_endpoint,
-                            byUrl: '/api/fetch_image',
+                            byUrl: '/api/fetch_image', //TODO: implement endpoint
                         }
                     }
                 }
@@ -84,7 +86,7 @@ export async function save_changes(){
     try {
         // @ts-ignore
         await API.send_update_content_blocks(globalThis.project_id, globalThis.section_path, data.blocks);
-        Tools.show_alert("Saved Changes.", "success");
+        //Tools.show_alert("Saved Changes.", "success");
     }catch(e){
         console.error(e);
         Tools.show_alert("Couldn't save content.", "danger");

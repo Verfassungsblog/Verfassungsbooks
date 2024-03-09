@@ -27,5 +27,5 @@ pub async fn show_editor(project_id: String, _session: Session, settings: &State
         },
     };
 
-    Ok(Template::render("editor", project_entry))
+    Ok(Template::render("editor", project_id))
 }

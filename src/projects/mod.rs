@@ -775,5 +775,5 @@ pub fn test_deserialize_and_serialize_content_block(){
 pub mod create;
 pub mod editor;
 pub mod list;
-
 pub mod api;
+pub mod bibliography_editor;

@@ -8,9 +8,11 @@ use argon2::{Argon2, PasswordHasher};
 use argon2::password_hash::rand_core::OsRng;
 use serde::{Deserialize, Serialize};
 use bincode::{Encode, Decode};
+use hayagriva::Library;
 use crate::projects::{Person, ProjectMetadata, ProjectSettings, Section, SectionOrToc};
 use crate::projects::api::ApiError;
 use crate::settings::Settings;
+use hayagriva::types::*;
 
 /// Storage for small data like users, passwords and login attempts
 ///
@@ -582,7 +584,7 @@ impl ProjectStorage {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
 pub struct ProjectData{
     pub name: String,
     pub description: Option<String>,
@@ -591,7 +593,204 @@ pub struct ProjectData{
     pub last_interaction: u64,
     pub metadata: Option<ProjectMetadata>,
     pub settings: Option<ProjectSettings>,
-    pub sections: Vec<SectionOrToc>
+    pub sections: Vec<SectionOrToc>,
+    #[bincode(with_serde)]
+    pub bibliography: HashMap<String, BibEntry>
+}
+
+#[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
+pub struct BibEntry{
+    pub key: String,
+    #[bincode(with_serde)]
+    pub entry_type: EntryType,
+    pub title: Option<String>,
+    #[bincode(with_serde)]
+    pub authors: Vec<hayagriva::types::Person>,
+    #[bincode(with_serde)]
+    pub date: Option<Date>,
+    #[bincode(with_serde)]
+    pub editors: Vec<hayagriva::types::Person>,
+    #[bincode(with_serde)]
+    pub affiliated: Vec<PersonsWithRoles>,
+    pub publisher: Option<String>,
+    pub location: Option<String>,
+    pub organization: Option<String>,
+    #[bincode(with_serde)]
+    pub issue: Option<MaybeTyped<Numeric>>,
+    #[bincode(with_serde)]
+    pub volume: Option<MaybeTyped<Numeric>>,
+    #[bincode(with_serde)]
+    pub volume_total: Option<Numeric>,
+    #[bincode(with_serde)]
+    pub edition: Option<MaybeTyped<Numeric>>,
+    #[bincode(with_serde)]
+    pub page_range: Option<MaybeTyped<Numeric>>,
+    #[bincode(with_serde)]
+    pub page_total: Option<Numeric>,
+    #[bincode(with_serde)]
+    pub time_range: Option<MaybeTyped<DurationRange>>,
+    #[bincode(with_serde)]
+    pub runtime: Option<MaybeTyped<Duration>>,
+    #[bincode(with_serde)]
+    pub url: Option<QualifiedUrl>,
+    #[bincode(with_serde)]
+    pub serial_numbers: Option<SerialNumber>,
+    #[bincode(with_serde)]
+    pub language: Option<unic_langid_impl::LanguageIdentifier>,
+    pub archive: Option<String>,
+    pub archive_location: Option<String>,
+    pub call_number: Option<String>,
+    pub note: Option<String>,
+    pub abstract_: Option<String>,
+    pub annote: Option<String>,
+    pub genre: Option<String>,
+}
+
+impl From<BibEntry> for hayagriva::Entry{
+    fn from(value: BibEntry) -> Self {
+        let mut entry = hayagriva::Entry::new(&value.key, value.entry_type);
+
+        if let Some(title) = value.title{
+            entry.set_title(title.into());
+        }
+
+        if value.authors.len() > 0 {
+            entry.set_authors(value.authors);
+        }
+
+        if let Some(date) = value.date {
+            entry.set_date(date);
+        }
+
+        if value.editors.len() > 0 {
+            entry.set_editors(value.editors);
+        }
+
+        if value.affiliated.len() > 0 {
+            entry.set_affiliated(value.affiliated);
+        }
+
+        if let Some(publisher) = value.publisher {
+            entry.set_publisher(publisher.into());
+        }
+
+        if let Some(location) = value.location {
+            entry.set_location(location.into());
+        }
+
+        if let Some(organization) = value.organization {
+            entry.set_organization(organization.into());
+        }
+
+        if let Some(issue) = value.issue {
+            entry.set_issue(issue);
+        }
+
+        if let Some(volume) = value.volume {
+            entry.set_volume(volume);
+        }
+
+        if let Some(volume_total) = value.volume_total {
+            entry.set_volume_total(volume_total);
+        }
+
+        if let Some(edition) = value.edition {
+            entry.set_edition(edition);
+        }
+
+        if let Some(page_range) = value.page_range {
+            entry.set_page_range(page_range);
+        }
+
+        if let Some(page_total) = value.page_total {
+            entry.set_page_total(page_total);
+        }
+
+        if let Some(time_range) = value.time_range {
+            entry.set_time_range(time_range);
+        }
+
+        if let Some(runtime) = value.runtime {
+            entry.set_runtime(runtime);
+        }
+
+        if let Some(url) = value.url {
+            entry.set_url(url);
+        }
+
+        if let Some(serial_numbers) = value.serial_numbers {
+            entry.set_serial_number(serial_numbers);
+        }
+
+        if let Some(language) = value.language {
+            entry.set_language(language);
+        }
+
+        if let Some(archive) = value.archive {
+            entry.set_archive(archive.into());
+        }
+
+        if let Some(archive_location) = value.archive_location {
+            entry.set_archive_location(archive_location.into());
+        }
+
+        if let Some(call_number) = value.call_number {
+            entry.set_call_number(call_number.into());
+        }
+
+        if let Some(note) = value.note {
+            entry.set_note(note.into());
+        }
+
+        if let Some(abstract_) = value.abstract_ {
+            entry.set_abstract_(abstract_.into());
+        }
+
+        if let Some(annote) = value.annote {
+            entry.set_annote(annote.into());
+        }
+
+        if let Some(genre) = value.genre {
+            entry.set_genre(genre.into());
+        }
+
+        entry
+    }
+}
+
+impl BibEntry{
+    pub fn new(key: String, entry_type: EntryType) -> BibEntry {
+        BibEntry{
+            key,
+            entry_type,
+            title: None,
+            authors: vec![],
+            date: None,
+            editors: vec![],
+            affiliated: vec![],
+            publisher: None,
+            location: None,
+            organization: None,
+            issue: None,
+            volume: None,
+            volume_total: None,
+            edition: None,
+            page_range: None,
+            page_total: None,
+            time_range: None,
+            runtime: None,
+            url: None,
+            serial_numbers: None,
+            language: None,
+            archive: None,
+            archive_location: None,
+            call_number: None,
+            note: None,
+            abstract_: None,
+            annote: None,
+            genre: None,
+        }
+    }
 }
 
 impl ProjectData{
@@ -839,6 +1038,7 @@ mod tests {
             file_lock_timeout: 10,
             backup_to_file_interval: 120,
             max_rendering_threads: 10,
+            max_import_threads: 2,
             chromium_path: None,
         }
     }

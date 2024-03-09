@@ -135,3 +135,81 @@ export async function send_delete_user(user_id: string){
         }
     }
 }
+
+export async function send_import_from_upload(data: any){
+    const response = await fetch(`/api/import/upload`, {
+        method: 'POST',
+        body: data,
+    });
+    if(!response.ok){
+        throw new Error(`Failed to upload: ${response.status}`);
+    }else{
+        let response_data = await response.json();
+        if(response_data.hasOwnProperty("error")) {
+            throw new Error(`Failed to upload: ${response_data["error"]}`);
+        }else{
+            return response_data;
+        }
+    }
+}
+
+export async function send_add_new_bib_entry(data: any, project_id: string){
+    const response = await fetch(`/api/projects/`+project_id+`/bibliography`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: {
+            'Content-Type': 'application/json'
+        }
+
+    });
+    if(!response.ok){
+        throw new Error(`Failed to add new bib entry: ${response.status}`);
+    }else{
+        let response_data = await response.json();
+        if(response_data.hasOwnProperty("error")) {
+            throw new Error(`Failed to add new bib entry: `+ Object.keys(response_data["error"])[0]+" "+Object.values(response_data["error"])[0]);
+        }else{
+            return response_data;
+        }
+    }
+}
+
+export async function send_get_bib_list(project_id: string){
+    const response = await fetch(`/api/projects/`+project_id+`/bibliography`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+
+    });
+    if(!response.ok){
+        throw new Error(`Failed to get bib entries: ${response.status}`);
+    }else{
+        let response_data = await response.json();
+        if(response_data.hasOwnProperty("error")) {
+            throw new Error(`Failed to get bib entries: `+ Object.keys(response_data["error"])[0]+" "+Object.values(response_data["error"])[0]);
+        }else{
+            return response_data;
+        }
+    }
+}
+
+export async function send_get_bib_entry(key: string, project_id: string){
+    const response = await fetch(`/api/projects/`+project_id+`/bibliography/`+key, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+
+    });
+    if(!response.ok){
+        throw new Error(`Failed to get bib entry: ${response.status}`);
+    }else{
+        let response_data = await response.json();
+        if(response_data.hasOwnProperty("error")) {
+            throw new Error(`Failed to get bib entry: `+ Object.keys(response_data["error"])[0]+" "+Object.values(response_data["error"])[0]);
+        }else{
+            return response_data;
+        }
+    }
+}

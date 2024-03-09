@@ -15,7 +15,12 @@
         {{/each}}
     </div>
 </div>
-<div class="editor-sidebar-structure-ctl input-group">
-    <input type="text" class="form-control" placeholder="Chaptername" id="editor_sidebar_section_name">
-    <button type="button" class="btn btn-outline-success" id="editor_sidebar_add_section">Add</button>
+<div class="editor-sidebar-structure-ctl">
+    <div class="input-group">
+        <input type="text" class="form-control" placeholder="Chaptername" id="editor_sidebar_section_name">
+        <button type="button" class="btn btn-outline-success" id="editor_sidebar_add_section">Add</button>
+    </div>
+    <div class="mt-1">
+        <button type="button" class="btn btn-outline-primary w-100" id="editor_sidebar_import">Import</button>
+    </div>
 </div>

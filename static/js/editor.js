@@ -2253,6 +2253,8 @@ var Editor;
                 add_dropzones();
                 add_draggables();
                 add_toc_listeners();
+                // @ts-ignore
+                window.add_import_listeners();
                 document.getElementById("editor_sidebar_project_title").addEventListener("click", Editor.ProjectOverview.show_overview);
             });
         }

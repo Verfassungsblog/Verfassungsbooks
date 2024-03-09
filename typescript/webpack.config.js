@@ -3,7 +3,9 @@ const path = require('path');
 module.exports = {
     entry: {
         neditor: './editor.ts',
-        settings: './Settings.ts'
+        settings: './Settings.ts',
+        import: './Import.ts',
+        bibliography_editor: './BibliographyEditor.ts'
     },
     devtool: 'inline-source-map',
     module: {

@@ -31,5 +31,8 @@ handlebars = {version = "5.1.0", features = ["dir_source"]}
 hyphenation = {version = "0.8.4", features = ["embed_all"]}
 qrcode = "0.13"
 image = "0.24.9"
-base64 = "0.21.7"
+base64 = "0.22.0"
 num-integer = "0.1.46"
+pandoc = "0.8"
+hayagriva= "0.5.2"
+unic-langid-impl = "0.9.4"

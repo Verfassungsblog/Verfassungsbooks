@@ -5,7 +5,7 @@
     <link rel="stylesheet" href="/css/app.css">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verfassungsbooks - Editor</title>
+    <title>Verfassungsbooks - Bibliography Editor</title>
 </head>
 <body>
 <nav class="navbar navbar-expand-lg">
@@ -16,16 +16,12 @@
                     <a class="nav-link p-0" aria-current="page" href="/"><svg xmlns="http://www.w3.org/2000/svg" fill="white" height="20" viewBox="0 -960 960 960" width="20"><path d="m274-450 248 248-42 42-320-320 320-320 42 42-248 248h526v60H274Z"/></svg></a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link active p-0 ms-3" href="/projects/{{this}}">Editor</a>
+                    <a class="nav-link p-0 ms-3" href="/projects/{{this}}">Editor</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link p-0 ms-3" href="/projects/{{this}}/bibliography">Bibliography</a>
+                    <a class="nav-link active p-0 ms-3" href="/projects/{{this}}/bibliography">Bibliography</a>
                 </li>
             </ul>
-        </div>
-        <div>
-            <button class="btn btn-sm btn-success" style="font-size: 10pt; padding: 0 5px 0 5px;" id="editor_render_project_btn">Render Project</button>
-            <a class="img-btn hide" id="editor_download_pdf_btn" href="" download><svg xmlns="http://www.w3.org/2000/svg" height="22" viewBox="0 -960 960 960" fill="white" width="22"><path d="M480-313 287-506l43-43 120 120v-371h60v371l120-120 43 43-193 193ZM220-160q-24 0-42-18t-18-42v-143h60v143h520v-143h60v143q0 24-18 42t-42 18H220Z"/></svg></a>
         </div>
     </div>
 </nav>
@@ -47,11 +43,6 @@
                 <div class="editor-details">
 
                 </div>
-                <div id="editor-render-preview" class="hide">
-                    <div style="overflow-y:scroll;" id="test">
-                        Loading Preview...
-                    </div>
-                </div>
             </div>
         </div>
     </div>
@@ -59,9 +50,7 @@
 <script src="/js/handlebars-v4.7.8.js" type="text/javascript"></script>
 <script src="/js/precompiled_partials.js"></script>
 <script src="/js/precompiled_templates.js"></script>
-<script src="/js/import.js"></script>
-<script src="/js/neditor.js"></script>
 <script src="/js/general.js"></script>
-<script src="/js/editor.js"></script>
+<script src="/js/bibliography_editor.js"></script>
 </body>
 </html>
