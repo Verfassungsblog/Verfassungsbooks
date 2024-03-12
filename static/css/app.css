@@ -490,3 +490,6 @@ customstyle{
     display: flex;
     flex-direction: row;
 }
+#wizard-pandoc-upload-progress{
+    width: 100%;
+}

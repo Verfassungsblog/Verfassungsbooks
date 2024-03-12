@@ -456,6 +456,18 @@ pub struct NewContentBlockEditorJSFormat{
     #[serde(rename = "type")]
     pub block_type: String,
     pub data: BlockDataEditorJSFormat,
+    pub tunes: BlockTuneEditorJSFormat,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+pub struct BlockTuneEditorJSFormat{
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub block_style_tune: Option<BlockStyleTuneEditorJS>
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+pub struct BlockStyleTuneEditorJS{
+    pub css_classes: String,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
@@ -484,12 +496,6 @@ pub struct BlockDataEditorJSFormat{
     pub stretched: Option<bool>,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
-pub struct BlockTuneEditorJSFormat{
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub footnotes: Option<Vec<Footnote>>,
-}
-
 #[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub struct Footnote{
     pub id: String,
@@ -502,42 +508,19 @@ pub struct NewContentBlock{
     pub id: String,
     pub block_type: BlockType,
     pub data: BlockData,
+    pub css_classes: Vec<String>,
     #[bincode(with_serde)]
     pub revision_id: Option<uuid::Uuid>,
-}
-
-impl From<BlockTuneEditorJSFormat> for BlockTune{
-
-    fn from(value: BlockTuneEditorJSFormat) -> Self {
-        if let Some(footnotes) = value.footnotes{
-            return BlockTune::Footnotes{footnotes}
-        }
-
-        return BlockTune::None
-    }
-}
-
-impl From<BlockTune> for BlockTuneEditorJSFormat{
-    fn from(value: BlockTune) -> Self {
-        match value{
-            BlockTune::Footnotes {footnotes} => {
-                BlockTuneEditorJSFormat{
-                    footnotes: Some(footnotes)
-                }
-            }
-            BlockTune::None => {
-                BlockTuneEditorJSFormat{
-                    footnotes: None,
-                }
-            }
-        }
-    }
 }
 
 impl TryFrom<NewContentBlockEditorJSFormat> for NewContentBlock{
     type Error = String;
 
     fn try_from(value: NewContentBlockEditorJSFormat) -> Result<Self, Self::Error> {
+        let css_classes = match value.tunes.block_style_tune{
+            Some(tune) => tune.css_classes.split(" ").map(|s| s.to_string()).collect(),
+            None => vec![],
+        };
         match value.block_type.as_str(){
             "paragraph" => {
                let text = value.data.text.ok_or("Missing field 'text' in paragraph block".to_string())?;
@@ -545,7 +528,8 @@ impl TryFrom<NewContentBlockEditorJSFormat> for NewContentBlock{
                      id: value.id,
                      block_type: BlockType::Paragraph,
                      data: BlockData::Paragraph { text },
-                     revision_id: None,
+                    css_classes,
+                    revision_id: None,
                 })
             },
             "header" => {
@@ -556,6 +540,7 @@ impl TryFrom<NewContentBlockEditorJSFormat> for NewContentBlock{
                     id: value.id,
                     block_type: BlockType::Heading,
                     data: BlockData::Heading { text, level },
+                    css_classes,
                     revision_id: None,
                 })
             },
@@ -566,6 +551,7 @@ impl TryFrom<NewContentBlockEditorJSFormat> for NewContentBlock{
                     id: value.id,
                     block_type: BlockType::Heading,
                     data: BlockData::Raw {html},
+                    css_classes,
                     revision_id: None,
                 })
             },
@@ -576,6 +562,7 @@ impl TryFrom<NewContentBlockEditorJSFormat> for NewContentBlock{
                     id: value.id,
                     block_type: BlockType::Heading,
                     data: BlockData::List {style, items},
+                    css_classes,
                     revision_id: None,
                 })
             },
@@ -587,6 +574,7 @@ impl TryFrom<NewContentBlockEditorJSFormat> for NewContentBlock{
                     id: value.id,
                     block_type: BlockType::Heading,
                     data: BlockData::Quote {text, caption, alignment},
+                    css_classes,
                     revision_id: None,
                 })
             },
@@ -600,6 +588,7 @@ impl TryFrom<NewContentBlockEditorJSFormat> for NewContentBlock{
                     id: value.id,
                     block_type: BlockType::Heading,
                     data: BlockData::Image {file, caption, with_border, with_background, stretched},
+                    css_classes,
                     revision_id: None,
                 })
             }
@@ -611,6 +600,14 @@ impl TryFrom<NewContentBlockEditorJSFormat> for NewContentBlock{
 impl From<NewContentBlock> for NewContentBlockEditorJSFormat{
 
     fn from(value: NewContentBlock) -> Self {
+        let mut tunes = BlockTuneEditorJSFormat{
+            block_style_tune: None,
+        };
+        if value.css_classes.len() > 0{
+            tunes.block_style_tune = Some(BlockStyleTuneEditorJS{
+                css_classes: value.css_classes.join(" "),
+            });
+        }
         match value.data{
             BlockData::Paragraph { text } => {
                 NewContentBlockEditorJSFormat {
@@ -629,6 +626,7 @@ impl From<NewContentBlock> for NewContentBlockEditorJSFormat{
                         withBackground: None,
                         stretched: None,
                     },
+                    tunes,
                 }
             },
             BlockData::Heading { text, level } => {
@@ -648,6 +646,7 @@ impl From<NewContentBlock> for NewContentBlockEditorJSFormat{
                         withBackground: None,
                         stretched: None,
                     },
+                    tunes,
                 }
             },
             BlockData::Raw {html} => {
@@ -667,6 +666,7 @@ impl From<NewContentBlock> for NewContentBlockEditorJSFormat{
                         withBackground: None,
                         stretched: None,
                     },
+                    tunes,
                 }
             },
             BlockData::List {items, style} => {
@@ -686,6 +686,7 @@ impl From<NewContentBlock> for NewContentBlockEditorJSFormat{
                         withBackground: None,
                         stretched: None,
                     },
+                    tunes,
                 }
             },
             BlockData::Quote {text, caption, alignment} => {
@@ -705,6 +706,7 @@ impl From<NewContentBlock> for NewContentBlockEditorJSFormat{
                         withBackground: None,
                         stretched: None,
                     },
+                    tunes,
                 }
             },
             BlockData::Image {file, caption, with_border, with_background, stretched} => {
@@ -724,6 +726,7 @@ impl From<NewContentBlock> for NewContentBlockEditorJSFormat{
                         withBackground: Some(with_background),
                         stretched: Some(stretched),
                     },
+                    tunes,
                 }
             }
         }
@@ -738,12 +741,6 @@ pub enum BlockType{
     List,
     Quote,
     Image
-}
-
-#[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone, PartialEq)]
-pub enum BlockTune {
-    Footnotes{footnotes: Vec<Footnote>},
-    None
 }
 
 #[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone, PartialEq)]

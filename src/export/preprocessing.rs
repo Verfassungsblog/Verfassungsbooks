@@ -67,6 +67,8 @@ pub fn render_project(prepared_project: PreparedProject, project_id: uuid::Uuid,
     if let Some(path_str) = path_str {
         args.push("--executable-browser");
         args.push(path_str);
+        args.push("--timeout");
+        args.push("480000");
     }
 
     let output =  Command::new("vivliostyle").current_dir(temp_dir).args(args).output();
@@ -118,10 +120,6 @@ fn handlebars_qrcode_helper(h: &Helper, _: &Handlebars, _: &Context, rc: &mut Re
 
 pub fn prepare_project(project_data: ProjectData, data_storage: Arc<DataStorage>, csl_data: Arc<CslData>) -> Result<PreparedProject, RenderingError>{
     let citation_bib = render_citations(&project_data, csl_data);
-    println!("Citation bib:");
-    for (key, value) in citation_bib.iter(){
-        println!("{}: {}\n", key, value);
-    }
 
     let metadata = match project_data.metadata{
         Some(metadata) => metadata,
@@ -301,7 +299,6 @@ pub fn render_section(section: Section, data_storage: Arc<DataStorage>, citation
     let mut endnotes = vec![];
     for i in 0..endnote_storage.len(){
         endnotes.push(PreparedEndnote{ num: i+1, content: endnote_storage.get(i).unwrap().clone() });
-        println!("Endnote: {}: {}", i+1, endnote_storage.get(i).unwrap());
     }
 
     PreparedSection{
@@ -315,12 +312,18 @@ pub fn render_section(section: Section, data_storage: Arc<DataStorage>, citation
 }
 
 pub fn render_content_block(block: NewContentBlock, endnote_storage: &mut Vec<String>, dict: &Standard, citation_bib: &HashMap<String, String>) -> PreparedContentBlock{
+    let css_classes_raw = block.css_classes.join(" ");
+    let css_classes = if block.css_classes.len() > 0{
+        format!(" class='{}'", block.css_classes.join(" "))
+    }else{
+        String::new()
+    };
     let data: String = match block.data{
         BlockData::Paragraph {text} => {
-            format!("<p>{}</p>", render_text(text, endnote_storage, dict, citation_bib))
+            format!("<p{}>{}</p>", css_classes, render_text(text, endnote_storage, dict, citation_bib))
         }
         BlockData::Heading { text , level} => {
-            format!("<h{}>{}</h{}>", level, render_text(text, endnote_storage, dict, citation_bib), level)
+            format!("<h{}{}'>{}</h{}>", level, css_classes, render_text(text, endnote_storage, dict, citation_bib), level)
         }
         BlockData::Raw { html } => {
             html
@@ -331,17 +334,17 @@ pub fn render_content_block(block: NewContentBlock, endnote_storage: &mut Vec<St
                 res.push_str(&format!("<li>{}</li>", render_text(item, endnote_storage, dict, citation_bib)));
             }
             if style == "ordered"{
-                format!("<ol>{}</ol>", res)
+                format!("<ol{}>{}</ol>", css_classes, res)
             }else{
-                format!("<ul>{}</ul>", res)
+                format!("<ul{}>{}</ul>", css_classes, res)
             }
         },
         BlockData::Quote{text, caption, alignment} => {
-            format!("<blockquote class=\"align-{}\"><p>{}</p><footer>{}</footer></blockquote>", alignment, render_text(text, endnote_storage, dict, citation_bib), render_text(caption, endnote_storage, dict, citation_bib))
+            format!("<blockquote class=\"align-{} {}\"><p>{}</p><footer>{}</footer></blockquote>", alignment, css_classes_raw, render_text(text, endnote_storage, dict, citation_bib), render_text(caption, endnote_storage, dict, citation_bib))
         }
         BlockData::Image {file, caption, with_border, with_background, stretched} => {
             // We use filename since all images are copied from te uploads directory to our temporary working dir and file.url represents the public url
-            format!("<img src=\"{}\" alt=\"{}\" />", file.filename, caption.unwrap_or_default())
+            format!("<img src=\"{}\" alt=\"{}\" {}/>", file.filename, caption.unwrap_or_default(), css_classes)
         }
     };
     PreparedContentBlock{

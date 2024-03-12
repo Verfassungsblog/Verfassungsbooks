@@ -9,6 +9,7 @@ use html_parser::{Dom, Node};
 use pandoc::{InputFormat, InputKind, OutputFormat, OutputKind, PandocError, PandocOutput};
 use rocket::fs::TempFile;
 use rocket::http::ContentType;
+use serde::{Deserialize, Serialize};
 use crate::data_storage::{BibEntry, ProjectData, ProjectStorage};
 use crate::settings::Settings;
 use tokio::io::AsyncReadExt;
@@ -19,9 +20,10 @@ pub struct ImportProcessor{
     pub settings: Settings,
     pub project_storage: Arc<ProjectStorage>,
     pub job_queue: RwLock<Vec<ImportJob>>,
-    pub job_archive: RwLock<Vec<Arc<RwLock<ImportJob>>>>,
+    pub job_archive: RwLock<HashMap<uuid::Uuid, Arc<RwLock<ImportJob>>>>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ImportStatus{
     Pending,
     Processing,
@@ -39,6 +41,14 @@ pub enum ImportError{
     HtmlConversionFailed
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ImportStatusPoll{
+    pub status: ImportStatus,
+    pub processed: usize,
+    pub length: usize,
+}
+
+
 pub struct ImportJob{
     pub id: uuid::Uuid,
     pub project_id: uuid::Uuid,
@@ -55,7 +65,7 @@ impl ImportProcessor{
             settings,
             project_storage,
             job_queue: RwLock::new(Vec::new()),
-            job_archive: RwLock::new(Vec::new()),
+            job_archive: RwLock::new(HashMap::new()),
         });
 
         let processor_clone = processor.clone();
@@ -82,7 +92,7 @@ impl ImportProcessor{
                         };
                         job.status = ImportStatus::Processing;
                         let job = Arc::new(RwLock::new(job));
-                        proc_clone.job_archive.write().unwrap().push(job.clone());
+                        proc_clone.job_archive.write().unwrap().insert(job.read().unwrap().id, job.clone());
                         proc_clone.process_job(job, proc_clone.project_storage.clone()).await;
                         println!("Job finished");
                         running_threads_cpy.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
@@ -360,6 +370,7 @@ impl ImportProcessor{
                         data: BlockData::Paragraph {
                             text: t,
                         },
+                        css_classes: vec![],
                         revision_id: None,
                     };
                     section.children.push(cb);
@@ -383,6 +394,7 @@ impl ImportProcessor{
                                     text: self.dom_to_html(el, Some(&footnotes)),
                                     level,
                                 },
+                                css_classes: vec![],
                                 revision_id: None,
                             })
                         },
@@ -393,6 +405,7 @@ impl ImportProcessor{
                                 data: BlockData::Paragraph {
                                     text: self.dom_to_html(el, Some(&footnotes)),
                                 },
+                                css_classes: vec![],
                                 revision_id: None,
                             })
                         },
@@ -421,6 +434,7 @@ impl ImportProcessor{
                                     style,
                                     items
                                 },
+                                css_classes: vec![],
                                 revision_id: None,
                             });
                         },
@@ -433,6 +447,7 @@ impl ImportProcessor{
                                     caption: "".to_string(),
                                     alignment: "".to_string(),
                                 },
+                                css_classes: vec![],
                                 revision_id: None,
                             });
                         },
@@ -453,6 +468,7 @@ impl ImportProcessor{
                                 data: BlockData::Paragraph {
                                     text: self.dom_to_html(el, Some(&footnotes)),
                                 },
+                                css_classes: vec![],
                                 revision_id: None,
                             });
                         }

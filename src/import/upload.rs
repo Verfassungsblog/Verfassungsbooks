@@ -6,7 +6,7 @@ use rocket::serde::json::Json;
 use rocket::State;
 use uuid::Uuid;
 use crate::data_storage::ProjectStorage;
-use crate::import::processing::{ImportJob, ImportProcessor, ImportStatus};
+use crate::import::processing::{ImportJob, ImportProcessor, ImportStatus, ImportStatusPoll};
 use crate::projects::api::{ApiError, ApiResult};
 use crate::session::session_guard::Session;
 use crate::settings::Settings;
@@ -19,7 +19,7 @@ struct FileUpload<'r>{
 }
 
 #[post("/api/import/upload", data = "<upload>")]
-pub async fn import_from_upload(mut upload: Form<FileUpload<'_>>, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>, import_processor: &State<Arc<ImportProcessor>>) -> Json<ApiResult<()>>{
+pub async fn import_from_upload(mut upload: Form<FileUpload<'_>>, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>, import_processor: &State<Arc<ImportProcessor>>) -> Json<ApiResult<uuid::Uuid>>{
     println!("Uploading files to project {}", upload.project_id);
 
     let mut file_paths = vec![];
@@ -64,5 +64,39 @@ pub async fn import_from_upload(mut upload: Form<FileUpload<'_>>, _session: Sess
 
     import_processor.job_queue.write().unwrap().push(import_job);
 
-    ApiResult::new_data(())
+    ApiResult::new_data(id)
+}
+
+#[get("/api/import/status/<id>")]
+pub async fn poll_import_status(id: String, _session: Session, import_processor: &State<Arc<ImportProcessor>>) -> Json<ApiResult<ImportStatusPoll>>{
+    let job_archive = import_processor.job_archive.read().unwrap();
+
+    let id = match uuid::Uuid::parse_str(&id){
+        Ok(id) => id,
+        Err(_) => return ApiResult::new_error(ApiError::BadRequest("Invalid job id".to_string()))
+    };
+
+    match job_archive.get(&id){
+        Some(job) =>{
+            let job = job.read().unwrap();
+            let status = ImportStatusPoll{
+                status: job.status.clone(),
+                processed: job.processed,
+                length: job.length,
+            };
+            return ApiResult::new_data(status);
+        },
+        None => ()
+    }
+    let job_queue = import_processor.job_queue.read().unwrap();
+
+    let job = job_queue.iter().find(|job| job.id == id);
+    match job{
+        Some(job) => ApiResult::new_data(ImportStatusPoll{
+            status: job.status.clone(),
+            processed: job.processed,
+            length: job.length,
+        }),
+        None => ApiResult::new_error(ApiError::NotFound)
+    }
 }

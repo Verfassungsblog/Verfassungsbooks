@@ -16,7 +16,12 @@
 <div id="wizard-pandoc-1" class="hide">
     <p>Please supply one file per Section.</p>
     <input type="file" class="form-control" id="wizard-pandoc-upload-input" multiple/>
-    <p>Optional bibliography</p>
+    <p class="mt-2">Optional bibliography</p>
     <input type="file" class="form-control" id="wizard-pandoc-upload-bib-input"/>
     <button class="btn btn-primary mt-2 float-end" id="wizard-pandoc-upload-btn">Upload</button>
+</div>
+<div id="wizard-pandoc-2" class="hide">
+    <p>Upload Progress:</p>
+    <progress id="wizard-pandoc-upload-progress" value="0" max="100"></progress>
+    <p class="mt-2">Status: <span id="wizard-pandoc-upload-progress-status"></span></p>
 </div>

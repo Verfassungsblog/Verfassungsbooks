@@ -12,6 +12,7 @@ import * as Tools from "./tools";
 import * as RenderPDF from "./RenderPDF";
 import {CustomStyleTool} from "./CustomStyleTool";
 import {CitationTool} from "./CitationTool";
+import {BlockStyleTune} from "./BlockStyleTune";
 
 let typing_timer: number | null = null;
 let editor: EditorJS | null = null;
@@ -51,8 +52,10 @@ export async function show_editor(){
                             byUrl: '/api/fetch_image', //TODO: implement endpoint
                         }
                     }
-                }
+                },
+                block_style_tune: BlockStyleTune
             },
+            tunes: ['block_style_tune'],
             data: {blocks: data},
             onChange: (api, event) => {
                 if(!first_change){ // Don't save the first change, as it's just the initial load

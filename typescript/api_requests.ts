@@ -213,3 +213,24 @@ export async function send_get_bib_entry(key: string, project_id: string){
         }
     }
 }
+
+export async function send_poll_import_status(id: string){
+    const response = await fetch(`/api/import/status/`+id, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+
+    });
+    if(!response.ok){
+        throw new Error(`Failed to get import status: ${response.status}`);
+    }else{
+        let response_data = await response.json();
+        if(response_data.hasOwnProperty("error")) {
+            console.error(response_data["error"]);
+            throw new Error(`Failed to get import status: `+ Object.keys(response_data["error"])[0]+" "+Object.values(response_data["error"])[0]);
+        }else{
+            return response_data;
+        }
+    }
+}
