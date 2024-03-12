@@ -93,6 +93,7 @@ async fn rocket() -> _ {
     if temp_dir.exists(){
         std::fs::remove_dir_all(temp_dir).unwrap();
     }
+    std::fs::create_dir(temp_dir).unwrap();
 
     println!("Loading data storage...");
     let data_storage = Arc::new(data_storage::DataStorage::load_from_disk(&settings).await.unwrap());
@@ -110,10 +111,10 @@ async fn rocket() -> _ {
     data_storage::save_data_worker(data_storage.clone(), project_storage.clone(), settings.clone()).await;
 
     println!("Starting rendering worker...");
-    let rendering_manager = export::rendering_manager::RenderingManager::start(settings.clone(), data_storage.clone()).await;
+    let rendering_manager = export::rendering_manager::RenderingManager::start(settings.clone(), data_storage.clone());
 
     println!("Starting import processing worker...");
-    //TODO start import processing worker
+    let import_manager = import::processing::ImportProcessor::start(settings.clone(), project_storage.clone());
 
     println!("Starting web server...");
     rocket::build()
@@ -127,6 +128,7 @@ async fn rocket() -> _ {
         .manage(data_storage)
         .manage(project_storage)
         .manage(rendering_manager)
+        .manage(import_manager)
 }
 
 //TODO: clean shutdown

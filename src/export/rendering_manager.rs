@@ -73,7 +73,7 @@ impl error::Error for RenderingError {
 }
 
 impl RenderingManager{
-    pub async fn start(settings: Settings, data_storage: Arc<DataStorage>) -> Arc<RenderingManager>{
+    pub fn start(settings: Settings, data_storage: Arc<DataStorage>) -> Arc<RenderingManager>{
         let rendering_manager = RenderingManager{
             settings,
             data_storage,

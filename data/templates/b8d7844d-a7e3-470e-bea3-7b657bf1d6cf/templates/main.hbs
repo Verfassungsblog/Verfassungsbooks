@@ -22,6 +22,15 @@
             {{{html}}}
         {{/each}}
     </div>
+
+    {{#if endnotes}}
+        <span>Notes</span>
+        <ol>
+            {{#each endnotes}}
+                <li id="note-{{num}}">{{{content}}}</li>
+            {{/each}}
+        </ol>
+    {{/if}}
         <!-- TOC -->
         <nav role="doc-toc">
             <h1>Contents</h1>

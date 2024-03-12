@@ -150,26 +150,18 @@ a{
     }
 }
 
-span.footnote {
+:root {
+    counter-reset: footnote;
+}
+.footnote {
+    counter-increment: footnote;
     float: footnote;
 }
-
-.footnote::footnote-call {
-    content: counter(footnote, decimal) " ";
-    color: green;
-    vertical-align: super;
-    font-size: 0.8em;
+.footnote-marker::before,
+.footnote-call::before {
+    content: counter(footnote);
 }
 
-.footnote::footnote-marker {
-    content: counter(footnote, decimal);
-    font-size: 14pt;
-    color: red;
-    display: inline-block;
-    width: 2em;
-    padding-right: 1em;
-    text-align: right;
-}
 .chapter{
     hyphens: manual;
     text-align: justify;

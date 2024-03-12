@@ -1,6 +1,8 @@
-use std::collections::HashMap;
-use std::fs;
+use std::collections::{BTreeMap, HashMap};
+use std::{fmt, fs};
+use std::fmt::Display;
 use std::path::Path;
+use std::str::FromStr;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::sync::atomic::AtomicBool;
 use std::time::SystemTime;
@@ -8,11 +10,18 @@ use argon2::{Argon2, PasswordHasher};
 use argon2::password_hash::rand_core::OsRng;
 use serde::{Deserialize, Serialize};
 use bincode::{Encode, Decode};
+use bincode::error::DecodeError;
+use hayagriva::citationberg::LongShortForm;
+use hayagriva::lang::{SentenceCase, TitleCase};
 use hayagriva::Library;
 use crate::projects::{Person, ProjectMetadata, ProjectSettings, Section, SectionOrToc};
 use crate::projects::api::ApiError;
 use crate::settings::Settings;
 use hayagriva::types::*;
+use reqwest::Url;
+use serde::de::Visitor;
+use serde::ser::SerializeMap;
+use unic_langid_impl::LanguageIdentifier;
 
 /// Storage for small data like users, passwords and login attempts
 ///
@@ -595,7 +604,202 @@ pub struct ProjectData{
     pub settings: Option<ProjectSettings>,
     pub sections: Vec<SectionOrToc>,
     #[bincode(with_serde)]
-    pub bibliography: HashMap<String, BibEntry>
+    pub bibliography: HashMap<String, BibEntry> //TODO: add prefix & suffix support
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub struct MyPersonsWithRoles {
+    /// The persons.
+    pub names: Vec<MyPerson>,
+    /// The role the persons had in the creation of the cited item.
+    pub role: MyPersonRole,
+}
+
+impl From<PersonsWithRoles> for MyPersonsWithRoles{
+    fn from(value: PersonsWithRoles) -> Self {
+        MyPersonsWithRoles{
+            names: value.names.iter().map(|p| <hayagriva::types::Person as Clone>::clone(&(*p)).into()).collect(),
+            role: value.role.into(),
+        }
+    }
+}
+
+impl From<MyPersonsWithRoles> for PersonsWithRoles{
+    fn from(value: MyPersonsWithRoles) -> Self {
+        PersonsWithRoles{
+            names: value.names.iter().map(|p| <MyPerson as Clone>::clone(&(*p)).into()).collect(),
+            role: value.role.into(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum MyPersonRole {
+    /// Translated the work from a foreign language to the cited edition.
+    Translator,
+    /// Authored an afterword.
+    Afterword,
+    /// Authored an foreword.
+    Foreword,
+    /// Authored an introduction.
+    Introduction,
+    /// Provided value-adding annotations.
+    Annotator,
+    /// Commented the work.
+    Commentator,
+    /// Holds a patent or similar.
+    Holder,
+    /// Compiled the works in an [Anthology](super::EntryType::Anthology).
+    Compiler,
+    /// Founded the publication.
+    Founder,
+    /// Collaborated on the cited item.
+    Collaborator,
+    /// Organized the creation of the cited item.
+    Organizer,
+    /// Performed in the cited item.
+    CastMember,
+    /// Composed all or parts of the cited item's musical / audible components.
+    Composer,
+    /// Produced the cited item.
+    Producer,
+    /// Lead Producer for the cited item.
+    ExecutiveProducer,
+    /// Did the writing for the cited item.
+    Writer,
+    /// Shot film/video for the cited item.
+    Cinematography,
+    /// Directed the cited item.
+    Director,
+    /// Illustrated the cited item.
+    Illustrator,
+    /// Provided narration or voice-over for the cited item.
+    Narrator,
+    /// Various other roles described by the contained string.
+    Unknown(String),
+}
+
+impl From<MyPersonRole> for PersonRole{
+    fn from(value: MyPersonRole) -> Self {
+        match value {
+            MyPersonRole::Translator => PersonRole::Translator,
+            MyPersonRole::Afterword => PersonRole::Afterword,
+            MyPersonRole::Foreword => PersonRole::Foreword,
+            MyPersonRole::Introduction => PersonRole::Introduction,
+            MyPersonRole::Annotator => PersonRole::Annotator,
+            MyPersonRole::Commentator => PersonRole::Commentator,
+            MyPersonRole::Holder => PersonRole::Holder,
+            MyPersonRole::Compiler => PersonRole::Compiler,
+            MyPersonRole::Founder => PersonRole::Founder,
+            MyPersonRole::Collaborator => PersonRole::Collaborator,
+            MyPersonRole::Organizer => PersonRole::Organizer,
+            MyPersonRole::CastMember => PersonRole::CastMember,
+            MyPersonRole::Composer => PersonRole::Composer,
+            MyPersonRole::Producer => PersonRole::Producer,
+            MyPersonRole::ExecutiveProducer => PersonRole::ExecutiveProducer,
+            MyPersonRole::Writer => PersonRole::Writer,
+            MyPersonRole::Cinematography => PersonRole::Cinematography,
+            MyPersonRole::Director => PersonRole::Director,
+            MyPersonRole::Illustrator => PersonRole::Illustrator,
+            MyPersonRole::Narrator => PersonRole::Narrator,
+            MyPersonRole::Unknown(s) => PersonRole::Unknown(s),
+        }
+    }
+}
+
+impl From<PersonRole> for MyPersonRole{
+    fn from(value: PersonRole) -> Self {
+        match value {
+            PersonRole::Translator => MyPersonRole::Translator,
+            PersonRole::Afterword => MyPersonRole::Afterword,
+            PersonRole::Foreword => MyPersonRole::Foreword,
+            PersonRole::Introduction => MyPersonRole::Introduction,
+            PersonRole::Annotator => MyPersonRole::Annotator,
+            PersonRole::Commentator => MyPersonRole::Commentator,
+            PersonRole::Holder => MyPersonRole::Holder,
+            PersonRole::Compiler => MyPersonRole::Compiler,
+            PersonRole::Founder => MyPersonRole::Founder,
+            PersonRole::Collaborator => MyPersonRole::Collaborator,
+            PersonRole::Organizer => MyPersonRole::Organizer,
+            PersonRole::CastMember => MyPersonRole::CastMember,
+            PersonRole::Composer => MyPersonRole::Composer,
+            PersonRole::Producer => MyPersonRole::Producer,
+            PersonRole::ExecutiveProducer => MyPersonRole::ExecutiveProducer,
+            PersonRole::Writer => MyPersonRole::Writer,
+            PersonRole::Cinematography => MyPersonRole::Cinematography,
+            PersonRole::Director => MyPersonRole::Director,
+            PersonRole::Illustrator => MyPersonRole::Illustrator,
+            PersonRole::Narrator => MyPersonRole::Narrator,
+            PersonRole::Unknown(s) => MyPersonRole::Unknown(s),
+            _ => MyPersonRole::Unknown("".to_string()),
+        }
+    }
+}
+
+
+/// Same as [MaybeTyped], but without serde untagged, because Bincode doesn't support this
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Eq, Hash)]
+pub enum MyMaybeTyped<T> {
+    /// The typed variant.
+    Typed(T),
+    /// The fallback string variant.
+    String(String),
+}
+
+impl<T> From<MyMaybeTyped<T>> for MaybeTyped<T> {
+    fn from(value: MyMaybeTyped<T>) -> Self {
+        match value {
+            MyMaybeTyped::Typed(t) => MaybeTyped::Typed(t),
+            MyMaybeTyped::String(s) => MaybeTyped::String(s),
+        }
+    }
+}
+
+impl<T> From<MaybeTyped<T>> for MyMaybeTyped<T> {
+    fn from(value: MaybeTyped<T>) -> Self {
+        match value {
+            MaybeTyped::Typed(t) => MyMaybeTyped::Typed(t),
+            MaybeTyped::String(s) => MyMaybeTyped::String(s),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, )]
+pub struct MyPerson{
+    pub name: String,
+    /// The given name / forename.
+    pub given_name: Option<String>,
+    /// A prefix of the family name such as 'van' or 'de'.
+    pub prefix: Option<String>,
+    /// A suffix of the family name such as 'Jr.' or 'IV'.
+    pub suffix: Option<String>,
+    /// Another name (often user name) the person might be known under.
+    pub alias: Option<String>,
+}
+
+impl From<hayagriva::types::Person> for MyPerson{
+    fn from(value: hayagriva::types::Person) -> Self {
+        MyPerson{
+            name: value.name,
+            given_name: value.given_name,
+            prefix: value.prefix,
+            suffix: value.suffix,
+            alias: value.alias,
+        }
+    }
+}
+
+impl From<MyPerson> for hayagriva::types::Person{
+    fn from(value: MyPerson) -> Self {
+        hayagriva::types::Person{
+            name: value.name,
+            given_name: value.given_name,
+            prefix: value.prefix,
+            suffix: value.suffix,
+            alias: value.alias,
+        }
+    }
 }
 
 
@@ -607,102 +811,203 @@ pub struct BibEntry{
     #[bincode(with_serde)]
     pub entry_type: EntryType,
     #[bincode(with_serde)]
-    pub title: Option<FormatString>,
+    pub title: Option<MyFormatString>,
     #[bincode(with_serde)]
-    pub authors: Vec<hayagriva::types::Person>,
+    pub authors: Vec<MyPerson>,
     #[bincode(with_serde)]
-    pub date: Option<Date>,
+    pub date: Option<MyDate>,
     #[bincode(with_serde)]
-    pub editors: Vec<hayagriva::types::Person>,
+    pub editors: Vec<MyPerson>,
     #[bincode(with_serde)]
-    pub affiliated: Vec<PersonsWithRoles>,
+    pub affiliated: Vec<MyPersonsWithRoles>,
     #[bincode(with_serde)]
-    pub publisher: Option<FormatString>,
+    pub publisher: Option<MyFormatString>,
     #[bincode(with_serde)]
-    pub location: Option<FormatString>,
+    pub location: Option<MyFormatString>,
     #[bincode(with_serde)]
-    pub organization: Option<FormatString>,
+    pub organization: Option<MyFormatString>,
     #[bincode(with_serde)]
-    pub issue: Option<MaybeTyped<Numeric>>,
+    pub issue: Option<MyMaybeTyped<MyNumeric>>,
     #[bincode(with_serde)]
-    pub volume: Option<MaybeTyped<Numeric>>,
+    pub volume: Option<MyMaybeTyped<MyNumeric>>,
     #[bincode(with_serde)]
-    pub volume_total: Option<Numeric>,
+    pub volume_total: Option<MyNumeric>,
     #[bincode(with_serde)]
-    pub edition: Option<MaybeTyped<Numeric>>,
+    pub edition: Option<MyMaybeTyped<MyNumeric>>,
     #[bincode(with_serde)]
-    pub page_range: Option<MaybeTyped<Numeric>>,
+    pub page_range: Option<MyMaybeTyped<MyNumeric>>,
     #[bincode(with_serde)]
-    pub page_total: Option<Numeric>,
+    pub page_total: Option<MyNumeric>,
     #[bincode(with_serde)]
-    pub time_range: Option<MaybeTyped<DurationRange>>,
+    pub time_range: Option<MyMaybeTyped<MyDurationRange>>,
     #[bincode(with_serde)]
-    pub runtime: Option<MaybeTyped<Duration>>,
+    pub runtime: Option<MyMaybeTyped<Duration>>,
     #[bincode(with_serde)]
-    pub url: Option<QualifiedUrl>,
+    pub url: Option<MyQualifiedUrl>,
     #[bincode(with_serde)]
-    pub serial_numbers: Option<SerialNumber>,
+    pub serial_numbers: Option<BTreeMap<String, String>>,
     #[bincode(with_serde)]
-    pub language: Option<unic_langid_impl::LanguageIdentifier>,
+    pub language: Option<String>,
     #[bincode(with_serde)]
-    pub archive: Option<FormatString>,
+    pub archive: Option<MyFormatString>,
     #[bincode(with_serde)]
-    pub archive_location: Option<FormatString>,
+    pub archive_location: Option<MyFormatString>,
     #[bincode(with_serde)]
-    pub call_number: Option<FormatString>,
+    pub call_number: Option<MyFormatString>,
     #[bincode(with_serde)]
-    pub note: Option<FormatString>,
+    pub note: Option<MyFormatString>,
     #[bincode(with_serde)]
-    pub abstract_: Option<FormatString>,
+    pub abstract_: Option<MyFormatString>,
     #[bincode(with_serde)]
-    pub annote: Option<FormatString>,
+    pub annote: Option<MyFormatString>,
     #[bincode(with_serde)]
-    pub genre: Option<FormatString>,
+    pub genre: Option<MyFormatString>,
 }
 
 impl From<&hayagriva::Entry> for BibEntry{
     fn from(value: &hayagriva::Entry) -> Self {
+        let title = match value.title(){
+            Some(title) => Some(title.clone().into()),
+            None => None,
+        };
+        let publisher = match value.publisher(){
+            Some(publisher) => Some(publisher.clone().into()),
+            None => None,
+        };
+        let location = match value.location(){
+            Some(location) => Some(location.clone().into()),
+            None => None,
+        };
+        let organization = match value.organization(){
+            Some(organization) => Some(organization.clone().into()),
+            None => None,
+        };
+        let archive = match value.archive(){
+            Some(archive) => Some(archive.clone().into()),
+            None => None,
+        };
+        let archive_location = match value.archive_location(){
+            Some(archive_location) => Some(archive_location.clone().into()),
+            None => None,
+        };
+        let call_number = match value.call_number(){
+            Some(call_number) => Some(call_number.clone().into()),
+            None => None,
+        };
+        let note = match value.note(){
+            Some(note) => Some(note.clone().into()),
+            None => None,
+        };
+        let abstract_ = match value.abstract_(){
+            Some(abstract_) => Some(abstract_.clone().into()),
+            None => None,
+        };
+        let annote = match value.annote(){
+            Some(annote) => Some(annote.clone().into()),
+            None => None,
+        };
+        let genre = match value.genre(){
+            Some(genre) => Some(genre.clone().into()),
+            None => None,
+        };
         let authors = match value.authors(){
-            Some(authors) => Vec::from(authors),
+            Some(authors) => authors.iter().map(|x| <hayagriva::types::Person as Clone>::clone(&(*x)).into()).collect(),
             None => vec![],
         };
         let editors = match value.editors(){
-            Some(editors) => Vec::from(editors),
+            Some(editors) => editors.iter().map(|x| <hayagriva::types::Person as Clone>::clone(&(*x)).into()).collect(),
             None => vec![],
         };
+
+        let serial_numbers = match value.serial_number(){
+            Some(serial_numbers) => Some(serial_numbers.0.clone()),
+            None => None,
+        };
+
+        let issue= match value.issue(){
+            Some(issue) => Some(issue.clone().into()),
+            None => None,
+        };
+        let volume = match value.volume(){
+            Some(volume) => Some(volume.clone().into()),
+            None => None,
+        };
+        let edition = match value.edition(){
+            Some(edition) => Some(edition.clone().into()),
+            None => None,
+        };
+        let page_range = match value.page_range(){
+            Some(page_range) => Some(page_range.clone().into()),
+            None => None,
+        };
+        let volume_total = match value.volume_total(){
+            Some(volume_total) => Some(volume_total.clone().into()),
+            None => None,
+        };
+        let page_total = match value.page_total(){
+            Some(page_total) => Some(page_total.clone().into()),
+            None => None,
+        };
+        let url = match value.url(){
+            Some(url) => Some(url.clone().into()),
+            None => None,
+        };
+        let date = match value.date(){
+            Some(date) => Some(date.clone().into()),
+            None => None,
+        };
+        let language = match value.language(){
+            Some(language) => Some(language.to_string()),
+            None => None,
+        };
         let affiliated = match value.affiliated(){
-            Some(affiliated) => Vec::from(affiliated),
+            Some(affiliated) => {
+                affiliated.iter().map(|x| <hayagriva::types::PersonsWithRoles as Clone>::clone(&(*x)).into()).collect()
+            },
             None => vec![],
+        };
+        let time_range = match value.time_range(){
+            Some(time_range) => {
+                match time_range {
+                    hayagriva::types::MaybeTyped::Typed(t) => Some(MyMaybeTyped::Typed(t.clone().into())),
+                    hayagriva::types::MaybeTyped::String(s) => Some(MyMaybeTyped::String(s.to_string())),
+                }
+            },
+            None => None,
+        };
+        let runtime = match value.runtime(){
+            Some(runtime) => Some(runtime.clone().into()),
+            None => None,
         };
         BibEntry{
             key: value.key().to_string(),
             entry_type: value.entry_type().clone(),
-            title: value.title().cloned(),
+            title,
             authors,
-            date: value.date().cloned(),
+            date,
             editors,
             affiliated,
-            publisher: value.publisher().cloned(),
-            location: value.location().cloned(),
-            organization: value.organization().cloned(),
-            issue: value.issue().cloned(),
-            volume: value.volume().cloned(),
-            volume_total: value.volume_total().cloned(),
-            edition: value.edition().cloned(),
-            page_range: value.page_range().cloned(),
-            page_total: value.page_total().cloned(),
-            time_range: value.time_range().cloned(),
-            runtime: value.runtime().cloned(),
-            url: value.url().cloned(),
-            serial_numbers: value.serial_number().cloned(),
-            language: value.language().cloned(),
-            archive: value.archive().cloned(),
-            archive_location: value.archive_location().cloned(),
-            call_number: value.call_number().cloned(),
-            note: value.note().cloned(),
-            abstract_: value.abstract_().cloned(),
-            annote: value.annote().cloned(),
-            genre: value.genre().cloned(),
+            publisher,
+            location,
+            organization,
+            issue,
+            volume,
+            volume_total,
+            edition,
+            page_range,
+            page_total,
+            time_range,
+            runtime,
+            url,
+            serial_numbers,
+            language,
+            archive,
+            archive_location,
+            call_number,
+            note,
+            abstract_,
+            annote,
+            genre,
         }
     }
 }
@@ -716,19 +1021,19 @@ impl From<BibEntry> for hayagriva::Entry{
         }
 
         if value.authors.len() > 0 {
-            entry.set_authors(value.authors);
+            entry.set_authors(value.authors.iter().map(|x| <MyPerson as Clone>::clone(&(*x)).into()).collect())
         }
 
         if let Some(date) = value.date {
-            entry.set_date(date);
+            entry.set_date(date.into());
         }
 
         if value.editors.len() > 0 {
-            entry.set_editors(value.editors);
+            entry.set_editors(value.editors.iter().map(|x| <MyPerson as Clone>::clone(&(*x)).into()).collect());
         }
 
         if value.affiliated.len() > 0 {
-            entry.set_affiliated(value.affiliated);
+            entry.set_affiliated(value.affiliated.into_iter().map(|x| x.into()).collect());
         }
 
         if let Some(publisher) = value.publisher {
@@ -744,47 +1049,67 @@ impl From<BibEntry> for hayagriva::Entry{
         }
 
         if let Some(issue) = value.issue {
-            entry.set_issue(issue);
+            let nissue : MaybeTyped<Numeric> = match issue {
+                MyMaybeTyped::Typed(t) => MaybeTyped::Typed(t.into()),
+                MyMaybeTyped::String(s) => MaybeTyped::String(s),
+            };
+            entry.set_issue(nissue);
         }
 
         if let Some(volume) = value.volume {
-            entry.set_volume(volume);
+            let nvolume : MaybeTyped<Numeric> = match volume {
+                MyMaybeTyped::Typed(t) => MaybeTyped::Typed(t.into()),
+                MyMaybeTyped::String(s) => MaybeTyped::String(s),
+            };
+            entry.set_volume(nvolume);
         }
 
         if let Some(volume_total) = value.volume_total {
-            entry.set_volume_total(volume_total);
+            entry.set_volume_total(volume_total.into());
         }
 
         if let Some(edition) = value.edition {
-            entry.set_edition(edition);
+            let nedition : MaybeTyped<Numeric> = match edition {
+                MyMaybeTyped::Typed(t) => MaybeTyped::Typed(t.into()),
+                MyMaybeTyped::String(s) => MaybeTyped::String(s),
+            };
+            entry.set_edition(nedition);
         }
 
         if let Some(page_range) = value.page_range {
-            entry.set_page_range(page_range);
+            let npage_range : MaybeTyped<Numeric> = match page_range {
+                MyMaybeTyped::Typed(t) => MaybeTyped::Typed(t.into()),
+                MyMaybeTyped::String(s) => MaybeTyped::String(s),
+            };
+            entry.set_page_range(npage_range);
         }
 
         if let Some(page_total) = value.page_total {
-            entry.set_page_total(page_total);
+            entry.set_page_total(page_total.into());
         }
 
         if let Some(time_range) = value.time_range {
-            entry.set_time_range(time_range);
+            let ntime_range : MaybeTyped<DurationRange> = match time_range {
+                MyMaybeTyped::Typed(t) => MaybeTyped::Typed(t.into()),
+                MyMaybeTyped::String(s) => MaybeTyped::String(s),
+            };
+            entry.set_time_range(ntime_range);
         }
 
         if let Some(runtime) = value.runtime {
-            entry.set_runtime(runtime);
+            entry.set_runtime(runtime.into());
         }
 
         if let Some(url) = value.url {
-            entry.set_url(url);
+            entry.set_url(url.into());
         }
 
         if let Some(serial_numbers) = value.serial_numbers {
-            entry.set_serial_number(serial_numbers);
+            entry.set_serial_number(SerialNumber(serial_numbers));
         }
 
         if let Some(language) = value.language {
-            entry.set_language(language);
+            entry.set_language(LanguageIdentifier::from_str(&language).unwrap_or(LanguageIdentifier::from_str("en-GB").unwrap()));
         }
 
         if let Some(archive) = value.archive {
@@ -1078,6 +1403,214 @@ pub async fn save_data_worker(data_storage: Arc<DataStorage>, project_storage: A
             println!("Finished saving projects to disk");
         }
     });
+}
+
+impl From<MyFormatString> for FormatString {
+    fn from(my_format_string: MyFormatString) -> Self {
+        match my_format_string.short{
+            Some(short) => FormatString::with_short(my_format_string.value, short),
+            None => FormatString::with_value(my_format_string.value),
+        }
+    }
+}
+
+impl From<FormatString> for MyFormatString {
+    fn from(format_string: FormatString) -> Self {
+        MyFormatString {
+            value: format_string.value.to_string(),
+            short: match format_string.short {
+                Some(short) => Some(short.to_string()),
+                None => None,
+            },
+        }
+    }
+}
+
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct MyQualifiedUrl{
+    pub value: Url,
+    pub visit_date: Option<MyDate>,
+}
+
+impl From<QualifiedUrl> for MyQualifiedUrl {
+    fn from(value: QualifiedUrl) -> Self {
+        MyQualifiedUrl {
+            value: value.value,
+            visit_date: value.visit_date.map(|d| d.into()),
+        }
+    }
+}
+
+impl From<MyQualifiedUrl> for QualifiedUrl {
+    fn from(value: MyQualifiedUrl) -> Self {
+        QualifiedUrl {
+            value: value.value,
+            visit_date: value.visit_date.map(|d| d.into()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct MyFormatString {
+    /// The canonical version of the string.
+    pub value: String,
+    /// The short version of the string.
+    pub short: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct MyNumeric {
+    /// The numeric value.
+    pub value: MyNumericValue,
+    /// A string that is prepended to the value.
+    pub prefix: Option<Box<String>>,
+    /// A string that is appended to the value.
+    pub suffix: Option<Box<String>>,
+}
+
+impl From<MaybeTyped<Numeric>> for MyMaybeTyped<MyNumeric>{
+    fn from(value: MaybeTyped<Numeric>) -> MyMaybeTyped<MyNumeric> {
+        match value {
+            MaybeTyped::Typed(n) => MyMaybeTyped::Typed(n.into()),
+            MaybeTyped::String(s) => MyMaybeTyped::String(s),
+        }
+    }
+}
+
+impl From<Numeric> for MyNumeric {
+    fn from(value: Numeric) -> Self {
+        MyNumeric {
+            value: value.value.into(),
+            prefix: value.prefix,
+            suffix: value.suffix,
+        }
+    }
+}
+
+
+impl From<MyNumeric> for Numeric {
+    fn from(value: MyNumeric) -> Self {
+        Numeric {
+            value: value.value.into(),
+            prefix: value.prefix,
+            suffix: value.suffix,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum MyNumericValue {
+    /// A single number.
+    Number(i32),
+    /// A set of numbers.
+    Set(Vec<(i32, Option<MyNumericDelimiter>)>),
+}
+
+impl From<NumericValue> for MyNumericValue {
+    fn from(value: NumericValue) -> Self {
+        match value {
+            NumericValue::Number(n) => MyNumericValue::Number(n),
+            NumericValue::Set(s) => MyNumericValue::Set(s.into_iter().map(|(n, d)| (n, d.map(|d| d.into()))).collect()),
+        }
+    }
+}
+
+impl From<MyNumericValue> for NumericValue {
+    fn from(value: MyNumericValue) -> Self {
+        match value {
+            MyNumericValue::Number(n) => NumericValue::Number(n),
+            MyNumericValue::Set(s) => NumericValue::Set(s.into_iter().map(|(n, d)| (n, d.map(|d| d.into()))).collect()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum MyNumericDelimiter {
+    /// A comma.
+    Comma,
+    /// An ampersand.
+    Ampersand,
+    /// A hyphen. Will be converted to an en dash for display.
+    Hyphen,
+}
+
+impl From<MyNumericDelimiter> for NumericDelimiter {
+    fn from(value: MyNumericDelimiter) -> Self {
+        match value {
+            MyNumericDelimiter::Comma => NumericDelimiter::Comma,
+            MyNumericDelimiter::Ampersand => NumericDelimiter::Ampersand,
+            MyNumericDelimiter::Hyphen => NumericDelimiter::Hyphen,
+        }
+    }
+}
+
+impl From<NumericDelimiter> for MyNumericDelimiter {
+    fn from(value: NumericDelimiter) -> Self {
+        match value {
+            NumericDelimiter::Comma => MyNumericDelimiter::Comma,
+            NumericDelimiter::Ampersand => MyNumericDelimiter::Ampersand,
+            NumericDelimiter::Hyphen => MyNumericDelimiter::Hyphen,
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct MyDate {
+    /// The year (1 B.C.E. is represented as 0 and so forth).
+    pub year: i32,
+    /// The optional month (0-11).
+    pub month: Option<u8>,
+    /// The optional day (0-30).
+    pub day: Option<u8>,
+    /// Whether the date is approximate.
+    pub approximate: bool,
+}
+
+impl From<Date> for MyDate {
+    fn from(value: Date) -> Self {
+        MyDate {
+            year: value.year,
+            month: value.month,
+            day: value.day,
+            approximate: value.approximate,
+        }
+    }
+}
+
+impl From<MyDate> for Date {
+    fn from(value: MyDate) -> Self {
+        Date {
+            year: value.year,
+            month: value.month,
+            day: value.day,
+            approximate: value.approximate,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct MyDurationRange{
+    pub start: Duration,
+    pub end: Duration,
+}
+
+impl From<DurationRange> for MyDurationRange {
+    fn from(value: DurationRange) -> Self {
+        MyDurationRange {
+            start: value.start,
+            end: value.end,
+        }
+    }
+}
+
+impl From<MyDurationRange> for DurationRange {
+    fn from(value: MyDurationRange) -> Self {
+        DurationRange {
+            start: value.start,
+            end: value.end,
+        }
+    }
 }
 
 #[cfg(test)]

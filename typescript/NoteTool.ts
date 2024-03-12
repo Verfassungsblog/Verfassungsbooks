@@ -60,10 +60,19 @@ export class NoteTool{
         toolbar.insertAdjacentHTML('afterend', settings_dialog_html);
 
         let settings_dialog: HTMLElement = toolbar.parentElement.querySelector('.note-settings');
-        settings_dialog.style.left = toolbar.style.left;
-        // Add the same position as the toolbar but add 40px to the top
-        let currentTop = parseInt(toolbar.style.top, 10);
+
+        let note_pos = note.getBoundingClientRect();
+        settings_dialog.style.left = note_pos.left + window.scrollX + 'px';
+        // Add the same position as the note mark but add 40px to the top
+        let currentTop = note_pos.top + window.scrollY;
         settings_dialog.style.top = (currentTop + 40) + 'px';
+
+        let viewport_width = window.innerWidth
+        let settings_dialog_width = settings_dialog.getBoundingClientRect().width;
+        if((note_pos.left + window.scrollX+ settings_dialog_width) > viewport_width){
+            settings_dialog.style.left = (viewport_width - settings_dialog_width) + 'px';
+        }
+
 
         document.getElementById('note-save').addEventListener('click', () => {
             let note_type = (document.getElementById('note-type') as HTMLSelectElement).value;

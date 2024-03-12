@@ -32,7 +32,7 @@ async function upload_files_handler(){
         formData.append("files", files[i]);
     }
 
-    let bib_file = (<HTMLInputElement>document.getElementById("wizard-pandoc-bib-input")).files;
+    let bib_file = (<HTMLInputElement>document.getElementById("wizard-pandoc-upload-bib-input")).files;
     if(bib_file.length > 0){
         formData.append("bib_file", bib_file[0]);
     }
