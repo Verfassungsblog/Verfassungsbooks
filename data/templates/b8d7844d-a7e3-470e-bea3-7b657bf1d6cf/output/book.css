@@ -41,6 +41,7 @@ body{
 a{
     color: grey;
     text-decoration: none;
+    word-break: break-all;
 }
 
 #metadata_page{

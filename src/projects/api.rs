@@ -31,6 +31,7 @@ pub enum ApiError{
     NotFound,
     BadRequest(String),
     Unauthorized,
+    InternalServerError,
     Other(String),
 }
 
@@ -404,6 +405,44 @@ pub async fn patch_project_metadata(project_id: String, _session: Session, setti
     project.metadata = Some(new_metadata);
 
     ApiResult::new_data(())
+}
+
+#[get("/api/csl/styles")]
+pub async fn get_csl_styles(_session: Session, settings: &State<Settings>) -> Json<ApiResult<Vec<String>>> {
+    let path = format!("{}/csl_styles", settings.data_path);
+    let mut styles = vec![];
+
+    match tokio::fs::read_dir(path).await{
+        Ok(mut dir) => {
+            loop{
+                let entry = match dir.next_entry().await{
+                    Ok(entry) => {
+                        match entry{
+                            Some(entry) => {
+                                let file_name = entry.file_name().to_string_lossy().to_string();
+                                if file_name.ends_with(".csl"){
+                                    styles.push((&file_name[..file_name.len() - 4]).to_string());
+                                }
+                            },
+                            None => {
+                                break;
+                            }
+                        }
+                    },
+                    Err(e) => {
+                        eprintln!("Error reading csl directory: {}", e);
+                        return ApiResult::new_error(ApiError::InternalServerError)
+                    }
+                };
+            }
+        },
+        Err(e) => {
+            eprintln!("Error reading csl styles: {}", e);
+            return ApiResult::new_error(ApiError::InternalServerError)
+        }
+    }
+
+    ApiResult::new_data(styles)
 }
 
 #[get("/api/projects/<project_id>/settings")]

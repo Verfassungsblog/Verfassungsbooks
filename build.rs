@@ -76,6 +76,7 @@ fn main() {
         .expect("Failed to compile typescript to javascript with tsc");
 
     println!("cargo:rerun-if-changed=typescript");
+    println!("cargo:rerun-if-changed=typescript_old");
     println!("cargo:rerun-if-changed=templates_frontend");
     if !res1.status.success() || !res2.status.success() || !res3.status.success() || !res4.status.success() {
         panic!("Failed to compile typescript to javascript with tsc:\n{}\n{}\n{}\n{}", String::from_utf8_lossy(&res1.stdout), String::from_utf8_lossy(&res2.stdout),String::from_utf8_lossy(&res3.stdout), String::from_utf8_lossy(&res4.stdout));

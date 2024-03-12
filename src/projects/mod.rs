@@ -22,7 +22,8 @@ impl SectionOrToc{
 /// Struct holds all project-level settings
 #[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub struct ProjectSettings{
-    pub toc_enabled: bool
+    pub toc_enabled: bool,
+    pub csl_style: Option<String>,
 }
 
 

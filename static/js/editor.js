@@ -18,9 +18,10 @@ var Editor;
             let project_data = load_project_metadata(globalThis.project_id);
             let project_settings = load_project_settings(globalThis.project_id);
             let build_sidebar = Editor.Sidebar.build_sidebar();
+            let csl_styles = load_csl_styles();
             Tools.start_loading_spinner();
             // @ts-ignore
-            Promise.all([project_data, project_settings, build_sidebar]).then(function (values) {
+            Promise.all([project_data, project_settings, build_sidebar, csl_styles]).then(function (values) {
                 return __awaiter(this, void 0, void 0, function* () {
                     // @ts-ignore
                     Tools.stop_loading_spinner();
@@ -29,6 +30,18 @@ var Editor;
                     data["metadata"] = values[0].data || null;
                     // @ts-ignore
                     data["settings"] = values[1].data || null;
+                    data["csl-styles"] = [];
+                    for (let rawstyle of values[3]["data"]) {
+                        let style = {
+                            "name": rawstyle,
+                            "selected": false
+                        };
+                        if (data["settings"] != null && data["settings"]["csl_style"] === rawstyle) {
+                            style["selected"] = true;
+                        }
+                        data["csl-styles"].push(style);
+                    }
+                    console.log(data["csl-styles"]);
                     // Retrieve details for authors and editors
                     if (data["metadata"] != null && data["metadata"]["authors"] != null) {
                         let promises = [];
@@ -122,6 +135,7 @@ var Editor;
                     }
                     attach_ddc_handlers();
                     document.getElementById("project_settings_toc_enabled").addEventListener("change", update_settings);
+                    document.getElementById("project_settings_csl_style").addEventListener("change", update_settings);
                     document.getElementById("project_metadata_search_authors").addEventListener("input", search_authors);
                     document.getElementById("project_metadata_search_authors").addEventListener("click", search_authors);
                     document.getElementById("project_metadata_search_editors").addEventListener("input", search_editors);
@@ -766,6 +780,13 @@ var Editor;
                 console.log("Updating settings for project " + globalThis.project_id);
                 let data = {};
                 data["toc_enabled"] = document.getElementById("project_settings_toc_enabled").checked;
+                let csl_style = document.getElementById("project_settings_csl_style").value;
+                if (csl_style === "default") {
+                    data["csl_style"] = null;
+                }
+                else {
+                    data["csl_style"] = csl_style;
+                }
                 try {
                     Tools.start_loading_spinner();
                     const response = yield fetch(`/api/projects/${globalThis.project_id}/settings`, {
@@ -887,6 +908,23 @@ var Editor;
                 });
                 if (!response.ok) {
                     throw new Error(`Failed to load project settings ${project_id}`);
+                }
+                else {
+                    return response.json();
+                }
+            });
+        }
+        // @ts-ignore
+        function load_csl_styles() {
+            return __awaiter(this, void 0, void 0, function* () {
+                const response = yield fetch(`/api/csl/styles`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                if (!response.ok) {
+                    throw new Error(`Failed to load csl styles`);
                 }
                 else {
                     return response.json();

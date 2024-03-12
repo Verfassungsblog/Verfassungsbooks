@@ -7,6 +7,7 @@ use serde::Serialize;
 use crate::data_storage::{DataStorage, ProjectData};
 use crate::export::preprocessing::{prepare_project, render_project};
 use crate::settings::Settings;
+use crate::utils::csl::CslData;
 
 #[derive(Default, Clone, Serialize)]
 pub enum RenderingStatus{
@@ -29,6 +30,7 @@ pub struct RenderingRequest{
 pub struct RenderingManager{
     pub settings: Settings,
     pub data_storage: Arc<DataStorage>,
+    pub csl_data: Arc<CslData>,
     pub requests_archive: RwLock<HashMap<uuid::Uuid, RwLock<RenderingRequest>>>,
     pub rendering_requests: RwLock<Vec<RwLock<RenderingRequest>>>,
 }
@@ -73,10 +75,11 @@ impl error::Error for RenderingError {
 }
 
 impl RenderingManager{
-    pub fn start(settings: Settings, data_storage: Arc<DataStorage>) -> Arc<RenderingManager>{
+    pub fn start(settings: Settings, data_storage: Arc<DataStorage>, csl_data: Arc<CslData>) -> Arc<RenderingManager>{
         let rendering_manager = RenderingManager{
             settings,
             data_storage,
+            csl_data,
             requests_archive: RwLock::new(HashMap::new()),
             rendering_requests: RwLock::new(Vec::new()),
         };
@@ -162,7 +165,7 @@ impl RenderingManager{
         std::fs::create_dir_all(temp_dir).unwrap();
 
         // Prepare project
-        let prepared_project = prepare_project(project_data, rendering_manager.data_storage.clone())?;
+        let prepared_project = prepare_project(project_data, rendering_manager.data_storage.clone(), rendering_manager.csl_data.clone())?;
 
         // Update project status
         {

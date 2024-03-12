@@ -1,11 +1,20 @@
 <h1>{{metadata.name}}</h1>
 <h3 class="mt-3">Project Settings:</h3>
-<div class="project_settings">
+<div class="project_settings mb-3">
     <div class="form-check">
         <input class="form-check-input" type="checkbox" {{#if settings.toc_enabled}}checked="true"{{/if}} id="project_settings_toc_enabled">
         <label class="form-check-label" for="project_settings_toc_enabled">
             Enable Table of Contents (TOC)
         </label>
+    </div>
+    <div class="from-group">
+        <label>Citation Style</label>
+        <select class="form-select form-select-sm" id="project_settings_csl_style">
+                <option value="default">default</option>
+            {{#each csl-styles}}
+                <option value="{{name}}" {{#if selected}}selected{{/if}}>{{name}}</option>
+            {{/each}}
+        </select>
     </div>
 </div>
 <h3>Project Metadata:</h3>
