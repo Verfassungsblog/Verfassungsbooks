@@ -41,7 +41,10 @@ export async function show_editor(){
                     }
                 },
                 note: NoteTool,
-                quote: Quote,
+                quote: {
+                    class: Quote,
+                    inlineToolbar: true,
+                },
                 custom_style_tool: CustomStyleTool,
                 citation: CitationTool,
                 image: {
