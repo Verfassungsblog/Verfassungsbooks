@@ -323,7 +323,7 @@ pub fn render_content_block(block: NewContentBlock, endnote_storage: &mut Vec<St
             format!("<p{}>{}</p>", css_classes, render_text(text, endnote_storage, dict, citation_bib))
         }
         BlockData::Heading { text , level} => {
-            format!("<h{}{}'>{}</h{}>", level, css_classes, render_text(text, endnote_storage, dict, citation_bib), level)
+            format!("<h{}{}>{}</h{}>", level, css_classes, render_text(text, endnote_storage, dict, citation_bib), level)
         }
         BlockData::Raw { html } => {
             html
