@@ -374,7 +374,7 @@ pub fn render_text(text: String, endnote_storage: &mut Vec<String>, dict: &Stand
 
         if note_type == "endnote" {
             endnote_storage.push(note_content.to_string());
-            return format!("<sup class=\"endnote\"><a href=\"#note-{}\">[{}]</a></sup>", endnote_storage.len(), endnote_storage.len())
+            return format!("<sup class=\"endnote\"><a href=\"#note-{}\">{}</a></sup>", endnote_storage.len(), endnote_storage.len())
         }else if note_type == "footnote" {
             let uuid = uuid::Uuid::new_v4();
             return format!("<span class=\"footnote\" id=\"footnote-{}\"><a class=\"footnote-marker\" href=\"#footnote-call-{}\"></a>{}</span><a class=\"footnote-call\" href=\"#footnote-{}\" id=\"footnote-call-{}\"></a>", uuid, uuid,  note_content, uuid, uuid)
