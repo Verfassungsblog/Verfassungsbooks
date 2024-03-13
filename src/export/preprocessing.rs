@@ -404,7 +404,7 @@ pub fn render_text(text: String, endnote_storage: &mut Vec<String>, dict: &Stand
         match citation_bib.get(key){
             Some(citation) => {
                 endnote_storage.push(citation.clone());
-                format!("<sup class=\"endnote\"><a href=\"#note-{}\">[{}]</a></sup>", endnote_storage.len(), endnote_storage.len())
+                format!("<sup class=\"endnote\"><a href=\"#note-{}\">{}</a></sup>", endnote_storage.len(), endnote_storage.len())
             },
             None => {
                 eprintln!("Citation with key {} not found", key);
