@@ -271,9 +271,14 @@ pub fn render_section(section: Section, data_storage: Arc<DataStorage>, citation
         None => PreparedLanguage{de: false, en: false}
     };
 
+    let subtitle = match section.metadata.subtitle{
+        Some(subtitle) => Some(hyphenate_text(subtitle, &dict)),
+        None => None
+    };
+
     let metadata = PreparedSectionMetadata{
-        title: section.metadata.title,
-        subtitle: section.metadata.subtitle,
+        title: hyphenate_text(section.metadata.title.clone(), &dict),
+        subtitle,
         authors,
         editors,
         web_url: section.metadata.web_url,
