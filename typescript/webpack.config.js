@@ -5,7 +5,8 @@ module.exports = {
         neditor: './editor.ts',
         settings: './Settings.ts',
         import: './Import.ts',
-        bibliography_editor: './BibliographyEditor.ts'
+        bibliography_editor: './BibliographyEditor.ts',
+        user_tools: './UserTools.ts',
     },
     devtool: 'inline-source-map',
     module: {

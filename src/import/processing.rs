@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::io::{BufRead, Read};
 use std::iter;
 use std::sync::{Arc, RwLock};
@@ -19,7 +19,7 @@ use crate::utils::block_id_generator::generate_id;
 pub struct ImportProcessor{
     pub settings: Settings,
     pub project_storage: Arc<ProjectStorage>,
-    pub job_queue: RwLock<Vec<ImportJob>>,
+    pub job_queue: RwLock<VecDeque<ImportJob>>,
     pub job_archive: RwLock<HashMap<uuid::Uuid, Arc<RwLock<ImportJob>>>>,
 }
 
@@ -54,7 +54,8 @@ pub struct ImportJob{
     pub project_id: uuid::Uuid,
     pub length: usize,
     pub processed: usize,
-    pub files_to_process: Vec<(String, ContentType)>,
+    pub convert_footnotes_to_endnotes: bool,
+    pub files_to_process: VecDeque<(String, ContentType)>,
     pub bib_file: Option<String>,
     pub status: ImportStatus,
 }
@@ -64,7 +65,7 @@ impl ImportProcessor{
         let processor = Arc::new(ImportProcessor{
             settings,
             project_storage,
-            job_queue: RwLock::new(Vec::new()),
+            job_queue: RwLock::new(VecDeque::new()),
             job_archive: RwLock::new(HashMap::new()),
         });
 
@@ -83,7 +84,7 @@ impl ImportProcessor{
 
                     tokio::spawn(async move{
                         running_threads_cpy.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-                        let mut job = match proc_clone.job_queue.write().unwrap().pop(){
+                        let mut job = match proc_clone.job_queue.write().unwrap().pop_front(){
                             Some(job) => job,
                             None => {
                                 running_threads_cpy.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
@@ -130,7 +131,7 @@ impl ImportProcessor{
 
         loop{
             println!("Checking remaining files... {} remaining", job.read().unwrap().files_to_process.len());
-            let res = job.write().unwrap().files_to_process.pop();
+            let res = job.write().unwrap().files_to_process.pop_front();
             let (file, content_type) = match res{
                 Some(f) => f,
                 None => {
@@ -140,10 +141,11 @@ impl ImportProcessor{
             };
 
             let project_id = job.read().unwrap().project_id.clone();
+            let endnotes = job.read().unwrap().convert_footnotes_to_endnotes;
 
             let project = project_storage.get_project(&project_id, &self.settings).await.unwrap();
 
-            match self.convert_file(&file, content_type, project).await{
+            match self.convert_file(&file, content_type, project, endnotes).await{
                 Ok(_) => {
                     println!("File processed successfully");
                     // Remove file from temp directory
@@ -174,7 +176,7 @@ impl ImportProcessor{
         }
     }
 
-    async fn convert_file(&self, file_path: &str, content_type: ContentType, project: Arc<RwLock<ProjectData>>) -> Result<(), ImportError>{
+    async fn convert_file(&self, file_path: &str, content_type: ContentType, project: Arc<RwLock<ProjectData>>, endnotes: bool) -> Result<(), ImportError>{
         let mut file = match tokio::fs::File::open(file_path).await{
             Ok(file) => file,
             Err(e) => {
@@ -227,7 +229,7 @@ impl ImportProcessor{
                     }
         }
 
-        self.import_html(file_content, project)?;
+        self.import_html(file_content, project, endnotes)?;
         Ok(())
     }
 
@@ -252,7 +254,7 @@ impl ImportProcessor{
             }
     }
 
-    fn import_html(&self, input: String, project_data: Arc<RwLock<ProjectData>>) -> Result<(), ImportError>{
+    fn import_html(&self, input: String, project_data: Arc<RwLock<ProjectData>>, endnotes: bool) -> Result<(), ImportError>{
         let dom = match Dom::parse(&input){
             Ok(dom) => dom,
             Err(e) => {
@@ -329,12 +331,12 @@ impl ImportProcessor{
                                                                                 None => attributes.push_str(&format!(" {}", attr)),
                                                                             }
                                                                         }
-                                                                        text.push_str(&format!("<a {}>{}</a>", attributes, &self.dom_to_html(ele.clone(), None)));
+                                                                        text.push_str(&format!("<a {}>{}</a>", attributes, &self.dom_to_html(ele.clone(), None, endnotes)));
                                                                     },
                                                                     _ => {
                                                                         // TODO: whitelist elements and attributes
                                                                         // Currently we allow all elements but strip attributes
-                                                                        text.push_str(&format!("<{}>{}</{}>", ele.name, &self.dom_to_html(ele.clone(), None), ele.name));
+                                                                        text.push_str(&format!("<{}>{}</{}>", ele.name, &self.dom_to_html(ele.clone(), None, endnotes), ele.name));
                                                                     },
                                                                 }
                                                             }
@@ -391,7 +393,7 @@ impl ImportProcessor{
                                 id: generate_id(&section),
                                 block_type: BlockType::Heading,
                                 data: BlockData::Heading {
-                                    text: self.dom_to_html(el, Some(&footnotes)),
+                                    text: self.dom_to_html(el, Some(&footnotes), endnotes),
                                     level,
                                 },
                                 css_classes: vec![],
@@ -403,7 +405,7 @@ impl ImportProcessor{
                                 id: generate_id(&section),
                                 block_type: BlockType::Paragraph,
                                 data: BlockData::Paragraph {
-                                    text: self.dom_to_html(el, Some(&footnotes)),
+                                    text: self.dom_to_html(el, Some(&footnotes), endnotes),
                                 },
                                 css_classes: vec![],
                                 revision_id: None,
@@ -419,7 +421,7 @@ impl ImportProcessor{
                             let items = el.children.iter().filter_map(|node| match node{
                                 Node::Element(el) => {
                                     if el.name.to_lowercase() == "li"{
-                                        Some(self.dom_to_html(el.clone(), Some(&footnotes)))
+                                        Some(self.dom_to_html(el.clone(), Some(&footnotes), endnotes))
                                     }else{
                                         None
                                     }
@@ -443,7 +445,7 @@ impl ImportProcessor{
                                 id: generate_id(&section),
                                 block_type: BlockType::Quote,
                                 data: BlockData::Quote {
-                                    text: self.dom_to_html(el, Some(&footnotes)),
+                                    text: self.dom_to_html(el, Some(&footnotes), endnotes),
                                     caption: "".to_string(),
                                     alignment: "".to_string(),
                                 },
@@ -466,7 +468,7 @@ impl ImportProcessor{
                                 id: generate_id(&section),
                                 block_type: BlockType::Paragraph,
                                 data: BlockData::Paragraph {
-                                    text: self.dom_to_html(el, Some(&footnotes)),
+                                    text: self.dom_to_html(el, Some(&footnotes), endnotes),
                                 },
                                 css_classes: vec![],
                                 revision_id: None,
@@ -484,7 +486,7 @@ impl ImportProcessor{
     }
 
     //TODO: maybe also copy classes and ids from the html
-    fn dom_to_html(&self, ele: html_parser::Element, footnotes: Option<&HashMap<String, String>>) -> String{
+    fn dom_to_html(&self, ele: html_parser::Element, footnotes: Option<&HashMap<String, String>>, endnotes: bool) -> String{
         let mut html = String::new();
         for node in ele.children{
             match node{
@@ -509,7 +511,11 @@ impl ImportProcessor{
                                                             let num = num.trim().to_string();
                                                             if let Some(footnote) = footnotes.get(&format!("fn{}", num)){
                                                                 println!("Found footnote: {}", footnote.clone());
-                                                                html.push_str(&format!("<span class=\"note\" note-type=\"footnote\" note-content=\"{}\">F</span>", footnote.clone().replace("\"", "'")));
+                                                                if endnotes {
+                                                                    html.push_str(&format!("<span class=\"note\" note-type=\"endnote\" note-content=\"{}\">E</span>", footnote.clone().replace("\"", "'")));
+                                                                }else{
+                                                                    html.push_str(&format!("<span class=\"note\" note-type=\"footnote\" note-content=\"{}\">F</span>", footnote.clone().replace("\"", "'")));
+                                                                }
                                                                 continue;
                                                             }
                                                         }
@@ -531,7 +537,7 @@ impl ImportProcessor{
                         }
                     }
                     html.push_str(&format!("<{}{}>", el.name, attrs));
-                    html.push_str(&self.dom_to_html(el.clone(), footnotes));
+                    html.push_str(&self.dom_to_html(el.clone(), footnotes, endnotes));
                     html.push_str(&format!("</{}>", el.name));
                 },
                 // Ignore comments

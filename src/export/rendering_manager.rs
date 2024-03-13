@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::{error, fmt, mem};
 use std::path::Path;
 use std::sync::{Arc, RwLock};
@@ -32,7 +32,7 @@ pub struct RenderingManager{
     pub data_storage: Arc<DataStorage>,
     pub csl_data: Arc<CslData>,
     pub requests_archive: RwLock<HashMap<uuid::Uuid, RwLock<RenderingRequest>>>,
-    pub rendering_requests: RwLock<Vec<RwLock<RenderingRequest>>>,
+    pub rendering_requests: RwLock<VecDeque<RwLock<RenderingRequest>>>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -81,7 +81,7 @@ impl RenderingManager{
             data_storage,
             csl_data,
             requests_archive: RwLock::new(HashMap::new()),
-            rendering_requests: RwLock::new(Vec::new()),
+            rendering_requests: RwLock::new(VecDeque::new()),
         };
 
         let rendering_manager = Arc::new(rendering_manager);
@@ -104,8 +104,8 @@ impl RenderingManager{
                         running_threads.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
                         // Move the rendering request out of the vector, put it into the archive and start rendering
-                        let request_id = rendering_requests.first().unwrap().read().unwrap().rendering_id;
-                        rendering_manager_cpy.requests_archive.write().unwrap().insert(request_id, rendering_requests.pop().unwrap());
+                        let request_id = rendering_requests.front().unwrap().read().unwrap().rendering_id;
+                        rendering_manager_cpy.requests_archive.write().unwrap().insert(request_id, rendering_requests.pop_front().unwrap());
 
                         let rendering_manager_cpy2 = rendering_manager_cpy.clone();
                         let rendering_manager_cpy3 = rendering_manager_cpy.clone();
@@ -194,7 +194,7 @@ impl RenderingManager{
             project_data: Some(project_data),
         };
 
-        self.rendering_requests.write().unwrap().push(RwLock::new(rendering_request));
+        self.rendering_requests.write().unwrap().push_back(RwLock::new(rendering_request));
         rendering_id
     }
 

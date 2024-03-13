@@ -34,6 +34,8 @@ namespace Editor{
             add_toc_listeners();
             // @ts-ignore
             window.add_import_listeners();
+            // @ts-ignore
+            window.add_user_tools_listener();
             document.getElementById("editor_sidebar_project_title").addEventListener("click", ProjectOverview.show_overview);
         }
 

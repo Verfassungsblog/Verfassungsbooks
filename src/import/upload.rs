@@ -1,7 +1,9 @@
+use std::collections::VecDeque;
 use std::sync::Arc;
 use config::File;
 use rocket::form::Form;
 use rocket::fs::TempFile;
+use rocket::http::ContentType;
 use rocket::serde::json::Json;
 use rocket::State;
 use uuid::Uuid;
@@ -16,16 +18,19 @@ struct FileUpload<'r>{
     files: Vec<TempFile<'r>>,
     bib_file: Option<TempFile<'r>>,
     project_id: String,
+    convert_footnotes_to_endnotes: bool,
 }
 
 #[post("/api/import/upload", data = "<upload>")]
 pub async fn import_from_upload(mut upload: Form<FileUpload<'_>>, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>, import_processor: &State<Arc<ImportProcessor>>) -> Json<ApiResult<uuid::Uuid>>{
     println!("Uploading files to project {}", upload.project_id);
 
-    let mut file_paths = vec![];
+    let mut file_paths: VecDeque<(String, ContentType)> = VecDeque::new();
 
     // Persisting the files to disk
     for file in upload.files.iter_mut(){
+        println!("Processing file {}", file.name().unwrap());
+
         let path = format!("{}/temp/{}", settings.data_path, Uuid::new_v4());
         file.copy_to(path.clone()).await.unwrap();
         let content_type = match file.content_type(){
@@ -33,7 +38,7 @@ pub async fn import_from_upload(mut upload: Form<FileUpload<'_>>, _session: Sess
             None => return ApiResult::new_error(ApiError::BadRequest("Invalid file type".to_string()))
         };
 
-        file_paths.push((path, content_type.clone()));
+        file_paths.push_back((path, content_type.clone()));
     }
 
     // Persisting bib file
@@ -58,11 +63,12 @@ pub async fn import_from_upload(mut upload: Form<FileUpload<'_>>, _session: Sess
         length: file_paths.len() as usize,
         processed: 0,
         files_to_process: file_paths,
+        convert_footnotes_to_endnotes: upload.convert_footnotes_to_endnotes,
         bib_file: bib_file_path,
         status: ImportStatus::Pending,
     };
 
-    import_processor.job_queue.write().unwrap().push(import_job);
+    import_processor.job_queue.write().unwrap().push_back(import_job);
 
     ApiResult::new_data(id)
 }

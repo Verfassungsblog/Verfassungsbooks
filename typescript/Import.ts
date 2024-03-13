@@ -37,6 +37,9 @@ async function upload_files_handler(){
         formData.append("bib_file", bib_file[0]);
     }
 
+    let convert_to_endnotes = (<HTMLInputElement>document.getElementById("wizard-pandoc-settings-convert-to-endnotes")).checked;
+    formData.append("convert_footnotes_to_endnotes", convert_to_endnotes.toString());
+
     // @ts-ignore
     formData.append("project_id", globalThis.project_id);
 
@@ -61,6 +64,8 @@ async function upload_files_handler(){
             if(status == "Complete"){
                 status_text.innerHTML = "Files processed successfully!";
                 clearInterval(poller);
+                // Reload page:
+                location.reload();
             }
             if(status == "Failed"){
                 status_text.innerHTML = "Failed to process files!";
