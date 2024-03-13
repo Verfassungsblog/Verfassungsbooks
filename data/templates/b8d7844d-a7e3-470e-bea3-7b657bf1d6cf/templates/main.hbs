@@ -16,62 +16,77 @@
 <!-- Content -->
 {{#each data}}
     {{#if @first}} <!-- Vorwort -->
-    <h1 id="{{id}}">{{metadata.title}}</h1>
-    <div class="chapter" lang="en">
+    <div class="chapter" lang="de">
+        <h1 id="{{id}}">{{metadata.title}}</h1>
+
         {{#each children}}
             {{{html}}}
         {{/each}}
     </div>
 
     {{#if endnotes}}
-        <span>Notes</span>
-        <ol>
-            {{#each endnotes}}
-                <li id="note-{{num}}">{{{content}}}</li>
-            {{/each}}
-        </ol>
-    {{/if}}
-        <!-- TOC -->
-        <nav role="doc-toc">
-            <h1>Contents</h1>
-            <div class="toc">
-                {{#each ../data}}
-                    <a href="#{{id}}">{{metadata.title}}</a>
+        <div class="endnotes">
+            <h1>Notes</h1>
+            <ol>
+                {{#each endnotes}}
+                    <li id="note-{{num}}">{{{content}}}</li>
                 {{/each}}
-            </div>
-        </nav>
+            </ol>
+        </div>
+    {{/if}}
+    <div id="beforetoc">
+
+    </div>
+    <!-- TOC -->
+    <nav id="toc" role="doc-toc">
+        <h1>Contents</h1>
+        <div class="toc">
+            {{#each ../data}}
+                <a href="#{{id}}" class="toc-link">
+                    <div class="toc-link-inner">
+                        {{#if metadata.authors}}
+                            {{#each metadata.authors}}
+                                <span class="toc-section-authors">{{first_names}} {{last_names}}</span>
+                            {{/each}}
+                        {{/if}}<br><span class="toc-section-title">{{{metadata.title}}}
+                    </div>
+                    <div class="toc-link-number" href="#{{id}}"></div>
+                </a>
+            {{/each}}
+        </div>
+    </nav>
     {{else}}
 
-    <!-- Beginn eines Kapitels -->
-    <div class="chapter_titlepage">
-        <div class="chapter_titlepage_inner" id="{{id}}">
-        {{#if metadata.authors}}
-            {{#each metadata.authors}}
-                <span>{{first_names}} {{last_names}}</span>
-            {{/each}}
-        {{/if}}
-        <h1>{{metadata.title}}</h1>
-        {{#if metadata.subtitle}}<span class="chapter_titlepage_subtitle">{{metadata.subtitle}}</span>{{/if}}
-        {{#if metadata.web_url}}
-            {{qrcode metadata.web_url}}
-        {{/if}}
+        <!-- Beginn eines Kapitels -->
+        <div class="chapter_titlepage">
+            <div class="chapter_titlepage_inner" id="{{id}}">
+                {{#if metadata.authors}}
+                    {{#each metadata.authors}}
+                        <span>{{first_names}} {{last_names}}</span>
+                    {{/each}}
+                {{/if}}
+                <h1>{{metadata.title}}</h1>
+                {{#if metadata.subtitle}}<span class="chapter_titlepage_subtitle">{{metadata.subtitle}}</span>{{/if}}
+                {{#if metadata.web_url}}
+                    {{qrcode metadata.web_url}}
+                {{/if}}
+            </div>
         </div>
-    </div>
 
-    <div class="chapter">
-    {{#each children}}
-        {{{html}}}
-    {{/each}}
-    {{#if endnotes}}
-        <span>Notes</span>
-        <ol>
-        {{#each endnotes}}
-            <li id="note-{{num}}">{{{content}}}</li>
-        {{/each}}
-        </ol>
-    {{/if}}
+        <div class="chapter">
+            {{#each children}}
+                {{{html}}}
+            {{/each}}
+            {{#if endnotes}}
+                <span>Notes</span>
+                <ol>
+                    {{#each endnotes}}
+                        <li id="note-{{num}}">{{{content}}}</li>
+                    {{/each}}
+                </ol>
+            {{/if}}
 
-    </div>
+        </div>
     {{/if}}
 {{/each}}
 </body>
