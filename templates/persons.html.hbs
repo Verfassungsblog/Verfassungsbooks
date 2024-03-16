@@ -59,6 +59,29 @@
                     </div>
                 {{/each}}
             </div>
+            <div>
+                <select class="form-select mt-2" onchange="if (this.value) window.location.href=this.value" style="float: left;width: auto;">
+                    <option disabled selected>Einträge pro Seite</option>
+                    <option value="/persons?offset=0&limit=10">10</option>
+                    <option value="/persons?offset=0&limit=20">20</option>
+                    <option value="/persons?offset=0&limit=50">50</option>
+                    <option value="/persons?offset=0&limit=100">100</option>
+                </select>
+                <nav aria-label="Page navigation example">
+                    <ul class="pagination mt-2" style="float: right">
+                        <li class="page-item {{#unless previous_offset includeZero=true}}disabled{{/unless}}">
+                            <a class="page-link" href="/persons?offset={{previous_offset}}" aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link {{#unless next_offset includeZero=true}}disabled{{/unless}}" href="/persons?offset={{next_offset}}" aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
         </div>
         <div class="col-12 col-lg-6">
             <div id="persons_view_panel_inner" class="inner-panel">

@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 use rocket::State;
 use rocket_dyn_templates::Template;
+use serde::Serialize;
 use crate::data_storage::DataStorage;
 use crate::projects::Person;
 use crate::session::session_guard::Session;
@@ -12,6 +13,15 @@ pub enum OrderBy{
     FirstnameDescending,
     LastnameAscending,
     LastnameDescending,
+}
+
+#[derive(Debug, Serialize)]
+struct ListData<'a>{
+    persons: Vec<&'a Person>,
+    next_offset: Option<u32>,
+    previous_offset: Option<u32>,
+    offset: u32,
+    limit: u32,
 }
 
 #[get("/persons?<offset>&<limit>&<order>")]
@@ -35,8 +45,19 @@ pub fn list_persons(_session: Session, data_storage: &State<Arc<DataStorage>>, o
     }
 
     let selected_persons : Vec<&Person> = persons.iter().skip(offset as usize).take(limit as usize).collect();
+    let num_of_persons = persons.len() as u32;
+    let num_of_pages = (num_of_persons as f32 / limit as f32).ceil() as u32;
+    let current_page = (offset / limit) + 1;
 
-    let mut data = BTreeMap::new();
-    data.insert("persons", selected_persons);
+    let next_offset = if num_of_pages > current_page {Some(offset + limit)} else {None};
+    let previous_offset = if current_page > 1 {Some(offset - limit)} else {None};
+
+    let mut data = ListData{
+        persons: selected_persons,
+        next_offset,
+        previous_offset,
+        offset,
+        limit,
+    };
     Template::render("persons", data)
 }
