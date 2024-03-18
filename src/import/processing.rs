@@ -1,4 +1,5 @@
 use std::collections::{HashMap, VecDeque};
+use std::future::Future;
 use std::io::{BufRead, Read};
 use std::iter;
 use std::sync::{Arc, RwLock};
@@ -13,6 +14,7 @@ use serde::{Deserialize, Serialize};
 use crate::data_storage::{BibEntry, ProjectData, ProjectStorage};
 use crate::settings::Settings;
 use tokio::io::AsyncReadExt;
+use crate::import::wordpress::{Post, WordpressAPI, WordpressAPIError};
 use crate::projects::{BlockData, BlockType, NewContentBlock, Section, SectionMetadata, SectionOrToc};
 use crate::utils::block_id_generator::generate_id;
 
@@ -38,7 +40,8 @@ pub enum ImportError{
     InvalidFile,
     BibFileInvalid,
     PandocError,
-    HtmlConversionFailed
+    HtmlConversionFailed,
+    WordPressApiError(WordpressAPIError)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -55,7 +58,8 @@ pub struct ImportJob{
     pub length: usize,
     pub processed: usize,
     pub convert_footnotes_to_endnotes: bool,
-    pub files_to_process: VecDeque<(String, ContentType)>,
+    pub files_to_process: Option<VecDeque<(String, ContentType)>>,
+    pub wordpress_post_links_to_convert: Option<VecDeque<String>>,
     pub bib_file: Option<String>,
     pub status: ImportStatus,
 }
@@ -127,53 +131,143 @@ impl ImportProcessor{
             }
         }
 
-        let files_to_process = job.read().unwrap().files_to_process.clone();
+        let files_to_process_cpy = job.read().unwrap().files_to_process.clone().unwrap_or_else(|| VecDeque::new());
 
         loop{
-            println!("Checking remaining files... {} remaining", job.read().unwrap().files_to_process.len());
-            let res = job.write().unwrap().files_to_process.pop_front();
-            let (file, content_type) = match res{
-                Some(f) => f,
-                None => {
-                    job.write().unwrap().status = ImportStatus::Complete;
-                    break;
-                }
+            let files_to_process_len = match &job.read().unwrap().files_to_process{
+                None => 0,
+                Some(ftp) => ftp.len()
+            };
+            let wordpress_to_process_len = match &job.read().unwrap().wordpress_post_links_to_convert{
+                None => 0,
+                Some(pltc) => pltc.len(),
             };
 
-            let project_id = job.read().unwrap().project_id.clone();
-            let endnotes = job.read().unwrap().convert_footnotes_to_endnotes;
-
-            let project = project_storage.get_project(&project_id, &self.settings).await.unwrap();
-
-            match self.convert_file(&file, content_type, project, endnotes).await{
-                Ok(_) => {
-                    println!("File processed successfully");
-                    // Remove file from temp directory
-                    let res = tokio::fs::remove_file(file).await;
-                    if let Err(e) = res{
-                        println!("Error removing file from temp directory: {:?}", e);
+            if files_to_process_len > 0 {
+                println!("Checking remaining files... {} remaining", files_to_process_len);
+                let res = job.write().unwrap().files_to_process.as_mut().unwrap().pop_front();
+                let (file, content_type) = match res {
+                    Some(f) => f,
+                    None => {
+                        job.write().unwrap().status = ImportStatus::Complete;
+                        break;
                     }
-                }
-                Err(e) => {
-                    println!("Error processing file: {:?}", e);
-                    job.write().unwrap().status = ImportStatus::Failed;
-                    // Remove files from temp directory
-                    let res = tokio::fs::remove_file(file).await;
-                    if let Err(e) = res{
-                        println!("Error removing file from temp directory: {:?}", e);
-                    }
-                    for (file, _) in files_to_process.iter(){
+                };
+
+                let project_id = job.read().unwrap().project_id.clone();
+                let endnotes = job.read().unwrap().convert_footnotes_to_endnotes;
+
+                let project = project_storage.get_project(&project_id, &self.settings).await.unwrap();
+
+                match self.convert_file(&file, content_type, project, endnotes).await {
+                    Ok(_) => {
+                        println!("File processed successfully");
+                        // Remove file from temp directory
                         let res = tokio::fs::remove_file(file).await;
-                        if let Err(e) = res{
+                        if let Err(e) = res {
                             println!("Error removing file from temp directory: {:?}", e);
                         }
                     }
-                    break;
+                    Err(e) => {
+                        println!("Error processing file: {:?}", e);
+                        job.write().unwrap().status = ImportStatus::Failed;
+                        // Remove files from temp directory
+                        let res = tokio::fs::remove_file(file).await;
+                        if let Err(e) = res {
+                            println!("Error removing file from temp directory: {:?}", e);
+                        }
+                        for (file, _) in files_to_process_cpy.iter() {
+                            let res = tokio::fs::remove_file(file).await;
+                            if let Err(e) = res {
+                                println!("Error removing file from temp directory: {:?}", e);
+                            }
+                        }
+                        break;
+                    }
                 }
+            }else if wordpress_to_process_len > 0{
+
+                let endnotes = job.read().unwrap().convert_footnotes_to_endnotes;
+
+                let project = project_storage.get_project(&project_id, &self.settings).await.unwrap();
+
+                let res = job.write().unwrap().wordpress_post_links_to_convert.as_mut().unwrap().pop_front();
+                if let Some(url) = res{
+                    match self.import_by_url(&url, project, endnotes).await{
+                        Ok(_) => {
+                            println!("Wordpress Post processed successfully");
+                        }
+                        Err(e) => {
+                            println!("Error processing wordpress post: {:?}", e);
+                            job.write().unwrap().status = ImportStatus::Failed;
+                            break;
+                        }
+                    }
+                }
+            }else{
+                job.write().unwrap().status = ImportStatus::Complete;
+                break;
             }
 
             job.write().unwrap().processed += 1;
         }
+    }
+
+    pub async fn import_by_url(&self, url: &str, project: Arc<RwLock<ProjectData>>, endnotes: bool) -> Result<(), ImportError>{
+        let url = if url.ends_with("/"){
+            url[..url.len()-1].to_string()
+        }else{
+            url.to_string()
+        };
+
+        let parsed_url = url::Url::parse(&url).unwrap();
+        let host = match parsed_url.host(){
+            Some(host) => host,
+            None => return Err(ImportError::WordPressApiError(WordpressAPIError::InvalidURL))
+        };
+
+        let api = WordpressAPI::new(host.to_string());
+        let path = parsed_url.path();
+        let slug = path.split("/").last().unwrap();
+        let posts = match api.get_posts(None, None, None, None, None, Some(slug.to_string())).await{
+            Ok(posts) => posts,
+            Err(e) => return Err(ImportError::WordPressApiError(e))
+        };
+        if posts.len()!= 1{
+            return Err(ImportError::WordPressApiError(WordpressAPIError::NotFound));
+        }
+        let post = posts.first().unwrap();
+
+        let subtitle = match &post.acf{
+            None => None,
+            Some(acf) => {
+                match &acf.subheadline{
+                    None => None,
+                    Some(subheadline) => Some(subheadline.clone())
+                }
+            }
+        };
+
+        let mut section = Section{
+            id: Some(uuid::Uuid::new_v4()),
+            css_classes: vec![],
+            sub_sections: vec![],
+            children: vec![],
+            visible_in_toc: true,
+            metadata: SectionMetadata {
+                title: post.title.rendered.clone(),
+                subtitle,
+                authors: vec![], //TODO create authors automatically
+                editors: vec![],
+                web_url: None,
+                identifiers: vec![],
+                published: None,
+                last_changed: None,
+                lang: None,
+            },
+        };
+
+        self.import_html_from_wp(section, post.content.rendered.clone(), project, endnotes)
     }
 
     async fn convert_file(&self, file_path: &str, content_type: ContentType, project: Arc<RwLock<ProjectData>>, endnotes: bool) -> Result<(), ImportError>{
@@ -229,7 +323,7 @@ impl ImportProcessor{
                     }
         }
 
-        self.import_html(file_content, project, endnotes)?;
+        self.import_html_from_pandoc(file_content, project, endnotes)?;
         Ok(())
     }
 
@@ -254,7 +348,218 @@ impl ImportProcessor{
             }
     }
 
-    fn import_html(&self, input: String, project_data: Arc<RwLock<ProjectData>>, endnotes: bool) -> Result<(), ImportError>{
+    fn import_html_from_wp(&self, mut section: Section, input: String, project_data: Arc<RwLock<ProjectData>>, endnotes: bool) -> Result<(), ImportError> {
+        let dom = match Dom::parse(&input) {
+            Ok(dom) => dom,
+            Err(e) => {
+                eprintln!("Couldn't parse html from import after pandoc: {}", e);
+                return Err(ImportError::HtmlConversionFailed)
+            }
+        };
+        if dom.tree_type == html_parser::DomVariant::Document {
+            return Err(ImportError::HtmlConversionFailed)
+        }
+
+        // Get footnotes:
+        let mut footnotes: HashMap<String, String> = HashMap::new();
+
+        if let Some(footnote_div) = dom.children.iter().find(|x| match x {
+            Node::Element(div) => {
+                div.classes.contains(&"footnotes_reference_container".to_string())
+            },
+            _ => false
+        }){
+            match footnote_div{
+                Node::Element(div) => {
+                    if let Some(div) = div.children.get(1){
+                        match div{
+                            Node::Element(e) => {
+                                if let Some(table) = e.children.get(0){
+                                    match table{
+                                        Node::Element(table) => {
+                                            if table.name == "table"{
+                                                if let Some(tbody) = table.children.get(1){
+                                                        if let Node::Element(tbody) = tbody{
+                                                            if tbody.name == "tbody" {
+                                                                for row in &tbody.children {
+                                                                    if let Node::Element(tr) = row {
+                                                                        if let Some(th) = tr.children.get(0) {
+                                                                            if let Node::Element(th) = th {
+                                                                                if let Some(a) = th.children.get(0) {
+                                                                                    if let Node::Element(a) = a {
+                                                                                        if a.classes.contains(&"footnote_backlink".to_string()) {
+                                                                                            if let Some(id) = a.id.clone() {
+                                                                                                //Found footnote id
+
+                                                                                                // Get footnote text
+                                                                                                if let Some(td) = tr.children.get(1) {
+                                                                                                    if let Node::Element(td) = td {
+                                                                                                        if td.classes.contains(&"footnote_plugin_text".to_string()) {
+                                                                                                            footnotes.insert(id, self.dom_to_html(td.clone(), None, endnotes));
+                                                                                                        }
+                                                                                                    }
+                                                                                                }
+                                                                                            }
+                                                                                        }
+                                                                                    }
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                }
+                                            }
+                                        },
+                                        _ => {}
+                                    }
+                                }
+                            },
+                            _ => {}
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        println!("Footnotes: {:?}", footnotes);
+
+        for node in dom.children{
+            match node{
+                Node::Text(t) => {
+                    // Wrap text without a tag in a paragraph
+                    let cb = NewContentBlock{
+                        id: generate_id(&section),
+                        block_type: BlockType::Paragraph,
+                        data: BlockData::Paragraph {
+                            text: t,
+                        },
+                        css_classes: vec![],
+                        revision_id: None,
+                    };
+                    section.children.push(cb);
+                }
+                Node::Element(el) => {
+                    match el.name.to_lowercase().as_str(){
+                        "h1" | "h2" | "h4" | "h5" | "h6" => {
+                            let level = match el.name.to_lowercase().as_str(){
+                                "h1" => 1,
+                                "h2" => 2,
+                                "h3" => 3,
+                                "h4" => 4,
+                                "h5" => 5,
+                                "h6" => 6,
+                                _ => 0
+                            };
+                            section.children.push(NewContentBlock{
+                                id: generate_id(&section),
+                                block_type: BlockType::Heading,
+                                data: BlockData::Heading {
+                                    text: self.dom_to_html(el, Some(&footnotes), endnotes),
+                                    level,
+                                },
+                                css_classes: vec![],
+                                revision_id: None,
+                            })
+                        },
+                        "p" => {
+                            section.children.push(NewContentBlock{
+                                id: generate_id(&section),
+                                block_type: BlockType::Paragraph,
+                                data: BlockData::Paragraph {
+                                    text: self.dom_to_html(el, Some(&footnotes), endnotes),
+                                },
+                                css_classes: vec![],
+                                revision_id: None,
+                            })
+                        },
+                        "ul" | "ol" => {
+                            let style = match el.name.to_lowercase().as_str(){
+                                "ul" => "unordered",
+                                "ol" => "ordered",
+                                _ => "unordered"
+                            };
+                            let style = style.to_string();
+                            let items = el.children.iter().filter_map(|node| match node{
+                                Node::Element(el) => {
+                                    if el.name.to_lowercase() == "li"{
+                                        Some(self.dom_to_html(el.clone(), Some(&footnotes), endnotes))
+                                    }else{
+                                        None
+                                    }
+                                },
+                                _ => None
+                            }).collect();
+
+                            section.children.push(NewContentBlock{
+                                id: generate_id(&section),
+                                block_type: BlockType::List,
+                                data: BlockData::List {
+                                    style,
+                                    items
+                                },
+                                css_classes: vec![],
+                                revision_id: None,
+                            });
+                        },
+                        "blockquote" => {
+                            section.children.push(NewContentBlock{
+                                id: generate_id(&section),
+                                block_type: BlockType::Quote,
+                                data: BlockData::Quote {
+                                    text: self.dom_to_html(el, Some(&footnotes), endnotes),
+                                    caption: "".to_string(),
+                                    alignment: "".to_string(),
+                                },
+                                css_classes: vec![],
+                                revision_id: None,
+                            });
+                        },
+                        "div" => {
+                            if el.classes.contains(&String::from("footnotes_reference_container")){
+                                continue
+                            }else{
+                                println!("Warning: Unsupported div. Adding as paragraph");
+                                // Add as paragraph
+                                section.children.push(NewContentBlock{
+                                    id: generate_id(&section),
+                                    block_type: BlockType::Paragraph,
+                                    data: BlockData::Paragraph {
+                                        text: self.dom_to_html(el, Some(&footnotes), endnotes),
+                                    },
+                                    css_classes: vec![],
+                                    revision_id: None,
+                                });
+                            }
+                        }
+                        _ => {
+                            println!("Warning: Unsupported tag: {}", el.name);
+                            // Add as paragraph
+                            section.children.push(NewContentBlock{
+                                id: generate_id(&section),
+                                block_type: BlockType::Paragraph,
+                                data: BlockData::Paragraph {
+                                    text: self.dom_to_html(el, Some(&footnotes), endnotes),
+                                },
+                                css_classes: vec![],
+                                revision_id: None,
+                            });
+                        }
+                    }
+                }
+                // Skip comments
+                Node::Comment(_) => {}
+            }
+        }
+
+        project_data.write().unwrap().sections.push(SectionOrToc::Section(section));
+        Ok(())
+
+    }
+
+    fn import_html_from_pandoc(&self, input: String, project_data: Arc<RwLock<ProjectData>>, endnotes: bool) -> Result<(), ImportError>{
         let dom = match Dom::parse(&input){
             Ok(dom) => dom,
             Err(e) => {
@@ -498,6 +803,7 @@ impl ImportProcessor{
                     println!("Found Element: {}", el.name);
 
                     if el.name == "a"{
+                        // For pandoc footnotes
                         if let Some(role) = el.attributes.get("role"){
                             if let Some(role) = role {
                                 if role == "doc-noteref" {
@@ -521,6 +827,28 @@ impl ImportProcessor{
                                                         }
                                                     }
                                                 }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        // For wordpress footnotes:
+                        if let Some(sup) = el.children.get(0){
+                            if let Node::Element(sup) = sup{
+                                if sup.classes.contains(&"footnote_plugin_tooltip_text".to_string()){
+                                    if let Some(id) = sup.id.clone(){
+                                        let footnote_id = id.replace("tooltip", "reference");
+                                        if let Some(footnotes) = footnotes{
+                                            if let Some(footnote) = footnotes.get(&footnote_id){
+                                                println!("Found footnote: {}", footnote.clone());
+                                                if endnotes {
+                                                    html.push_str(&format!("<span class=\"note\" note-type=\"endnote\" note-content=\"{}\">E</span>", footnote.clone().replace("\"", "'")));
+                                                }else{
+                                                    html.push_str(&format!("<span class=\"note\" note-type=\"footnote\" note-content=\"{}\">F</span>", footnote.clone().replace("\"", "'")));
+                                                }
+
+                                                continue;
                                             }
                                         }
                                     }

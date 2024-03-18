@@ -6,6 +6,7 @@ use rocket::fs::TempFile;
 use rocket::http::ContentType;
 use rocket::serde::json::Json;
 use rocket::State;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use crate::data_storage::ProjectStorage;
 use crate::import::processing::{ImportJob, ImportProcessor, ImportStatus, ImportStatusPoll};
@@ -19,6 +20,13 @@ struct FileUpload<'r>{
     bib_file: Option<TempFile<'r>>,
     project_id: String,
     convert_footnotes_to_endnotes: bool,
+}
+
+#[derive(Serialize, Deserialize)]
+struct WordpressImport{
+    project_id: uuid::Uuid,
+    endnotes: bool,
+    links: Vec<String>
 }
 
 #[post("/api/import/upload", data = "<upload>")]
@@ -62,14 +70,35 @@ pub async fn import_from_upload(mut upload: Form<FileUpload<'_>>, _session: Sess
         project_id,
         length: file_paths.len() as usize,
         processed: 0,
-        files_to_process: file_paths,
+        files_to_process: Some(file_paths),
         convert_footnotes_to_endnotes: upload.convert_footnotes_to_endnotes,
         bib_file: bib_file_path,
+        wordpress_post_links_to_convert: None,
         status: ImportStatus::Pending,
     };
 
     import_processor.job_queue.write().unwrap().push_back(import_job);
 
+    ApiResult::new_data(id)
+}
+
+#[post("/api/import/wordpress", data = "<job>")]
+pub async fn import_from_wordpress(job: Json<WordpressImport>, _session: Session, settings: &State<Settings>, import_processor: &State<Arc<ImportProcessor>>) -> Json<ApiResult<uuid::Uuid>>{
+    let id = Uuid::new_v4();
+
+    let import_job = ImportJob{
+        id,
+        project_id: job.project_id,
+        length: job.links.len(),
+        processed: 0,
+        files_to_process: None,
+        convert_footnotes_to_endnotes: job.endnotes,
+        wordpress_post_links_to_convert: Some(<Vec<std::string::String> as Clone>::clone(&job.links).into()),
+        status: ImportStatus::Pending,
+        bib_file: None,
+    };
+
+    import_processor.job_queue.write().unwrap().push_back(import_job);
     ApiResult::new_data(id)
 }
 

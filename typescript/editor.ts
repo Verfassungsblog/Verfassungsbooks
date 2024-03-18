@@ -31,7 +31,11 @@ export async function show_editor(){
         editor = new EditorJS({
             holder: "section_content_blocks_inner",
             tools: {
-                header: Header,
+                header: {
+                    // @ts-ignore
+                    class: Header,
+                    inlineToolbar: true,
+                },
                 raw: RawTool,
                 list: {
                     class: List,

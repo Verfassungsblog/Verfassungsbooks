@@ -234,3 +234,21 @@ export async function send_poll_import_status(id: string){
         }
     }
 }
+
+
+export async function send_import_from_wordpress(data: any){
+    const response = await fetch(`/api/import/wordpress`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
+    if(!response.ok){
+        throw new Error(`Failed to upload: ${response.status}`);
+    }else{
+        let response_data = await response.json();
+        if(response_data.hasOwnProperty("error")) {
+            throw new Error(`Failed to upload: ${response_data["error"]}`);
+        }else{
+            return response_data;
+        }
+    }
+}

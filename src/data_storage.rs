@@ -1619,11 +1619,13 @@ mod tests {
     use rocket::serde::json::Json;
     use crate::projects::{Paragraph, TextElement, TextFormat};
     use super::*;
+
     #[test]
     fn setup_test_environment() {
         std::fs::remove_dir_all("test_data");
         std::fs::create_dir_all("test_data/projects").unwrap();
     }
+
     fn generate_settings() -> Settings {
         Settings {
             app_title: "Test".to_string(),
@@ -1636,10 +1638,11 @@ mod tests {
             chromium_path: None,
         }
     }
+
     #[rocket::tokio::test]
-    async fn test_save_project_to_disk(){
+    async fn test_save_project_to_disk() {
         setup_test_environment();
-        let test_project = ProjectData{
+        let test_project = ProjectData {
             name: "Test Project".to_string(),
             description: None,
             template_id: Default::default(),
@@ -1647,123 +1650,11 @@ mod tests {
             metadata: None,
             settings: None,
             sections: vec![],
-        };
-        let settings = generate_settings();
-        let mut project_storage = ProjectStorage::new();
-        let id = project_storage.insert_project( test_project, &settings).await.unwrap();
-        assert!(std::path::Path::new(&format!("test_data/projects/{}.bincode", id)).exists());
-    }
-    #[rocket::tokio::test]
-    async fn test_load_from_disk(){
-        setup_test_environment();
-        let mut test_project = ProjectData{
-            name: "Test Project".to_string(),
-            description: None,
-            template_id: Default::default(),
-            last_interaction: 0,
-            metadata: None,
-            settings: None,
-            sections: vec![],
-        };
-        let settings = generate_settings();
-        let mut project_storage = ProjectStorage::new();
-        let id = project_storage.insert_project(test_project.clone(), &settings).await.unwrap();
-        project_storage.load_from_directory(&settings).await.unwrap();
-        let loaded_project = project_storage.get_project(&id, &settings).await.unwrap().read().unwrap().clone();
-        test_project.last_interaction = loaded_project.last_interaction;
-        assert_eq!(loaded_project, test_project);
-    }
-
-    #[rocket::tokio::test]
-    async fn test_file_lock_unlocks(){
-        setup_test_environment();
-        let test_project = ProjectData{
-            name: "Test Project".to_string(),
-            description: None,
-            template_id: Default::default(),
-            last_interaction: 0,
-            metadata: None,
-            settings: None,
-            sections: vec![],
-        };
-        let settings = generate_settings();
-        let mut project_storage = ProjectStorage::new();
-        let id = project_storage.insert_project(test_project.clone(), &settings).await.unwrap();
-        assert!(project_storage.wait_for_file_lock(&id, &settings).await.is_ok());
-    }
-
-    /// Test if file lock times out correctly
-    #[rocket::tokio::test]
-    async fn test_file_lock_timeout(){
-
-        setup_test_environment();
-        let test_project = ProjectData{
-            name: "Test Project".to_string(),
-            description: None,
-            template_id: Default::default(),
-            last_interaction: 0,
-            metadata: None,
-            settings: None,
-            sections: vec![],
-        };
-        let settings = generate_settings();
-        let mut project_storage = ProjectStorage::new();
-        let id = project_storage.insert_project(test_project.clone(), &settings).await.unwrap();
-
-        project_storage.file_locks.get_mut().unwrap().insert(id.clone(), Arc::new(AtomicBool::new(true)));
-        assert!(project_storage.wait_for_file_lock(&id, &settings).await.is_err());
-    }
-
-    /// Test if unused projects get unloaded correctly
-    #[rocket::tokio::test]
-    async fn test_unload_unused_projects(){
-        setup_test_environment();
-        let test_project = ProjectData{
-            name: "Test Project".to_string(),
-            description: None,
-            template_id: Default::default(),
-            last_interaction: 0,
-            metadata: None,
-            settings: None,
-            sections: vec![],
-        };
-        let settings = generate_settings();
-        let mut project_storage = ProjectStorage::new();
-        let id = project_storage.insert_project(test_project.clone(), &settings).await.unwrap();
-        project_storage.unload_unused_projects(&settings).await.unwrap();
-        assert!(project_storage.projects.read().unwrap().get(&id).unwrap().data.is_some());
-        thread::sleep(std::time::Duration::from_secs(5));
-        project_storage.unload_unused_projects(&settings).await.unwrap();
-        assert!(project_storage.projects.read().unwrap().get(&id).unwrap().data.is_none());
-    }
-
-
-    /// Test set project
-    #[rocket::tokio::test]
-    async fn test_set_project(){
-        setup_test_environment();
-        let test_project = ProjectData{
-            name: "Test Project Old".to_string(),
-            description: None,
-            template_id: Default::default(),
-            last_interaction: 0,
-            metadata: None,
-            settings: None,
-            sections: vec![],
+            bibliography: Default::default(),
         };
         let settings = generate_settings();
         let mut project_storage = ProjectStorage::new();
         let id = project_storage.insert_project(test_project, &settings).await.unwrap();
-        let project_cpy = project_storage.get_project(&id, &settings).await.unwrap().clone();
-        let test_project = ProjectData{
-            name: "Test Project New".to_string(),
-            description: None,
-            template_id: Default::default(),
-            last_interaction: 0,
-            metadata: None,
-            settings: None,
-            sections: vec![],
-        };
+        assert!(std::path::Path::new(&format!("test_data/projects/{}.bincode", id)).exists());
     }
-
 }

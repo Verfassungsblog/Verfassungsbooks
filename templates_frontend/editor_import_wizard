@@ -27,8 +27,22 @@
     <input type="file" class="form-control" id="wizard-pandoc-upload-bib-input"/>
     <button class="btn btn-primary mt-2 float-end" id="wizard-pandoc-upload-btn">Upload</button>
 </div>
-<div id="wizard-pandoc-2" class="hide">
+<div id="wizard-progress" class="hide">
     <p>Upload Progress:</p>
-    <progress id="wizard-pandoc-upload-progress" value="0" max="100"></progress>
-    <p class="mt-2">Status: <span id="wizard-pandoc-upload-progress-status"></span></p>
+    <progress id="wizard-upload-progress" value="0" max="100"></progress>
+    <p class="mt-2">Status: <span id="wizard-upload-progress-status"></span></p>
+</div>
+<div id="wizard-wordpress-1" class="hide">
+    <p>Settings:</p>
+    <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="wizard-wordpress-settings-convert-to-endnotes">
+        <label class="form-check-label" for="wizard-wordpress-settings-convert-to-endnotes">
+            Convert Footnotes to Endnotes
+        </label>
+    </div>
+    <label for="wizard-wordpress-settings-links">Wordpress Post Links to import:</label>
+    <textarea id="wizard-wordpress-settings-links" class="form-control">
+
+    </textarea>
+    <button class="btn btn-primary mt-2 float-end" id="wizard-wordpress-upload-btn">Upload</button>
 </div>
