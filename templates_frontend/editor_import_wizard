@@ -40,6 +40,18 @@
             Convert Footnotes to Endnotes
         </label>
     </div>
+    <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="wizard-wordpress-settings-shift-levels-up">
+        <label class="form-check-label" for="wizard-wordpress-settings-shift-levels-up">
+            Shift Headings up by one level
+        </label>
+    </div>
+    <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="wizard-wordpress-settings-convert-links">
+        <label class="form-check-label" for="wizard-wordpress-settings-convert-links">
+            Convert Links to Citations
+        </label>
+    </div>
     <label for="wizard-wordpress-settings-links">Wordpress Post Links to import:</label>
     <textarea id="wizard-wordpress-settings-links" class="form-control">
 

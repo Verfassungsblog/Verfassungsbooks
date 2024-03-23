@@ -11,3 +11,5 @@ max_rendering_threads = 10
 max_import_threads = 4
 # Optional: Path to chromium executable, set to empty string to use included chromium, but it doesn't work for alpine.
 chromium_path = "/usr/bin/chromium-browser"
+# URL to the zotero translation server (https://github.com/zotero/translation-server) for importing zotero items.
+zotero_translation_server = "https://translation-server.anghenfil.de"

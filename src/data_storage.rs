@@ -1636,6 +1636,7 @@ mod tests {
             max_rendering_threads: 10,
             max_import_threads: 2,
             chromium_path: None,
+            zotero_translation_server: "https://translation-server.anghenfil.de".to_string(),
         }
     }
 

@@ -207,6 +207,7 @@ h2{
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
+    margin-top: 0.3cm;
 }
 .toc-link-number{
     width: 2cm;
@@ -243,11 +244,26 @@ h2{
     page: NoFooter;
 }
 .toc-section-authors{
+    display: block;
     font-style: italic;
     font-size: 9pt;
 }
+.toc-foreword{
+    font-size: 11pt;
+    hyphens: manual;
+    word-break: normal;
+}
+.toc-part-title{
+    font-size: 11pt;
+    hyphens: manual;
+    word-break: normal;
+    font-weight: bold;
+}
 .toc-section-title{
     font-size: 11pt;
-    word-break: break-all;
     hyphens: manual;
+    word-break: normal;
+}
+.toc-part-link{
+    border-bottom: 1px solid gray;
 }

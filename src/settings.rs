@@ -17,7 +17,8 @@ pub struct Settings{
     pub backup_to_file_interval: u64,
     pub max_rendering_threads : u64,
     pub max_import_threads: u64,
-    pub chromium_path: Option<String>
+    pub chromium_path: Option<String>,
+    pub zotero_translation_server: String,
 }
 
 impl Settings{

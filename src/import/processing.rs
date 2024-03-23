@@ -1,3 +1,4 @@
+use async_recursion::async_recursion;
 use std::collections::{HashMap, VecDeque};
 use std::future::Future;
 use std::io::{BufRead, Read};
@@ -15,7 +16,7 @@ use crate::data_storage::{BibEntry, ProjectData, ProjectStorage};
 use crate::settings::Settings;
 use tokio::io::AsyncReadExt;
 use crate::import::wordpress::{Post, WordpressAPI, WordpressAPIError};
-use crate::projects::{BlockData, BlockType, NewContentBlock, Section, SectionMetadata, SectionOrToc};
+use crate::projects::{BlockData, BlockType, Identifier, IdentifierType, NewContentBlock, Section, SectionMetadata, SectionOrToc};
 use crate::utils::block_id_generator::generate_id;
 
 pub struct ImportProcessor{
@@ -58,6 +59,8 @@ pub struct ImportJob{
     pub length: usize,
     pub processed: usize,
     pub convert_footnotes_to_endnotes: bool,
+    pub shift_headings_up: bool,
+    pub convert_links: bool,
     pub files_to_process: Option<VecDeque<(String, ContentType)>>,
     pub wordpress_post_links_to_convert: Option<VecDeque<String>>,
     pub bib_file: Option<String>,
@@ -188,12 +191,14 @@ impl ImportProcessor{
             }else if wordpress_to_process_len > 0{
 
                 let endnotes = job.read().unwrap().convert_footnotes_to_endnotes;
+                let shift_headings_up = job.read().unwrap().shift_headings_up;
+                let convert_links = job.read().unwrap().convert_links;
 
                 let project = project_storage.get_project(&project_id, &self.settings).await.unwrap();
 
                 let res = job.write().unwrap().wordpress_post_links_to_convert.as_mut().unwrap().pop_front();
                 if let Some(url) = res{
-                    match self.import_by_url(&url, project, endnotes).await{
+                    match self.import_by_url(&url, project, endnotes, shift_headings_up, convert_links).await{
                         Ok(_) => {
                             println!("Wordpress Post processed successfully");
                         }
@@ -213,7 +218,7 @@ impl ImportProcessor{
         }
     }
 
-    pub async fn import_by_url(&self, url: &str, project: Arc<RwLock<ProjectData>>, endnotes: bool) -> Result<(), ImportError>{
+    pub async fn import_by_url(&self, url: &str, project: Arc<RwLock<ProjectData>>, endnotes: bool, shift_headings_up: bool, convert_links: bool) -> Result<(), ImportError>{
         let url = if url.ends_with("/"){
             url[..url.len()-1].to_string()
         }else{
@@ -228,8 +233,45 @@ impl ImportProcessor{
 
         let api = WordpressAPI::new(host.to_string());
         let path = parsed_url.path();
-        let slug = path.split("/").last().unwrap();
-        let posts = match api.get_posts(None, None, None, None, None, Some(slug.to_string())).await{
+
+        let slug = path.split("/").last().unwrap_or("");
+
+        if path.starts_with("/category/"){
+            println!("Found category link. Trying to import all posts within category");
+            let category = match api.get_categories(None, None, None, None, None, Some(slug.to_string()), None, None, None).await{
+                Ok(categories) => categories,
+                Err(e) => return Err(ImportError::WordPressApiError(e))
+            };
+            if category.len() != 1{
+                return Err(ImportError::WordPressApiError(WordpressAPIError::NotFound));
+            }
+            let category = category.first().unwrap();
+            let mut posts = vec![];
+            let mut page = 1;
+            loop{
+                let mut new_posts = match api.get_posts(Some(page), None, None, None, None, None, Some(vec![category.id]), None).await{
+                    Ok(posts) => posts,
+                    Err(e) => return Err(ImportError::WordPressApiError(e))
+                };
+                if new_posts.len() == 0{
+                    break;
+                }else{
+                    posts.append(&mut new_posts);
+                    page += 1;
+                }
+            }
+            for post in posts {
+                self.import_single_post(post.slug.clone(), project.clone(), endnotes, shift_headings_up, convert_links, &api).await?;
+            }
+        }else{
+            println!("Found non-category link. Trying to import single post");
+            self.import_single_post(slug.to_string(), project, endnotes, shift_headings_up, convert_links, &api).await?;
+        }
+        Ok(())
+    }
+
+    async fn import_single_post(&self, slug: String, project: Arc<RwLock<ProjectData>>, endnotes: bool, shift_headings_up: bool, convert_links: bool, api: &WordpressAPI) -> Result<(), ImportError>{
+        let posts = match api.get_posts(None, None, None, None, None, Some(slug.to_string()), None, None).await{
             Ok(posts) => posts,
             Err(e) => return Err(ImportError::WordPressApiError(e))
         };
@@ -248,6 +290,27 @@ impl ImportProcessor{
             }
         };
 
+        let mut identifiers = vec![];
+
+        if let Some(acf) = &post.acf{
+            if let Some(crossref_doi) = &acf.crossref_doi{
+                identifiers.push(Identifier{
+                    id: Some(uuid::Uuid::new_v4()),
+                    name: "DOI".to_string(),
+                    value: crossref_doi.clone(),
+                    identifier_type: IdentifierType::DOI,
+                });
+            }else if let Some(doi) = &acf.doi{
+                identifiers.push(Identifier{
+                    id: Some(uuid::Uuid::new_v4()),
+                    name: "DOI".to_string(),
+                    value: doi.clone(),
+                    identifier_type: IdentifierType::DOI,
+                });
+            }
+        }
+
+
         let mut section = Section{
             id: Some(uuid::Uuid::new_v4()),
             css_classes: vec![],
@@ -259,15 +322,15 @@ impl ImportProcessor{
                 subtitle,
                 authors: vec![], //TODO create authors automatically
                 editors: vec![],
-                web_url: None,
-                identifiers: vec![],
-                published: None,
-                last_changed: None,
+                web_url: Some(post.link.clone()),
+                identifiers,
+                published: Some(post.date),
+                last_changed: Some(post.modified),
                 lang: None,
             },
         };
 
-        self.import_html_from_wp(section, post.content.rendered.clone(), project, endnotes)
+        self.import_html_from_wp(section, post.content.rendered.clone(), project, endnotes, shift_headings_up, convert_links).await
     }
 
     async fn convert_file(&self, file_path: &str, content_type: ContentType, project: Arc<RwLock<ProjectData>>, endnotes: bool) -> Result<(), ImportError>{
@@ -323,7 +386,7 @@ impl ImportProcessor{
                     }
         }
 
-        self.import_html_from_pandoc(file_content, project, endnotes)?;
+        self.import_html_from_pandoc(file_content, project, endnotes).await?;
         Ok(())
     }
 
@@ -348,7 +411,7 @@ impl ImportProcessor{
             }
     }
 
-    fn import_html_from_wp(&self, mut section: Section, input: String, project_data: Arc<RwLock<ProjectData>>, endnotes: bool) -> Result<(), ImportError> {
+    async fn import_html_from_wp(&self, mut section: Section, input: String, project_data: Arc<RwLock<ProjectData>>, endnotes: bool, shift_headings: bool, convert_links: bool) -> Result<(), ImportError> {
         let dom = match Dom::parse(&input) {
             Ok(dom) => dom,
             Err(e) => {
@@ -395,7 +458,7 @@ impl ImportProcessor{
                                                                                                 if let Some(td) = tr.children.get(1) {
                                                                                                     if let Node::Element(td) = td {
                                                                                                         if td.classes.contains(&"footnote_plugin_text".to_string()) {
-                                                                                                            footnotes.insert(id, self.dom_to_html(td.clone(), None, endnotes));
+                                                                                                            footnotes.insert(id, self.dom_to_html(td.clone(), None, endnotes, convert_links, project_data.clone()).await);
                                                                                                         }
                                                                                                     }
                                                                                                 }
@@ -424,8 +487,6 @@ impl ImportProcessor{
             }
         }
 
-        println!("Footnotes: {:?}", footnotes);
-
         for node in dom.children{
             match node{
                 Node::Text(t) => {
@@ -444,7 +505,7 @@ impl ImportProcessor{
                 Node::Element(el) => {
                     match el.name.to_lowercase().as_str(){
                         "h1" | "h2" | "h4" | "h5" | "h6" => {
-                            let level = match el.name.to_lowercase().as_str(){
+                            let mut level = match el.name.to_lowercase().as_str(){
                                 "h1" => 1,
                                 "h2" => 2,
                                 "h3" => 3,
@@ -453,11 +514,18 @@ impl ImportProcessor{
                                 "h6" => 6,
                                 _ => 0
                             };
+
+                            if shift_headings{
+                                if level > 1{
+                                    level -= 1;
+                                }
+                            }
+
                             section.children.push(NewContentBlock{
                                 id: generate_id(&section),
                                 block_type: BlockType::Heading,
                                 data: BlockData::Heading {
-                                    text: self.dom_to_html(el, Some(&footnotes), endnotes),
+                                    text: self.dom_to_html(el, Some(&footnotes), endnotes, convert_links, project_data.clone()).await,
                                     level,
                                 },
                                 css_classes: vec![],
@@ -469,7 +537,7 @@ impl ImportProcessor{
                                 id: generate_id(&section),
                                 block_type: BlockType::Paragraph,
                                 data: BlockData::Paragraph {
-                                    text: self.dom_to_html(el, Some(&footnotes), endnotes),
+                                    text: self.dom_to_html(el, Some(&footnotes), endnotes, convert_links, project_data.clone()).await,
                                 },
                                 css_classes: vec![],
                                 revision_id: None,
@@ -482,16 +550,16 @@ impl ImportProcessor{
                                 _ => "unordered"
                             };
                             let style = style.to_string();
-                            let items = el.children.iter().filter_map(|node| match node{
-                                Node::Element(el) => {
-                                    if el.name.to_lowercase() == "li"{
-                                        Some(self.dom_to_html(el.clone(), Some(&footnotes), endnotes))
-                                    }else{
-                                        None
+                            let mut items = Vec::new();
+
+                            for node in el.children.iter() {
+                                if let Node::Element(el) = node {
+                                    if el.name.to_lowercase() == "li" {
+                                        let result = self.dom_to_html(el.clone(), Some(&footnotes), endnotes, convert_links, project_data.clone()).await;
+                                        items.push(result);
                                     }
-                                },
-                                _ => None
-                            }).collect();
+                                }
+                            }
 
                             section.children.push(NewContentBlock{
                                 id: generate_id(&section),
@@ -509,7 +577,7 @@ impl ImportProcessor{
                                 id: generate_id(&section),
                                 block_type: BlockType::Quote,
                                 data: BlockData::Quote {
-                                    text: self.dom_to_html(el, Some(&footnotes), endnotes),
+                                    text: self.dom_to_html(el, Some(&footnotes), endnotes, convert_links, project_data.clone()).await,
                                     caption: "".to_string(),
                                     alignment: "".to_string(),
                                 },
@@ -527,7 +595,7 @@ impl ImportProcessor{
                                     id: generate_id(&section),
                                     block_type: BlockType::Paragraph,
                                     data: BlockData::Paragraph {
-                                        text: self.dom_to_html(el, Some(&footnotes), endnotes),
+                                        text: self.dom_to_html(el, Some(&footnotes), endnotes, convert_links, project_data.clone()).await,
                                     },
                                     css_classes: vec![],
                                     revision_id: None,
@@ -541,7 +609,7 @@ impl ImportProcessor{
                                 id: generate_id(&section),
                                 block_type: BlockType::Paragraph,
                                 data: BlockData::Paragraph {
-                                    text: self.dom_to_html(el, Some(&footnotes), endnotes),
+                                    text: self.dom_to_html(el, Some(&footnotes), endnotes, convert_links, project_data.clone()).await,
                                 },
                                 css_classes: vec![],
                                 revision_id: None,
@@ -559,7 +627,7 @@ impl ImportProcessor{
 
     }
 
-    fn import_html_from_pandoc(&self, input: String, project_data: Arc<RwLock<ProjectData>>, endnotes: bool) -> Result<(), ImportError>{
+    async fn import_html_from_pandoc(&self, input: String, project_data: Arc<RwLock<ProjectData>>, endnotes: bool) -> Result<(), ImportError>{
         let dom = match Dom::parse(&input){
             Ok(dom) => dom,
             Err(e) => {
@@ -636,12 +704,12 @@ impl ImportProcessor{
                                                                                 None => attributes.push_str(&format!(" {}", attr)),
                                                                             }
                                                                         }
-                                                                        text.push_str(&format!("<a {}>{}</a>", attributes, &self.dom_to_html(ele.clone(), None, endnotes)));
+                                                                        text.push_str(&format!("<a {}>{}</a>", attributes, &self.dom_to_html(ele.clone(), None, endnotes, false, project_data.clone()).await));
                                                                     },
                                                                     _ => {
                                                                         // TODO: whitelist elements and attributes
                                                                         // Currently we allow all elements but strip attributes
-                                                                        text.push_str(&format!("<{}>{}</{}>", ele.name, &self.dom_to_html(ele.clone(), None, endnotes), ele.name));
+                                                                        text.push_str(&format!("<{}>{}</{}>", ele.name, &self.dom_to_html(ele.clone(), None, endnotes, false, project_data.clone()).await, ele.name));
                                                                     },
                                                                 }
                                                             }
@@ -657,7 +725,6 @@ impl ImportProcessor{
                                             }
                                         }
                                         footnotes.insert(id.clone(), text.clone());
-                                        println!("Found footnote: {}:{}", id, text);
                                     }
                                 }
                             }
@@ -698,7 +765,7 @@ impl ImportProcessor{
                                 id: generate_id(&section),
                                 block_type: BlockType::Heading,
                                 data: BlockData::Heading {
-                                    text: self.dom_to_html(el, Some(&footnotes), endnotes),
+                                    text: self.dom_to_html(el, Some(&footnotes), endnotes, false, project_data.clone()).await,
                                     level,
                                 },
                                 css_classes: vec![],
@@ -710,7 +777,7 @@ impl ImportProcessor{
                                 id: generate_id(&section),
                                 block_type: BlockType::Paragraph,
                                 data: BlockData::Paragraph {
-                                    text: self.dom_to_html(el, Some(&footnotes), endnotes),
+                                    text: self.dom_to_html(el, Some(&footnotes), endnotes, false, project_data.clone()).await,
                                 },
                                 css_classes: vec![],
                                 revision_id: None,
@@ -723,16 +790,16 @@ impl ImportProcessor{
                                 _ => "unordered"
                             };
                             let style = style.to_string();
-                            let items = el.children.iter().filter_map(|node| match node{
-                                Node::Element(el) => {
-                                    if el.name.to_lowercase() == "li"{
-                                        Some(self.dom_to_html(el.clone(), Some(&footnotes), endnotes))
-                                    }else{
-                                        None
+                            let mut items = Vec::new();
+
+                            for node in el.children.iter() {
+                                if let Node::Element(el) = node {
+                                    if el.name.to_lowercase() == "li" {
+                                        let result = self.dom_to_html(el.clone(), Some(&footnotes), endnotes, false, project_data.clone()).await;
+                                        items.push(result);
                                     }
-                                },
-                                _ => None
-                            }).collect();
+                                }
+                            }
 
                             section.children.push(NewContentBlock{
                                 id: generate_id(&section),
@@ -750,7 +817,7 @@ impl ImportProcessor{
                                 id: generate_id(&section),
                                 block_type: BlockType::Quote,
                                 data: BlockData::Quote {
-                                    text: self.dom_to_html(el, Some(&footnotes), endnotes),
+                                    text: self.dom_to_html(el, Some(&footnotes), endnotes, false, project_data.clone()).await,
                                     caption: "".to_string(),
                                     alignment: "".to_string(),
                                 },
@@ -773,7 +840,7 @@ impl ImportProcessor{
                                 id: generate_id(&section),
                                 block_type: BlockType::Paragraph,
                                 data: BlockData::Paragraph {
-                                    text: self.dom_to_html(el, Some(&footnotes), endnotes),
+                                    text: self.dom_to_html(el, Some(&footnotes), endnotes, false, project_data.clone()).await,
                                 },
                                 css_classes: vec![],
                                 revision_id: None,
@@ -791,7 +858,8 @@ impl ImportProcessor{
     }
 
     //TODO: maybe also copy classes and ids from the html
-    fn dom_to_html(&self, ele: html_parser::Element, footnotes: Option<&HashMap<String, String>>, endnotes: bool) -> String{
+    #[async_recursion]
+    async fn dom_to_html(&self, ele: html_parser::Element, footnotes: Option<&HashMap<String, String>>, endnotes: bool, convert_links: bool, project_data: Arc<RwLock<ProjectData>>) -> String{
         let mut html = String::new();
         for node in ele.children{
             match node{
@@ -855,6 +923,29 @@ impl ImportProcessor{
                                 }
                             }
                         }
+                        // Only convert links to citations if convert_links is true and we aren't in a footnote
+                        if convert_links && footnotes.is_some(){
+                            if let Some(href) = el.attributes.get("href"){
+                                if let Some(href) = href{
+                                    println!("Trying to get citation for link: {}", href);
+                                    if let Some(citation) = crate::import::link_converter::get_translation(href, &self.settings).await{
+                                        let key = citation.key.clone();
+
+                                        // Add citation to project
+                                        project_data.write().unwrap().bibliography.insert(citation.key.clone(), citation.clone());
+
+                                        let link_text = self.dom_to_html(el.clone(), None, endnotes, false, project_data.clone()).await;
+
+                                        if link_text == *href {
+                                            html.push_str(&format!("<citation data-key=\"{}\">C</citation>", key));
+                                        }else{
+                                            html.push_str(&format!("{}<citation data-key=\"{}\">C</citation>", link_text, key));
+                                        }
+                                        continue;
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     let mut attrs : String = String::new();
@@ -865,14 +956,13 @@ impl ImportProcessor{
                         }
                     }
                     html.push_str(&format!("<{}{}>", el.name, attrs));
-                    html.push_str(&self.dom_to_html(el.clone(), footnotes, endnotes));
+                    html.push_str(&self.dom_to_html(el.clone(), footnotes, endnotes, convert_links, project_data.clone()).await);
                     html.push_str(&format!("</{}>", el.name));
                 },
                 // Ignore comments
                 Node::Comment(_) => {}
             }
         }
-        println!("Debug: {}", html);
         html
     }
 

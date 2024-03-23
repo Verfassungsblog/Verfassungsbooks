@@ -96,6 +96,8 @@ async function wordpress_import_handler(){
         data["links"].push(link);
     }
     data["endnotes"] = (<HTMLInputElement>document.getElementById("wizard-wordpress-settings-convert-to-endnotes")).checked;
+    data["shift_headings"] = (<HTMLInputElement>document.getElementById("wizard-wordpress-settings-convert-to-endnotes")).checked;
+    data["convert_links"] = (<HTMLInputElement>document.getElementById("wizard-wordpress-settings-convert-links")).checked;
     // @ts-ignore
     data["project_id"] = globalThis.project_id;
 
