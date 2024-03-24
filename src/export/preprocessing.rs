@@ -485,7 +485,7 @@ pub fn hyphenate_text(text: String, dict: &hyphenation::Standard) -> String{
     let mut res = String::new();
     let mut word_iter = text.split_whitespace().peekable();
     while let Some(word) = word_iter.next(){
-        if word.starts_with("class=\"") || word.contains("<") || word.contains(">") || word.contains("="){
+        if word.starts_with("class=\"") || word.contains("<") || word.contains(">") || word.contains("=") || word.contains("&"){
             res.push_str(&format!("{} ", word));
             continue
         }
