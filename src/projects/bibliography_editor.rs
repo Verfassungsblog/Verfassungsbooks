@@ -167,4 +167,33 @@ pub mod api{
         return ApiResult::new_data(entry);
     }
 
+    #[put("/api/projects/<project_id>/bibliography/<key>", data="<bib_entry>")]
+    pub async fn update_bib_entry(bib_entry: Json<BibEntry>, key: &str, _session: Session, project_id: &str, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<()>>{
+        let project_id = match uuid::Uuid::parse_str(&project_id) {
+            Ok(project_id) => project_id,
+            Err(e) => {
+                eprintln!("Couldn't parse project id: {}", e);
+                return ApiResult::new_error(ApiError::BadRequest("Couldn't parse project id".to_string()));
+            },
+        };
+
+        let bib_entry = bib_entry.into_inner();
+
+        let project_storage_cpy = project_storage.clone();
+        let project = match project_storage_cpy.get_project(&project_id, &settings).await{
+            Ok(project) => project.clone(),
+            Err(_) => {
+                return ApiResult::new_error(ApiError::NotFound)
+            }
+        };
+
+        if project.read().unwrap().bibliography.get(key).is_none(){
+            return ApiResult::new_error(ApiError::NotFound)
+        }
+
+        project.write().unwrap().bibliography.remove(key);
+        project.write().unwrap().bibliography.insert(bib_entry.key.clone(), bib_entry.clone());
+        return ApiResult::new_data(());
+    }
+
 }

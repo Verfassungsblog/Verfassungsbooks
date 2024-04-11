@@ -857,7 +857,7 @@ pub struct BibEntry{
     #[bincode(with_serde)]
     pub note: Option<MyFormatString>,
     #[bincode(with_serde)]
-    pub abstract_: Option<MyFormatString>,
+    pub abstractt: Option<MyFormatString>,
     #[bincode(with_serde)]
     pub annote: Option<MyFormatString>,
     #[bincode(with_serde)]
@@ -1005,7 +1005,7 @@ impl From<&hayagriva::Entry> for BibEntry{
             archive_location,
             call_number,
             note,
-            abstract_,
+            abstractt: abstract_,
             annote,
             genre,
         }
@@ -1128,7 +1128,7 @@ impl From<BibEntry> for hayagriva::Entry{
             entry.set_note(note.into());
         }
 
-        if let Some(abstract_) = value.abstract_ {
+        if let Some(abstract_) = value.abstractt {
             entry.set_abstract_(abstract_.into());
         }
 
@@ -1172,7 +1172,7 @@ impl BibEntry{
             archive_location: None,
             call_number: None,
             note: None,
-            abstract_: None,
+            abstractt: None,
             annote: None,
             genre: None,
         }
