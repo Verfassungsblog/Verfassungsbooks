@@ -28,10 +28,6 @@ function import_btn_handler(){
 
 async function upload_files_handler(){
     let files = (<HTMLInputElement>document.getElementById("wizard-pandoc-upload-input")).files;
-    if(files.length == 0){
-        Tools.show_alert("You have to select at least one file to upload", "error");
-        return;
-    }
 
     let formData = new FormData();
     for(let i = 0; i < files.length; i++){
