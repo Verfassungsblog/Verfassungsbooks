@@ -21,6 +21,28 @@ namespace Persons {
         if(create_project_button !== null){
             create_project_button.addEventListener("click", create_project_handler);
         }
+        let delete_button = document.getElementById("delete_person_btn") as HTMLButtonElement;
+        delete_button.addEventListener("click", delete_person_handler);
+    }
+
+    // @ts-ignore
+    async function delete_person_handler(){
+        let person_id = (document.getElementById("person_id") as HTMLInputElement).value;
+        if(person_id === ""){
+            Tools.show_alert("Failed to delete person: no ID.", "danger");
+            return;
+        }
+        let confirmed = confirm("Are you sure you want to delete this person?");
+        if(confirmed){
+            try{
+                await send_delete_person(person_id);
+                Tools.show_alert("Person deleted.", "success");
+                window.location.href = "/persons/";
+            }catch (e) {
+                console.log(e);
+                Tools.show_alert("Failed to delete person.", "danger");
+            }
+        }
     }
 
     // @ts-ignore
@@ -134,6 +156,28 @@ namespace Persons {
                 }else{
                     return response_data["data"]["id"];
                 }
+            }
+        }else{
+            throw new Error(`Failed to create person.`);
+        }
+    }
+
+    async function send_delete_person(id){
+        Tools.start_loading_spinner();
+        let response = await fetch("/api/persons/"+id, {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json"
+            }
+        });
+
+        Tools.stop_loading_spinner();
+        if(response.ok){
+            let response_data = await response.json();
+            if(response_data.hasOwnProperty("error")){
+                throw new Error(`Failed to delete person: ${response_data["error"]}`);
+            }else{
+                return true;
             }
         }else{
             throw new Error(`Failed to create person.`);

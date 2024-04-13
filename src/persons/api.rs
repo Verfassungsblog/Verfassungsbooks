@@ -181,3 +181,27 @@ pub fn search_persons(_session: Session, data_storage: &State<Arc<DataStorage>>,
 
     ApiResult::new_data(result)
 }
+
+/// DELETE /api/persons/<id>
+/// Delete a person by id
+#[delete("/api/persons/<id>")]
+pub fn delete_person(_session: Session, data_storage: &State<Arc<DataStorage>>, id: String) -> Json<ApiResult<()>> {
+    let data_storage = Arc::clone(data_storage);
+    let id = match uuid::Uuid::parse_str(&id) {
+        Ok(id) => id,
+        Err(e) => {
+            eprintln!("Couldn't parse person id: {}", e);
+            return ApiResult::new_error(ApiError::BadRequest("Couldn't parse person id".to_string()));
+        },
+    };
+
+    // Remove person from data storage
+    match data_storage.data.write().unwrap().persons.remove(&id){
+        Some(_) => (),
+        None => {
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    ApiResult::new_data(())
+}

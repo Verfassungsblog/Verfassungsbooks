@@ -72,8 +72,32 @@ var Persons;
         if (create_project_button !== null) {
             create_project_button.addEventListener("click", create_project_handler);
         }
+        let delete_button = document.getElementById("delete_person_btn");
+        delete_button.addEventListener("click", delete_person_handler);
     }
     Persons.init_person_form = init_person_form;
+    // @ts-ignore
+    function delete_person_handler() {
+        return __awaiter(this, void 0, void 0, function* () {
+            let person_id = document.getElementById("person_id").value;
+            if (person_id === "") {
+                Tools.show_alert("Failed to delete person: no ID.", "danger");
+                return;
+            }
+            let confirmed = confirm("Are you sure you want to delete this person?");
+            if (confirmed) {
+                try {
+                    yield send_delete_person(person_id);
+                    Tools.show_alert("Person deleted.", "success");
+                    window.location.href = "/persons/";
+                }
+                catch (e) {
+                    console.log(e);
+                    Tools.show_alert("Failed to delete person.", "danger");
+                }
+            }
+        });
+    }
     // @ts-ignore
     function add_biography_handler() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -183,6 +207,30 @@ var Persons;
                     else {
                         return response_data["data"]["id"];
                     }
+                }
+            }
+            else {
+                throw new Error(`Failed to create person.`);
+            }
+        });
+    }
+    function send_delete_person(id) {
+        return __awaiter(this, void 0, void 0, function* () {
+            Tools.start_loading_spinner();
+            let response = yield fetch("/api/persons/" + id, {
+                method: "DELETE",
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            });
+            Tools.stop_loading_spinner();
+            if (response.ok) {
+                let response_data = yield response.json();
+                if (response_data.hasOwnProperty("error")) {
+                    throw new Error(`Failed to delete person: ${response_data["error"]}`);
+                }
+                else {
+                    return true;
                 }
             }
             else {
