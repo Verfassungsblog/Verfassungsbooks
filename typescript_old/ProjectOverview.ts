@@ -143,6 +143,20 @@ namespace Editor{
                 document.getElementById("project_metadata_search_editors").addEventListener("input", search_editors);
                 document.getElementById("project_metadata_search_editors").addEventListener("click", search_editors);
 
+                document.getElementById("project_settings_delete").addEventListener("click", function(){
+                    if(confirm("Do you really want to delete this project?")){
+                        Tools.start_loading_spinner();
+                        send_delete_project(globalThis.project_id).then(function(){
+                            Tools.stop_loading_spinner();
+                            window.location.href = "/";
+                        }, function(error){
+                            Tools.stop_loading_spinner();
+                            alert("Failed to delete project");
+                            console.log(error);
+                        });
+                    }
+                });
+
                 add_remove_author_editor_handlers();
 
                 // Add listeners to all remove keyword buttons
@@ -178,6 +192,24 @@ namespace Editor{
                 alert("Failed to load project");
                 console.log(error);
             });
+        }
+
+        // @ts-ignore
+        async function send_delete_project(project_id: string){
+            const response = await fetch(`/api/projects/${project_id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            if(response.ok){
+                let response_data = await response.json();
+                if(response_data.hasOwnProperty("error")){
+                    throw new Error(`Failed to delete project: ${response_data["error"]}`);
+                }
+            }else{
+                throw new Error(`Failed to delete project.`);
+            }
         }
 
         // @ts-ignore

@@ -50,6 +50,24 @@ impl<T> ApiResult<T>{
     }
 }
 
+/// Delete project
+/// DELETE /api/projects/<project_id>
+#[delete("/api/projects/<project_id>")]
+pub async fn delete_project(project_id: String, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<()>> {
+    let project_id = match uuid::Uuid::parse_str(&project_id) {
+        Ok(project_id) => project_id,
+        Err(e) => {
+            eprintln!("Couldn't parse project id: {}", e);
+            return ApiResult::new_error(ApiError::BadRequest("Couldn't parse project id".to_string()));
+        },
+    };
+
+    let project_storage = Arc::clone(project_storage);
+
+    project_storage.projects.write().unwrap().remove(&project_id);
+    ApiResult::new_data(())
+}
+
 #[get("/api/projects/<project_id>/metadata")]
 pub async fn get_project_metadata(project_id: String, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<Option<ProjectMetadata>>> {
     let project_id = match uuid::Uuid::parse_str(&project_id) {

@@ -16,6 +16,8 @@
             {{/each}}
         </select>
     </div>
+    <!-- Delete Button -->
+    <button class="btn btn-sm btn-danger mt-3" id="project_settings_delete">Delete Project</button>
 </div>
 <h3>Project Metadata:</h3>
 <div class="project_metadata">
