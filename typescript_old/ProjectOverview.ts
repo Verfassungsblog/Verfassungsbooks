@@ -8,10 +8,12 @@ namespace Editor{
             let project_settings = load_project_settings(globalThis.project_id);
             let build_sidebar = Sidebar.build_sidebar();
             let csl_styles = load_csl_styles();
+            let templates = send_load_templates();
+            let current_template = send_get_project_template(globalThis.project_id);
 
             Tools.start_loading_spinner();
             // @ts-ignore
-            Promise.all([project_data, project_settings, build_sidebar, csl_styles]).then(async function(values){
+            Promise.all([project_data, project_settings, build_sidebar, csl_styles, templates, current_template]).then(async function(values){
                 // @ts-ignore
                 Tools.stop_loading_spinner();
 
@@ -20,6 +22,18 @@ namespace Editor{
                 data["metadata"] = values[0].data || null;
                 // @ts-ignore
                 data["settings"] = values[1].data || null;
+                data["templates"] = values[4]["data"] || null;
+
+                let current_template = values[5]["data"];
+                console.log("Current template is: "+current_template);
+                // Loop through data["templates"] and set selected to true if the template is the current template
+                for(let template of data["templates"]){
+                    if(template["id"] === current_template){
+                        template["selected"] = true;
+                    }
+                }
+                console.log(data["templates"]);
+
                 data["csl-styles"] = [];
                 for(let rawstyle of values[3]["data"]){
                     let style = {
@@ -137,6 +151,13 @@ namespace Editor{
 
                 document.getElementById("project_settings_toc_enabled").addEventListener("change", update_settings);
                 document.getElementById("project_settings_csl_style").addEventListener("change", update_settings);
+                // @ts-ignore
+                document.getElementById("project_settings_template").addEventListener("change", async function(){
+                    let select = (<HTMLSelectElement>this);
+                    let template_id = select.options[select.selectedIndex].value;
+                    await send_set_project_template(globalThis.project_id, template_id);
+                    Tools.show_alert("Template set.", "success");
+                });
 
                 document.getElementById("project_metadata_search_authors").addEventListener("input", search_authors);
                 document.getElementById("project_metadata_search_authors").addEventListener("click", search_authors);
@@ -929,6 +950,53 @@ namespace Editor{
             });
             if(!response.ok){
                 throw new Error(`Failed to load project settings ${project_id}`);
+            }else{
+                return response.json();
+            }
+        }
+
+        // @ts-ignore
+        async function send_load_templates(): Promise<Object>{
+            const response = await fetch(`/api/templates`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            if(!response.ok){
+                throw new Error(`Failed to load templates`);
+            }else{
+                return response.json();
+            }
+        }
+
+
+        // @ts-ignore
+        async function send_get_project_template(project_id: string): Promise<Object>{
+            const response = await fetch(`/api/projects/${project_id}/template`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            if(!response.ok){
+                throw new Error(`Failed to get project template`);
+            }else{
+                return response.json();
+            }
+        }
+
+        // @ts-ignore
+        async function send_set_project_template(project_id: string, template_id: string): Promise<Object>{
+            const response = await fetch(`/api/projects/${project_id}/template`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(template_id)
+            });
+            if(!response.ok){
+                throw new Error(`Failed to set project template`);
             }else{
                 return response.json();
             }

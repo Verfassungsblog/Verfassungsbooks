@@ -1,4 +1,4 @@
-use crate::data_storage::DataStorage;
+use crate::data_storage::{DataStorage, ProjectTemplate};
 use crate::projects::{SectionMetadata, NewContentBlock, NewContentBlockEditorJSFormat};
 use crate::projects::SectionOrToc;
 use rocket::serde::json::Json;
@@ -1600,4 +1600,71 @@ pub async fn get_project_upload(project_id: String, filename: String, settings: 
 
     let file = NamedFile::open(path).await.map_err(|_| Status::NotFound)?;
     Ok(file)
+}
+
+/// Get current project template
+/// GET /api/projects/<project_id>/template
+#[get("/api/projects/<project_id>/template")]
+pub async fn get_project_template(project_id: String, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>, _session: Session) -> Json<ApiResult<uuid::Uuid>> {
+    let project_id = match uuid::Uuid::parse_str(&project_id) {
+        Ok(project_id) => project_id,
+        Err(e) => {
+            eprintln!("Couldn't parse project id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let project_storage = Arc::clone(project_storage);
+
+    let project = match project_storage.get_project(&project_id, settings).await{
+        Ok(project) => project,
+        Err(_) => {
+            eprintln!("Couldn't get project with id {}", project_id);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let project = project.read().unwrap();
+
+    ApiResult::new_data(project.template_id.clone())
+}
+
+/// Set project template
+/// PUT /api/projects/<project_id>/template
+#[put("/api/projects/<project_id>/template", data = "<template_id>")]
+pub async fn set_project_template(project_id: String, template_id: Json<uuid::Uuid>, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>, _session: Session) -> Json<ApiResult<()>> {
+    let project_id = match uuid::Uuid::parse_str(&project_id) {
+        Ok(project_id) => project_id,
+        Err(e) => {
+            eprintln!("Couldn't parse project id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let project_storage = Arc::clone(project_storage);
+
+    let project = match project_storage.get_project(&project_id, settings).await{
+        Ok(project) => project,
+        Err(_) => {
+            eprintln!("Couldn't get project with id {}", project_id);
+            return ApiResult::new_error(ApiError::NotFound);
+        },
+    };
+
+    let mut project = project.write().unwrap();
+
+    project.template_id = template_id.into_inner();
+
+    ApiResult::new_data(())
+}
+
+/// List all templates
+/// GET /api/templates
+#[get("/api/templates")]
+pub async fn list_templates(_session: Session, data_storage: &State<Arc<DataStorage>>) -> Json<ApiResult<Vec<ProjectTemplate>>> {
+    let data_storage = Arc::clone(data_storage);
+
+    let templates = data_storage.data.read().unwrap().templates.clone().iter().map(|x|x.1.read().unwrap().clone()).collect();
+
+    ApiResult::new_data(templates)
 }
