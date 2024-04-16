@@ -5,19 +5,19 @@
     <link rel="stylesheet" href="/css/app.css">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verfassungsbooks</title>
+    <title>Verfassungsbooks - Templates</title>
 </head>
 <body>
 <nav class="navbar navbar-expand-lg">
     <div class="container-fluid">
-        <a class="navbar-brand" href="#">Verfassungsbooks</a>
+        <a class="navbar-brand" href="/">Verfassungsbooks</a>
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 <li class="nav-item">
-                    <a class="nav-link active" aria-current="page" href="/">Dashboard</a>
+                    <a class="nav-link" href="/">Dashboard</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="/persons">Writers & Editors</a>
+                    <a class="nav-link active" href="/persons">Writers & Editors</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="/settings">Settings</a>
@@ -34,25 +34,20 @@
 </nav>
 
 <div class="container-fluid mt-3">
-    <div class="row mb-1">
-        <div class="col-12 d-flex align-content-center">
-            <h1 class="d-inline">Projects</h1><a href="/projects/create" class="btn d-flex align-content-center btn-outline-success align-self-center ms-2" style="flex-wrap: wrap; height: 80%;">+</a>
+    <div class="row">
+        <div class="col-12 d-flex align-content-center mb-4">
+            <div class="col-12 d-flex align-content-center">
+                <h1 class="d-inline">Templates</h1><a href="/templates/create" class="btn d-flex align-content-center btn-outline-success align-self-center ms-2" style="flex-wrap: wrap; height: 80%;">+</a>
+            </div>
         </div>
     </div>
-    <div class="project_list">
-        <div class="row project_list_row">
-            <div class="col d-flex align-content-center flex-wrap">
-                <b>Name</b>
-            </div>
-        </div>
-        {{#each projects}}
-        <div class="row project_list_row">
-            <div class="col d-flex align-content-center flex-wrap">
-                <a href="/projects/{{this.id}}">{{this.name}}</a>
-            </div>
-        </div>
-        {{/each}}
+    <div class="row">
+        Not yet supported.
     </div>
 </div>
+<script src="/js/handlebars-v4.7.8.js" type="text/javascript"></script>
+<script src="/js/precompiled_templates.js"></script>
+<script src="/js/general.js"></script>
+<script src="/js/templates.js"></script>
 </body>
 </html>

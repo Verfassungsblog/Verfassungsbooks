@@ -55,7 +55,7 @@ impl DataStorage{
         }
     }
 
-    pub async fn insert_template(&mut self, template: ProjectTemplate, settings: &Settings) -> Result<(), ()>{
+    pub async fn insert_template(&self, template: ProjectTemplate, settings: &Settings) -> Result<(), ()>{
         // Create template directory inside data if it doesn't exist
         if !Path::new(&format!("{}/templates/{}", settings.data_path, template.id)).exists(){
             if let Err(e) =  tokio::fs::create_dir_all(&format!("{}/templates/{}", settings.data_path, template.id)).await{
