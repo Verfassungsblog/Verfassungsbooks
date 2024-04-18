@@ -619,7 +619,7 @@ templates['bibliography_editor_entry'] = template({"1":function(container,depth0
         return undefined
     };
 
-  return container.escapeExpression(container.lambda(((stack1 = (depth0 != null ? lookupProperty(depth0,"issue") : depth0)) != null ? lookupProperty(stack1,"Typed") : stack1), depth0));
+  return container.escapeExpression(container.lambda(((stack1 = ((stack1 = ((stack1 = (depth0 != null ? lookupProperty(depth0,"edition") : depth0)) != null ? lookupProperty(stack1,"Typed") : stack1)) != null ? lookupProperty(stack1,"value") : stack1)) != null ? lookupProperty(stack1,"Number") : stack1), depth0));
 },"7":function(container,depth0,helpers,partials,data) {
     var stack1, lookupProperty = container.lookupProperty || function(parent, propertyName) {
         if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
@@ -628,7 +628,7 @@ templates['bibliography_editor_entry'] = template({"1":function(container,depth0
         return undefined
     };
 
-  return container.escapeExpression(container.lambda(((stack1 = (depth0 != null ? lookupProperty(depth0,"issue") : depth0)) != null ? lookupProperty(stack1,"String") : stack1), depth0));
+  return container.escapeExpression(container.lambda(((stack1 = (depth0 != null ? lookupProperty(depth0,"edition") : depth0)) != null ? lookupProperty(stack1,"String") : stack1), depth0));
 },"9":function(container,depth0,helpers,partials,data) {
     var stack1, lookupProperty = container.lookupProperty || function(parent, propertyName) {
         if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
@@ -637,7 +637,7 @@ templates['bibliography_editor_entry'] = template({"1":function(container,depth0
         return undefined
     };
 
-  return container.escapeExpression(container.lambda(((stack1 = ((stack1 = ((stack1 = (depth0 != null ? lookupProperty(depth0,"volume") : depth0)) != null ? lookupProperty(stack1,"Typed") : stack1)) != null ? lookupProperty(stack1,"value") : stack1)) != null ? lookupProperty(stack1,"Number") : stack1), depth0));
+  return container.escapeExpression(container.lambda(((stack1 = ((stack1 = ((stack1 = (depth0 != null ? lookupProperty(depth0,"page_range") : depth0)) != null ? lookupProperty(stack1,"Typed") : stack1)) != null ? lookupProperty(stack1,"value") : stack1)) != null ? lookupProperty(stack1,"Number") : stack1), depth0));
 },"11":function(container,depth0,helpers,partials,data) {
     var stack1, lookupProperty = container.lookupProperty || function(parent, propertyName) {
         if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
@@ -646,7 +646,7 @@ templates['bibliography_editor_entry'] = template({"1":function(container,depth0
         return undefined
     };
 
-  return container.escapeExpression(container.lambda(((stack1 = (depth0 != null ? lookupProperty(depth0,"volume") : depth0)) != null ? lookupProperty(stack1,"String") : stack1), depth0));
+  return container.escapeExpression(container.lambda(((stack1 = (depth0 != null ? lookupProperty(depth0,"page_range") : depth0)) != null ? lookupProperty(stack1,"String") : stack1), depth0));
 },"13":function(container,depth0,helpers,partials,data) {
     var stack1, lookupProperty = container.lookupProperty || function(parent, propertyName) {
         if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
@@ -655,7 +655,7 @@ templates['bibliography_editor_entry'] = template({"1":function(container,depth0
         return undefined
     };
 
-  return container.escapeExpression(container.lambda(((stack1 = ((stack1 = ((stack1 = (depth0 != null ? lookupProperty(depth0,"edition") : depth0)) != null ? lookupProperty(stack1,"Typed") : stack1)) != null ? lookupProperty(stack1,"value") : stack1)) != null ? lookupProperty(stack1,"Number") : stack1), depth0));
+  return container.escapeExpression(container.lambda(((stack1 = ((stack1 = ((stack1 = (depth0 != null ? lookupProperty(depth0,"runtime") : depth0)) != null ? lookupProperty(stack1,"Typed") : stack1)) != null ? lookupProperty(stack1,"value") : stack1)) != null ? lookupProperty(stack1,"Number") : stack1), depth0));
 },"15":function(container,depth0,helpers,partials,data) {
     var stack1, lookupProperty = container.lookupProperty || function(parent, propertyName) {
         if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
@@ -664,7 +664,7 @@ templates['bibliography_editor_entry'] = template({"1":function(container,depth0
         return undefined
     };
 
-  return container.escapeExpression(container.lambda(((stack1 = (depth0 != null ? lookupProperty(depth0,"edition") : depth0)) != null ? lookupProperty(stack1,"String") : stack1), depth0));
+  return container.escapeExpression(container.lambda(((stack1 = (depth0 != null ? lookupProperty(depth0,"runtime") : depth0)) != null ? lookupProperty(stack1,"String") : stack1), depth0));
 },"17":function(container,depth0,helpers,partials,data) {
     var stack1, lookupProperty = container.lookupProperty || function(parent, propertyName) {
         if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
@@ -673,7 +673,7 @@ templates['bibliography_editor_entry'] = template({"1":function(container,depth0
         return undefined
     };
 
-  return container.escapeExpression(container.lambda(((stack1 = ((stack1 = ((stack1 = (depth0 != null ? lookupProperty(depth0,"page_range") : depth0)) != null ? lookupProperty(stack1,"Typed") : stack1)) != null ? lookupProperty(stack1,"value") : stack1)) != null ? lookupProperty(stack1,"Number") : stack1), depth0));
+  return container.escapeExpression(container.lambda(((stack1 = (depth0 != null ? lookupProperty(depth0,"issue") : depth0)) != null ? lookupProperty(stack1,"Typed") : stack1), depth0));
 },"19":function(container,depth0,helpers,partials,data) {
     var stack1, lookupProperty = container.lookupProperty || function(parent, propertyName) {
         if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
@@ -682,7 +682,7 @@ templates['bibliography_editor_entry'] = template({"1":function(container,depth0
         return undefined
     };
 
-  return container.escapeExpression(container.lambda(((stack1 = (depth0 != null ? lookupProperty(depth0,"page_range") : depth0)) != null ? lookupProperty(stack1,"String") : stack1), depth0));
+  return container.escapeExpression(container.lambda(((stack1 = (depth0 != null ? lookupProperty(depth0,"issue") : depth0)) != null ? lookupProperty(stack1,"String") : stack1), depth0));
 },"21":function(container,depth0,helpers,partials,data) {
     var stack1, lookupProperty = container.lookupProperty || function(parent, propertyName) {
         if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
@@ -691,7 +691,7 @@ templates['bibliography_editor_entry'] = template({"1":function(container,depth0
         return undefined
     };
 
-  return container.escapeExpression(container.lambda(((stack1 = ((stack1 = ((stack1 = (depth0 != null ? lookupProperty(depth0,"runtime") : depth0)) != null ? lookupProperty(stack1,"Typed") : stack1)) != null ? lookupProperty(stack1,"value") : stack1)) != null ? lookupProperty(stack1,"Number") : stack1), depth0));
+  return container.escapeExpression(container.lambda(((stack1 = ((stack1 = ((stack1 = (depth0 != null ? lookupProperty(depth0,"volume") : depth0)) != null ? lookupProperty(stack1,"Typed") : stack1)) != null ? lookupProperty(stack1,"value") : stack1)) != null ? lookupProperty(stack1,"Number") : stack1), depth0));
 },"23":function(container,depth0,helpers,partials,data) {
     var stack1, lookupProperty = container.lookupProperty || function(parent, propertyName) {
         if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
@@ -700,7 +700,7 @@ templates['bibliography_editor_entry'] = template({"1":function(container,depth0
         return undefined
     };
 
-  return container.escapeExpression(container.lambda(((stack1 = (depth0 != null ? lookupProperty(depth0,"runtime") : depth0)) != null ? lookupProperty(stack1,"String") : stack1), depth0));
+  return container.escapeExpression(container.lambda(((stack1 = (depth0 != null ? lookupProperty(depth0,"volume") : depth0)) != null ? lookupProperty(stack1,"String") : stack1), depth0));
 },"compiler":[8,">= 4.3.0"],"main":function(container,depth0,helpers,partials,data) {
     var stack1, helper, alias1=depth0 != null ? depth0 : (container.nullContext || {}), alias2=container.hooks.helperMissing, alias3="function", alias4=container.escapeExpression, alias5=container.lambda, lookupProperty = container.lookupProperty || function(parent, propertyName) {
         if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
@@ -735,22 +735,16 @@ templates['bibliography_editor_entry'] = template({"1":function(container,depth0
     + alias4(alias5(((stack1 = (depth0 != null ? lookupProperty(depth0,"location") : depth0)) != null ? lookupProperty(stack1,"value") : stack1), depth0))
     + "\">\n<!-- Organization -->\n<label for=\"bibedit_entry_organization\">Organization:</label>\n<input id=\"bibedit_entry_organization\" class=\"form-control bibedit_chg_lstn\" type=\"text\" value=\""
     + alias4(alias5(((stack1 = (depth0 != null ? lookupProperty(depth0,"organization") : depth0)) != null ? lookupProperty(stack1,"value") : stack1), depth0))
-    + "\">\n<!-- Issue -->\n<label for=\"bibedit_entry_issue\">Issue:</label>\n<input id=\"bibedit_entry_issue\" class=\"form-control bibedit_chg_lstn\" type=\"text\" value=\""
-    + ((stack1 = lookupProperty(helpers,"if").call(alias1,((stack1 = (depth0 != null ? lookupProperty(depth0,"issue") : depth0)) != null ? lookupProperty(stack1,"Typed") : stack1),{"name":"if","hash":{},"fn":container.program(5, data, 0),"inverse":container.program(7, data, 0),"data":data,"loc":{"start":{"line":78,"column":89},"end":{"line":78,"column":154}}})) != null ? stack1 : "")
-    + "\">\n<!-- Volume -->\n<label for=\"bibedit_entry_volume\">Volume:</label>\n<input id=\"bibedit_entry_volume\" class=\"form-control bibedit_chg_lstn\" type=\"text\" value=\""
-    + ((stack1 = lookupProperty(helpers,"if").call(alias1,((stack1 = (depth0 != null ? lookupProperty(depth0,"volume") : depth0)) != null ? lookupProperty(stack1,"Typed") : stack1),{"name":"if","hash":{},"fn":container.program(9, data, 0),"inverse":container.program(11, data, 0),"data":data,"loc":{"start":{"line":81,"column":90},"end":{"line":81,"column":171}}})) != null ? stack1 : "")
-    + "\">\n<!-- Number of Volumes -->\n<label for=\"bibedit_entry_volume_total\">Number of Volumes:</label>\n<input id=\"bibedit_entry_volume_total\" class=\"form-control bibedit_chg_lstn\" type=\"text\" value=\""
-    + alias4(alias5(((stack1 = ((stack1 = (depth0 != null ? lookupProperty(depth0,"volume_total") : depth0)) != null ? lookupProperty(stack1,"value") : stack1)) != null ? lookupProperty(stack1,"Number") : stack1), depth0))
     + "\">\n<!-- Edition -->\n<label for=\"bibedit_entry_edition\">Edition:</label>\n<input id=\"bibedit_entry_edition\" class=\"form-control bibedit_chg_lstn\" type=\"text\" value=\""
-    + ((stack1 = lookupProperty(helpers,"if").call(alias1,((stack1 = (depth0 != null ? lookupProperty(depth0,"edition") : depth0)) != null ? lookupProperty(stack1,"Typed") : stack1),{"name":"if","hash":{},"fn":container.program(13, data, 0),"inverse":container.program(15, data, 0),"data":data,"loc":{"start":{"line":87,"column":91},"end":{"line":87,"column":175}}})) != null ? stack1 : "")
+    + ((stack1 = lookupProperty(helpers,"if").call(alias1,((stack1 = (depth0 != null ? lookupProperty(depth0,"edition") : depth0)) != null ? lookupProperty(stack1,"Typed") : stack1),{"name":"if","hash":{},"fn":container.program(5, data, 0),"inverse":container.program(7, data, 0),"data":data,"loc":{"start":{"line":78,"column":91},"end":{"line":78,"column":175}}})) != null ? stack1 : "")
     + "\">\n<!-- Page Range -->\n<label for=\"bibedit_entry_page_range\">Page Range:</label>\n<input id=\"bibedit_entry_page_range\" class=\"form-control bibedit_chg_lstn\" type=\"text\" value=\""
-    + ((stack1 = lookupProperty(helpers,"if").call(alias1,((stack1 = (depth0 != null ? lookupProperty(depth0,"page_range") : depth0)) != null ? lookupProperty(stack1,"Typed") : stack1),{"name":"if","hash":{},"fn":container.program(17, data, 0),"inverse":container.program(19, data, 0),"data":data,"loc":{"start":{"line":90,"column":94},"end":{"line":90,"column":187}}})) != null ? stack1 : "")
+    + ((stack1 = lookupProperty(helpers,"if").call(alias1,((stack1 = (depth0 != null ? lookupProperty(depth0,"page_range") : depth0)) != null ? lookupProperty(stack1,"Typed") : stack1),{"name":"if","hash":{},"fn":container.program(9, data, 0),"inverse":container.program(11, data, 0),"data":data,"loc":{"start":{"line":81,"column":94},"end":{"line":81,"column":187}}})) != null ? stack1 : "")
     + "\">\n<!-- Page Total -->\n<label for=\"bibedit_entry_page_total\">Page Total:</label>\n<input id=\"bibedit_entry_page_total\" class=\"form-control bibedit_chg_lstn\" type=\"text\" value=\""
     + alias4(alias5(((stack1 = ((stack1 = (depth0 != null ? lookupProperty(depth0,"page_total") : depth0)) != null ? lookupProperty(stack1,"value") : stack1)) != null ? lookupProperty(stack1,"Number") : stack1), depth0))
     + "\">\n<!-- Time Range -->\n<label for=\"bibedit_entry_time_range\">Time Range:</label>\n<input id=\"bibedit_entry_time_range\" class=\"form-control bibedit_chg_lstn\" type=\"text\" value=\""
     + alias4(alias5(((stack1 = (depth0 != null ? lookupProperty(depth0,"time_range") : depth0)) != null ? lookupProperty(stack1,"String") : stack1), depth0))
     + "\">\n<!-- Runtime -->\n<label for=\"bibedit_entry_runtime\">Runtime:</label>\n<input id=\"bibedit_entry_runtime\" class=\"form-control bibedit_chg_lstn\" type=\"text\" value=\""
-    + ((stack1 = lookupProperty(helpers,"if").call(alias1,((stack1 = (depth0 != null ? lookupProperty(depth0,"runtime") : depth0)) != null ? lookupProperty(stack1,"Typed") : stack1),{"name":"if","hash":{},"fn":container.program(21, data, 0),"inverse":container.program(23, data, 0),"data":data,"loc":{"start":{"line":99,"column":91},"end":{"line":99,"column":175}}})) != null ? stack1 : "")
+    + ((stack1 = lookupProperty(helpers,"if").call(alias1,((stack1 = (depth0 != null ? lookupProperty(depth0,"runtime") : depth0)) != null ? lookupProperty(stack1,"Typed") : stack1),{"name":"if","hash":{},"fn":container.program(13, data, 0),"inverse":container.program(15, data, 0),"data":data,"loc":{"start":{"line":90,"column":91},"end":{"line":90,"column":175}}})) != null ? stack1 : "")
     + "\">\n<!-- URL -->\n<label for=\"bibedit_entry_url\">URL:</label>\n<input id=\"bibedit_entry_url\" class=\"form-control bibedit_chg_lstn\" type=\"text\" value=\""
     + alias4(alias5(((stack1 = (depth0 != null ? lookupProperty(depth0,"url") : depth0)) != null ? lookupProperty(stack1,"value") : stack1), depth0))
     + "\">\n<!-- Visit Date -->\n<label for=\"bibedit_entry_visit_date\">Visit Date:</label>\n<input id=\"bibedit_entry_visit_date\" class=\"form-control bibedit_chg_lstn\" type=\"date\" value=\""
@@ -761,6 +755,14 @@ templates['bibliography_editor_entry'] = template({"1":function(container,depth0
     + alias4(alias5(((stack1 = (depth0 != null ? lookupProperty(depth0,"serial_numbers") : depth0)) != null ? lookupProperty(stack1,"issn") : stack1), depth0))
     + "\">\n<label for=\"bibedit_entry_doi\">DOI:</label>\n<input id=\"bibedit_entry_doi\" class=\"form-control bibedit_chg_lstn\" type=\"text\" value=\""
     + alias4(alias5(((stack1 = (depth0 != null ? lookupProperty(depth0,"serial_numbers") : depth0)) != null ? lookupProperty(stack1,"doi") : stack1), depth0))
-    + "\">";
+    + "\">\n<hr>\n<!-- Parent -->\n<!-- Parent Entry Type: -->\n<label for=\"bibedit_entry_parent_type\">Parent Entry Type:</label>\n<select class=\"form-select bibedit_chg_lstn\" id=\"bibedit_entry_parent_type\">\n    <option value=\"none\" title=\"No parent entry.\">None</option>\n    <option value=\"Article\" title=\"A short text, possibly of journalistic or scientific nature, appearing in some greater publication.\">Article</option>\n    <option value=\"Chapter\" title=\"A section of a greater containing work.\">Chapter</option>\n    <option value=\"Book\" title=\"Long-form work published pysically as a set of bound sheets.\">Book</option>\n    <option value=\"Entry\" title=\"A short segment of media on some subject matter. Could appear in a work of reference or a data set\">Entry</option>\n    <option value=\"Anthos\" title=\"Text published within an Anthology.\">Anthos</option>\n    <option value=\"Report\" title=\"A document compiled by authors that may be affiliated to an organization. Presents information for a specific audience or purpose.\">Report</option>\n    <option value=\"Thesis\" title=\"Scholarly work delivered to fulfill degree requirements at a higher education institution.\">Thesis</option>\n    <option value=\"Web\" title=\"Piece of content that can be found on the internet and is native to the medium, like an animation, a web app, or a form of content not found elsewhere. Do not use this entry type when referencing a textual blog article, instead use an Article with a Blog parent.\">Web</option>\n    <option value=\"Scene\" title=\"A part of a show or another type of performed media, typically all taking place in the same location.\">Scene</option>\n    <option value=\"Artwork\" title=\"A form of artistic/creative expression.\">Artwork</option>\n    <option value=\"Patent\" title=\"A technical document deposited at a government agency that describes an invention to legally limit the rights of reproduction to the inventors.\">Patent</option>\n    <option value=\"Case\" title=\"Reference to a legal case that was or is to be heard at a court of law.\">Case</option>\n    <option value=\"Newspaper\" title=\"The issue of a newspaper that was published on a given day.\">Newspaper</option>\n    <option value=\"Legislation\" title=\"Legal document or draft there of that is, is to be, or was to be enacted into binding law.\">Legislation</option>\n    <option value=\"Manuscript\" title=\"A document that is not yet published.\">Manuscript</option>\n    <option value=\"Post\" title=\"A post on a social media platform.\">Post</option>\n    <option value=\"Misc\" title=\"Items that do not match any of the other Entry type composites.\">Misc</option>\n    <option value=\"Performance\" title=\"A live performance.\">Performance</option>\n    <option value=\"Periodical\" title=\"A publication that periodically publishes issues with unique content. This includes scientific journals and news magazines.\">Periodical</option>\n    <option value=\"Proceedings\" title=\"The official published record of the events at a professional conference.\">Proceedings</option>\n    <option value=\"Blog\" title=\"Set of self-published articles on a website.\">Blog</option>\n    <option value=\"Reference\" title=\"A work of reference. This could be a manual or a dictionary.\">Reference</option>\n    <option value=\"Conference\" title=\"Professional conference. This Entry type implies that the item referenced has been an event at the conference itself. If you instead want to reference a paper published in the published proceedings of the conference, use an Article with a Proceedings parent.\">Conference</option>\n    <option value=\"Anthology\" title=\"Collection of different texts on a single topic/theme.\">Anthology</option>\n    <option value=\"Repository\" title=\"Publicly visible storage of the source code for a particular software and its modifications over time.\">Repository</option>\n    <option value=\"Thread\" title=\"Written discussion on the internet triggered by an original post. Could be on a forum, social network, or Q&A site.\">Thread</option>\n    <option value=\"Video\" title=\"Motion picture of any form, possibly with accompanying audio.\">Video</option>\n    <option value=\"Audio\" title=\"Recorded audible sound of any kind.\">Audio</option>\n    <option value=\"Exhibition\" title=\"A curated set of artworks.\">Exhibition</option>\n    <option value=\"Original\" title=\"A prior publication of the same item.\">Original</option>\n</select>\n<label for=\"bibedit_entry_parent_title\">Parent Title:</label>\n<input id=\"bibedit_entry_parent_title\" class=\"form-control bibedit_chg_lstn\" type=\"text\" value=\""
+    + alias4(alias5(((stack1 = (depth0 != null ? lookupProperty(depth0,"parent_entry") : depth0)) != null ? lookupProperty(stack1,"title") : stack1), depth0))
+    + "\">\n<!-- Issue -->\n<label for=\"bibedit_entry_issue\">Issue:</label>\n<input id=\"bibedit_entry_issue\" class=\"form-control bibedit_chg_lstn\" type=\"text\" value=\""
+    + ((stack1 = lookupProperty(helpers,"if").call(alias1,((stack1 = (depth0 != null ? lookupProperty(depth0,"issue") : depth0)) != null ? lookupProperty(stack1,"Typed") : stack1),{"name":"if","hash":{},"fn":container.program(17, data, 0),"inverse":container.program(19, data, 0),"data":data,"loc":{"start":{"line":145,"column":89},"end":{"line":145,"column":154}}})) != null ? stack1 : "")
+    + "\">\n<!-- Volume -->\n<label for=\"bibedit_entry_volume\">Volume:</label>\n<input id=\"bibedit_entry_volume\" class=\"form-control bibedit_chg_lstn\" type=\"text\" value=\""
+    + ((stack1 = lookupProperty(helpers,"if").call(alias1,((stack1 = (depth0 != null ? lookupProperty(depth0,"volume") : depth0)) != null ? lookupProperty(stack1,"Typed") : stack1),{"name":"if","hash":{},"fn":container.program(21, data, 0),"inverse":container.program(23, data, 0),"data":data,"loc":{"start":{"line":148,"column":90},"end":{"line":148,"column":171}}})) != null ? stack1 : "")
+    + "\">\n<!-- Number of Volumes -->\n<label for=\"bibedit_entry_volume_total\">Number of Volumes:</label>\n<input id=\"bibedit_entry_volume_total\" class=\"form-control bibedit_chg_lstn\" type=\"text\" value=\""
+    + alias4(alias5(((stack1 = ((stack1 = (depth0 != null ? lookupProperty(depth0,"volume_total") : depth0)) != null ? lookupProperty(stack1,"value") : stack1)) != null ? lookupProperty(stack1,"Number") : stack1), depth0))
+    + "\">\n";
 },"usePartial":true,"useData":true});
 })();

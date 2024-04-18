@@ -271,7 +271,7 @@ pub struct ProjectStorage {
 #[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
 pub struct ProjectStorageEntry{
     pub name: String,
-    pub data: Option<Arc<RwLock<ProjectData>>>,
+    pub data: Option<Arc<RwLock<ProjectDataV2>>>,
 }
 
 impl MultipleFileLocks for ProjectStorage{
@@ -404,11 +404,11 @@ impl ProjectStorage {
     /// Also calls [ProjectStorage::save_project_to_disk] to save the project to disk
     ///
     /// # Arguments
-    /// * `project` - [ProjectData] - Project to insert
+    /// * `project` - [OldProjectData] - Project to insert
     ///
     /// # Returns
     /// * `Ok(uuid::Uuid)` - Project inserted successfully - returns the generated [uuid::Uuid] of the project
-    pub async fn insert_project(&self, mut project: ProjectData, settings: &Settings) -> Result<uuid::Uuid, ()> {
+    pub async fn insert_project(&self, mut project: ProjectDataV2, settings: &Settings) -> Result<uuid::Uuid, ()> {
         let uuid = uuid::Uuid::new_v4();
 
         // Update last edited to current time, so the project doesn't get unloaded immediately
@@ -423,9 +423,9 @@ impl ProjectStorage {
     }
 
     async fn load_project_into_memory(&self, uuid: &uuid::Uuid, settings: &Settings) -> Result<(), ()> {
-
         // Try to load project file from disk
-        let path = format!("{}/projects/{}/project.bincode", settings.data_path, uuid);
+        //let path = format!("{}/projects/{}/project.bincode", settings.data_path, uuid);
+        let npath = format!("{}/projects/{}", settings.data_path, uuid);
 
         println!("Aquiring file lock for project {}.", uuid);
         match self.wait_for_file_lock(uuid, settings).await{
@@ -439,19 +439,92 @@ impl ProjectStorage {
         println!("Loading project {} into memory.", uuid);
 
         let res = rocket::tokio::task::spawn_blocking(move || {
-            let mut file = match std::fs::File::open(path) {
-                Ok(file) => file,
+            // Load a list of all files in project directory
+            match fs::read_dir(npath.clone()){
+                Ok(paths) => {
+                    let mut project_versions : Vec<(u64, String)> = vec![];
+
+                    for path in paths {
+                        match path {
+                            Ok(entry) => {
+                                let fname = entry.file_name().clone();
+                                let fname = fname.to_str().unwrap_or("");
+                                let parts: Vec<&str> = fname.split(".").collect();
+                                // First part = project
+                                // Second part = version
+                                // Third part = bincode
+
+                                if parts.len() == 3 && parts[0] == "project"{
+                                    // parse version as usize
+                                    let version = match parts[1].parse::<u64>(){
+                                        Ok(version) => version,
+                                        Err(e) => {
+                                            eprintln!("error while loading project into memory: couldn't parse version number: {}. Skipping file.", e);
+                                            continue
+                                        }
+                                    };
+
+                                    project_versions.push((version, fname.to_string()));
+                                }
+                            },
+                            Err(e) => {
+                                eprintln!("io error while loading project directory entry: {}, Skipping project.", e);
+                                return Err(())
+                            }
+                        }
+                    }
+
+                    // Sort project versions by version number
+                    project_versions.sort_by(|a, b| a.0.cmp(&b.0));
+
+                    // Load the latest version of the project
+                    if project_versions.is_empty(){
+                        eprintln!("error while loading project into memory: no project files found in project directory. Skipping project.");
+                        return Err(())
+                    }
+                    let (version, project_path) = project_versions.last().unwrap();
+                    if *version == 1 {
+                        // Load old project format
+                        let mut file = match std::fs::File::open(format!("{}/{}", npath.clone(), project_path)) {
+                            Ok(file) => file,
+                            Err(e) => {
+                                eprintln!("io error while loading project file into memory: {}", e);
+                                return Err(())
+                            },
+                        };
+                        match bincode::decode_from_std_read::<OldProjectData, _, _>(&mut file, bincode::config::standard()) {
+                            Ok(project) => return Ok(ProjectDataV2::from(project)),
+                            Err(e) => {
+                                eprintln!("bincode decode error while loading project file with version {} into memory: {}.", version, e);
+                                return Err(())
+                            },
+                        };
+                    }else if(*version == 2){
+                        // Load new project format
+                        let mut file = match std::fs::File::open(format!("{}/{}", npath.clone(), project_path)) {
+                            Ok(file) => file,
+                            Err(e) => {
+                                eprintln!("io error while loading project file into memory: {}", e);
+                                return Err(())
+                            },
+                        };
+                        let project = match bincode::decode_from_std_read(&mut file, bincode::config::standard()) {
+                            Ok(project) => project,
+                            Err(e) => {
+                                eprintln!("bincode decode error while loading project file with version {} into memory: {}.", version, e);
+                                return Err(())
+                            },
+                        };
+                        return Ok(project);
+                    }else{
+                        eprintln!("error while loading project into memory: unknown project version {}. Skipping project.", version);
+                        return Err(())
+                    }
+                },
                 Err(e) => {
-                    eprintln!("io error while loading project file into memory: {}", e);
+                    eprintln!("io error while loading project directory: {}. Check that your data_path is set correctly and we have sufficient file permissions.", e);
                     return Err(())
-                },
-            };
-            match bincode::decode_from_std_read(&mut file, bincode::config::standard()) {
-                Ok(project) => Ok(project),
-                Err(e) => {
-                    eprintln!("bincode decode error while loading project file into memory: {}", e);
-                    Err(())
-                },
+                }
             }
         }).await;
 
@@ -468,7 +541,7 @@ impl ProjectStorage {
                         println!("Loaded project, inserting into memory storage.");
                         if let Some(tproject) = self.projects.write().unwrap().get_mut(uuid){
                                 // Update last edited to current time, so the project doesn't get unloaded immediately
-                                let mut project: ProjectData = project;
+                                let mut project: ProjectDataV2 = project;
                                 project.last_interaction = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
                                 tproject.name = project.name.clone();
                                 println!("Replacing project");
@@ -496,7 +569,7 @@ impl ProjectStorage {
         }
     }
 
-    pub async fn get_project(&self, uuid: &uuid::Uuid, settings: &Settings) -> Result<Arc<RwLock<ProjectData>>, ()> {
+    pub async fn get_project(&self, uuid: &uuid::Uuid, settings: &Settings) -> Result<Arc<RwLock<ProjectDataV2>>, ()> {
         // Check if project exists
         match self.projects.read().unwrap().get(uuid) {
             Some(project) => {
@@ -551,8 +624,10 @@ impl ProjectStorage {
             }
         }
 
+        let version = "2"; //TODO: auto detect latest version
+
         // Encode project data with bincode and save to disk
-        let path = format!("{}/projects/{}/project.bincode", settings.data_path, uuid);
+        let path = format!("{}/projects/{}/project.{}.bincode", settings.data_path, uuid, version);
 
         match self.wait_for_file_lock(&uuid, settings).await{
             Ok(_) => {},
@@ -593,8 +668,14 @@ impl ProjectStorage {
     }
 }
 
+#[derive(Serialize, Deserialize)]
+pub enum ProjectData{
+    V1(OldProjectData),
+    V2(ProjectDataV2),
+}
+
 #[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
-pub struct ProjectData{
+pub struct OldProjectData {
     pub name: String,
     pub description: Option<String>,
     #[bincode(with_serde)]
@@ -604,7 +685,37 @@ pub struct ProjectData{
     pub settings: Option<ProjectSettings>,
     pub sections: Vec<SectionOrToc>,
     #[bincode(with_serde)]
-    pub bibliography: HashMap<String, BibEntry> //TODO: add prefix & suffix support
+    pub bibliography: HashMap<String, OldBibEntry> //TODO: add prefix & suffix support
+}
+
+
+#[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
+pub struct ProjectDataV2 {
+    pub name: String,
+    pub description: Option<String>,
+    #[bincode(with_serde)]
+    pub template_id: uuid::Uuid,
+    pub last_interaction: u64,
+    pub metadata: Option<ProjectMetadata>,
+    pub settings: Option<ProjectSettings>,
+    pub sections: Vec<SectionOrToc>,
+    #[bincode(with_serde)]
+    pub bibliography: HashMap<String, BibEntryV2> //TODO: add prefix & suffix support
+}
+
+impl From<OldProjectData> for ProjectDataV2{
+    fn from(value: OldProjectData) -> Self {
+        ProjectDataV2{
+            name: value.name,
+            description: value.description,
+            template_id: value.template_id,
+            last_interaction: value.last_interaction,
+            metadata: value.metadata,
+            settings: value.settings,
+            sections: value.sections,
+            bibliography: value.bibliography.iter().map(|(k, v)| (k.clone(), v.clone().into())).collect(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -806,7 +917,7 @@ impl From<MyPerson> for hayagriva::types::Person{
 /// Struct similar to [hayagriva::Entry], but without special serde annotations, since Bincode doesn't support these
 /// For convenience, the struct implements [From] and [Into] for [hayagriva::Entry] and reverse
 #[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
-pub struct BibEntry{
+pub struct OldBibEntry {
     pub key: String,
     #[bincode(with_serde)]
     pub entry_type: EntryType,
@@ -862,9 +973,110 @@ pub struct BibEntry{
     pub annote: Option<MyFormatString>,
     #[bincode(with_serde)]
     pub genre: Option<MyFormatString>,
+    //#[bincode(with_serde)]
+    //pub parents: Option<Vec<BibEntry>>,
 }
 
-impl From<&hayagriva::Entry> for BibEntry{
+/// Struct similar to [hayagriva::Entry], but without special serde annotations, since Bincode doesn't support these
+/// For convenience, the struct implements [From] and [Into] for [hayagriva::Entry] and reverse
+#[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
+pub struct BibEntryV2 {
+    pub key: String,
+    #[bincode(with_serde)]
+    pub entry_type: EntryType,
+    #[bincode(with_serde)]
+    pub title: Option<MyFormatString>,
+    #[bincode(with_serde)]
+    pub authors: Vec<MyPerson>,
+    #[bincode(with_serde)]
+    pub date: Option<MyDate>,
+    #[bincode(with_serde)]
+    pub editors: Vec<MyPerson>,
+    #[bincode(with_serde)]
+    pub affiliated: Vec<MyPersonsWithRoles>,
+    #[bincode(with_serde)]
+    pub publisher: Option<MyFormatString>,
+    #[bincode(with_serde)]
+    pub location: Option<MyFormatString>,
+    #[bincode(with_serde)]
+    pub organization: Option<MyFormatString>,
+    #[bincode(with_serde)]
+    pub issue: Option<MyMaybeTyped<MyNumeric>>,
+    #[bincode(with_serde)]
+    pub volume: Option<MyMaybeTyped<MyNumeric>>,
+    #[bincode(with_serde)]
+    pub volume_total: Option<MyNumeric>,
+    #[bincode(with_serde)]
+    pub edition: Option<MyMaybeTyped<MyNumeric>>,
+    #[bincode(with_serde)]
+    pub page_range: Option<MyMaybeTyped<MyNumeric>>,
+    #[bincode(with_serde)]
+    pub page_total: Option<MyNumeric>,
+    #[bincode(with_serde)]
+    pub time_range: Option<MyMaybeTyped<MyDurationRange>>,
+    #[bincode(with_serde)]
+    pub runtime: Option<MyMaybeTyped<Duration>>,
+    #[bincode(with_serde)]
+    pub url: Option<MyQualifiedUrl>,
+    #[bincode(with_serde)]
+    pub serial_numbers: Option<BTreeMap<String, String>>,
+    #[bincode(with_serde)]
+    pub language: Option<String>,
+    #[bincode(with_serde)]
+    pub archive: Option<MyFormatString>,
+    #[bincode(with_serde)]
+    pub archive_location: Option<MyFormatString>,
+    #[bincode(with_serde)]
+    pub call_number: Option<MyFormatString>,
+    #[bincode(with_serde)]
+    pub note: Option<MyFormatString>,
+    #[bincode(with_serde)]
+    pub abstractt: Option<MyFormatString>,
+    #[bincode(with_serde)]
+    pub annote: Option<MyFormatString>,
+    #[bincode(with_serde)]
+    pub genre: Option<MyFormatString>,
+    #[bincode(with_serde)]
+    pub parents: Vec<BibEntryV2>,
+}
+
+impl From<OldBibEntry> for BibEntryV2{
+    fn from(value: OldBibEntry) -> Self{
+        BibEntryV2{
+            key: value.key,
+            entry_type: value.entry_type,
+            title: value.title,
+            authors: value.authors,
+            date: value.date,
+            editors: value.editors,
+            affiliated: value.affiliated,
+            publisher: value.publisher,
+            location: value.location,
+            organization: value.organization,
+            issue: value.issue,
+            volume: value.volume,
+            volume_total: value.volume_total,
+            edition: value.edition,
+            page_range: value.page_range,
+            page_total: value.page_total,
+            time_range: value.time_range,
+            runtime: value.runtime,
+            url: value.url,
+            serial_numbers: value.serial_numbers,
+            language: value.language,
+            archive: value.archive,
+            archive_location: value.archive_location,
+            call_number: value.call_number,
+            note: value.note,
+            abstractt: value.abstractt,
+            annote: value.annote,
+            genre: value.genre,
+            parents: vec![],
+        }
+    }
+}
+
+impl From<&hayagriva::Entry> for BibEntryV2 {
     fn from(value: &hayagriva::Entry) -> Self {
         let title = match value.title(){
             Some(title) => Some(title.clone().into()),
@@ -979,7 +1191,13 @@ impl From<&hayagriva::Entry> for BibEntry{
             Some(runtime) => Some(runtime.clone().into()),
             None => None,
         };
-        BibEntry{
+
+        let parents_arr = value.parents();
+        let mut parents = vec![];
+        if parents_arr.len() > 0{
+            parents = parents_arr.iter().map(|x| (&<hayagriva::Entry as Clone>::clone(&(*x))).into()).collect();
+        }
+        BibEntryV2 {
             key: value.key().to_string(),
             entry_type: value.entry_type().clone(),
             title,
@@ -1008,12 +1226,13 @@ impl From<&hayagriva::Entry> for BibEntry{
             abstractt: abstract_,
             annote,
             genre,
+            parents,
         }
     }
 }
 
-impl From<BibEntry> for hayagriva::Entry{
-    fn from(value: BibEntry) -> Self {
+impl From<BibEntryV2> for hayagriva::Entry{
+    fn from(value: BibEntryV2) -> Self {
         let mut entry = hayagriva::Entry::new(&value.key, value.entry_type);
 
         if let Some(title) = value.title{
@@ -1140,13 +1359,17 @@ impl From<BibEntry> for hayagriva::Entry{
             entry.set_genre(genre.into());
         }
 
+        if value.parents.len() > 0 {
+            entry.set_parents(value.parents.iter().map(|x| <BibEntryV2 as Clone>::clone(&(*(&<BibEntryV2 as Clone>::clone(&(*x))))).into()).collect());
+        }
+
         entry
     }
 }
 
-impl BibEntry{
-    pub fn new(key: String, entry_type: EntryType) -> BibEntry {
-        BibEntry{
+impl BibEntryV2 {
+    pub fn new(key: String, entry_type: EntryType) -> BibEntryV2 {
+        BibEntryV2 {
             key,
             entry_type,
             title: None,
@@ -1175,11 +1398,12 @@ impl BibEntry{
             abstractt: None,
             annote: None,
             genre: None,
+            parents: vec![],
         }
     }
 }
 
-impl ProjectData{
+impl ProjectDataV2 {
     // TODO migrate to using path instead of the id and searching for it
     pub fn remove_section(&mut self, section_to_remove_id: &uuid::Uuid) -> Option<Section> {
         let pos = self.sections.iter().position(|section| match section {
@@ -1244,7 +1468,7 @@ impl ProjectData{
 }
 
 pub fn get_section_by_path_mut<'a>(
-    project: &'a mut RwLockWriteGuard<ProjectData>,
+    project: &'a mut RwLockWriteGuard<ProjectDataV2>,
     path: &Vec<uuid::Uuid>
 ) -> Result<&'a mut Section, ApiError> {
 
@@ -1294,7 +1518,7 @@ pub fn get_section_by_path_mut<'a>(
     Ok(current_section)
 }
 
-pub fn get_section_by_path<'a>(project: &'a RwLockReadGuard<ProjectData>, path: &Vec<uuid::Uuid>) -> Result<&'a Section, ApiError>{
+pub fn get_section_by_path<'a>(project: &'a RwLockReadGuard<ProjectDataV2>, path: &Vec<uuid::Uuid>) -> Result<&'a Section, ApiError>{
     let mut first_section : Option<&Section> = None;
 
     // Find first section
@@ -1643,7 +1867,7 @@ mod tests {
     #[rocket::tokio::test]
     async fn test_save_project_to_disk() {
         setup_test_environment();
-        let test_project = ProjectData {
+        let test_project = OldProjectData {
             name: "Test Project".to_string(),
             description: None,
             template_id: Default::default(),

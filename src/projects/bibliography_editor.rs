@@ -39,7 +39,7 @@ pub mod api{
     use rocket::serde::json::Json;
     use rocket::State;
     use serde::{Deserialize, Serialize};
-    use crate::data_storage::{BibEntry, ProjectData, ProjectStorage};
+    use crate::data_storage::{BibEntryV2, OldBibEntry, OldProjectData, ProjectStorage};
     use crate::projects::api::{ApiError, ApiResult};
     use crate::session::session_guard::Session;
     use crate::settings::Settings;
@@ -76,7 +76,7 @@ pub mod api{
 
     /// Get a bibliography entry by its key
     #[get("/api/projects/<project_id>/bibliography/<entry_key>")]
-    pub async fn get_bib_entry(_session: Session, project_id: String, entry_key: String, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<BibEntry>>{
+    pub async fn get_bib_entry(_session: Session, project_id: String, entry_key: String, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<BibEntryV2>>{
         let project_id = match uuid::Uuid::parse_str(&project_id) {
             Ok(project_id) => project_id,
             Err(e) => {
@@ -105,7 +105,7 @@ pub mod api{
 
     /// Search for bibliography entries by their key or title
     #[get("/api/projects/<project_id>/bibliography/search?<query>")]
-    pub async fn search_bib_entry(_session: Session, project_id: String, query: String, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<Vec<BibEntry>>>{
+    pub async fn search_bib_entry(_session: Session, project_id: String, query: String, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<Vec<BibEntryV2>>>{
         let project_id = match uuid::Uuid::parse_str(&project_id) {
             Ok(project_id) => project_id,
             Err(e) => {
@@ -139,7 +139,7 @@ pub mod api{
 
 
     #[post("/api/projects/<project_id>/bibliography", data="<new_bib_entry>")]
-    pub async fn add_bib_entry(new_bib_entry: Json<NewBibEntry>, _session: Session, project_id: String, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<BibEntry>>{
+    pub async fn add_bib_entry(new_bib_entry: Json<NewBibEntry>, _session: Session, project_id: String, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<BibEntryV2>>{
         let project_id = match uuid::Uuid::parse_str(&project_id) {
             Ok(project_id) => project_id,
             Err(e) => {
@@ -149,7 +149,7 @@ pub mod api{
         };
 
         let new_bib_entry = new_bib_entry.into_inner();
-        let entry = BibEntry::new(new_bib_entry.key.clone(), new_bib_entry.entry_type);
+        let entry = BibEntryV2::new(new_bib_entry.key.clone(), new_bib_entry.entry_type);
 
         let project_storage_cpy = project_storage.clone();
         let project = match project_storage_cpy.get_project(&project_id, &settings).await{
@@ -168,7 +168,7 @@ pub mod api{
     }
 
     #[put("/api/projects/<project_id>/bibliography/<key>", data="<bib_entry>")]
-    pub async fn update_bib_entry(bib_entry: Json<BibEntry>, key: &str, _session: Session, project_id: &str, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<()>>{
+    pub async fn update_bib_entry(bib_entry: Json<BibEntryV2>, key: &str, _session: Session, project_id: &str, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<()>>{
         let project_id = match uuid::Uuid::parse_str(&project_id) {
             Ok(project_id) => project_id,
             Err(e) => {

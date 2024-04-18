@@ -1,9 +1,9 @@
-use crate::data_storage::BibEntry;
+use crate::data_storage::BibEntryV2;
 use crate::settings::Settings;
 
 /// Module to generate a Citation from a Link.
 
-pub async fn get_translation(link: &str, settings: &Settings) -> Option<BibEntry>{
+pub async fn get_translation(link: &str, settings: &Settings) -> Option<BibEntryV2>{
     let translation = send_translation_request(link, settings).await;
     match translation{
         Some(translation) => send_export_translation_request(translation, settings).await,
@@ -38,7 +38,7 @@ async fn send_translation_request(link: &str, settings: &Settings) -> Option<ser
     }
 }
 
-async fn send_export_translation_request(entry: serde_json::Value, settings: &Settings) -> Option<BibEntry>{
+async fn send_export_translation_request(entry: serde_json::Value, settings: &Settings) -> Option<BibEntryV2>{
     let target = format!("{}/export?format=bibtex", settings.zotero_translation_server);
 
     let client = match reqwest::ClientBuilder::new().timeout(std::time::Duration::from_secs(2)).build(){

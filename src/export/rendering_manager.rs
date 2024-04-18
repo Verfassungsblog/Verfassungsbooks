@@ -4,7 +4,7 @@ use std::path::Path;
 use std::sync::{Arc, RwLock};
 use std::sync::atomic::AtomicU64;
 use serde::Serialize;
-use crate::data_storage::{DataStorage, ProjectData};
+use crate::data_storage::{DataStorage, ProjectDataV2};
 use crate::export::preprocessing::{prepare_project, render_project};
 use crate::settings::Settings;
 use crate::utils::csl::CslData;
@@ -24,7 +24,7 @@ pub struct RenderingRequest{
     pub rendering_id: uuid::Uuid,
     pub status: RenderingStatus,
     pub project_id: uuid::Uuid,
-    pub project_data: Option<ProjectData>,
+    pub project_data: Option<ProjectDataV2>,
 }
 
 pub struct RenderingManager{
@@ -140,7 +140,7 @@ impl RenderingManager{
     fn render(rendering_manager: Arc<RenderingManager>, request_id: uuid::Uuid) -> Result<(), RenderingError>{
         let mut project_id = uuid::Uuid::default();
 
-        let project_data: ProjectData = { // Introduction of a new scope to drop the lock on the request
+        let project_data: ProjectDataV2 = { // Introduction of a new scope to drop the lock on the request
             let mut storage = rendering_manager.requests_archive.write().unwrap();
             let mut rendering_request = storage.get_mut(&request_id).unwrap().write().unwrap();
             rendering_request.status = RenderingStatus::Preparing;
@@ -185,7 +185,7 @@ impl RenderingManager{
         }
     }
 
-    pub fn add_rendering_request(&self, project_data: ProjectData, project_id: uuid::Uuid) -> uuid::Uuid{
+    pub fn add_rendering_request(&self, project_data: ProjectDataV2, project_id: uuid::Uuid) -> uuid::Uuid{
         let rendering_id = uuid::Uuid::new_v4();
         let rendering_request = RenderingRequest{
             rendering_id,

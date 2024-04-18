@@ -13,7 +13,7 @@ use qrcode::QrCode;
 use base64::prelude::*;
 use hayagriva::{BibliographyDriver, BibliographyRequest, BufWriteFormat, CitationItem, CitationRequest};
 use hayagriva::citationberg::{IndependentStyle, LocaleCode};
-use crate::data_storage::{BibEntry, DataStorage, ProjectData};
+use crate::data_storage::{OldBibEntry, DataStorage, ProjectDataV2};
 use crate::export::{PreparedContentBlock, PreparedEndnote, PreparedLanguage, PreparedLicense, PreparedMetadata, PreparedProject, PreparedSection, PreparedSectionMetadata};
 use crate::export::rendering_manager::RenderingError;
 use crate::projects::{BlockData, Language, NewContentBlock, ProjectSettings, Section, SectionOrToc};
@@ -118,7 +118,7 @@ fn handlebars_qrcode_helper(h: &Helper, _: &Handlebars, _: &Context, rc: &mut Re
     Ok(())
 }
 
-pub fn prepare_project(project_data: ProjectData, data_storage: Arc<DataStorage>, csl_data: Arc<CslData>) -> Result<PreparedProject, RenderingError>{
+pub fn prepare_project(project_data: ProjectDataV2, data_storage: Arc<DataStorage>, csl_data: Arc<CslData>) -> Result<PreparedProject, RenderingError>{
     let citation_bib = render_citations(&project_data, csl_data);
 
     let metadata = match project_data.metadata{
@@ -415,7 +415,7 @@ pub fn render_text(text: String, endnote_storage: &mut Vec<String>, dict: &Stand
     hyphenate_text(res3.to_string(), dict)
 }
 
-pub fn render_citations(project: &ProjectData, csl_data: Arc<CslData>) -> HashMap<String, String>{
+pub fn render_citations(project: &ProjectDataV2, csl_data: Arc<CslData>) -> HashMap<String, String>{
     //TODO: remove unused citation entrys to avoid bibliography entries with no citations
     let mut driver: BibliographyDriver<hayagriva::Entry> = BibliographyDriver::new();
     let mut res = HashMap::new();

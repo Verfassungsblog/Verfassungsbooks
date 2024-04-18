@@ -246,6 +246,27 @@ async function save_changed_entry(){
         new_data["volume_total"] = null;
     }
 
+    let parent_type = (<HTMLSelectElement>document.getElementById("bibedit_entry_parent_type")).value || null;
+    let parent_title = (<HTMLInputElement>document.getElementById("bibedit_entry_parent_title")).value || null;
+    if(parent_type && parent_title && parent_type != "none"){
+        console.log("Parent type: "+parent_type);
+        let parent_key = window.crypto.randomUUID();
+        new_data["parents"] = [{
+            "key": parent_key,
+            "entry_type": parent_type,
+            "title": {
+                "short": null,
+                "value": parent_title
+            },
+            "authors": [],
+            "editors": [],
+            "affiliated": [],
+            "parents": []
+        }];
+    }else{
+        new_data["parents"] = [];
+    }
+
     console.log(new_data);
 
     try {
@@ -300,10 +321,22 @@ async function load_bibliography_entry(e: Event){
             data.data.date = date;
         }
 
+        if(data.data.parents.length > 0){
+            data.data["parent_entry"] = {};
+            data.data["parent_entry"]["key"] = data.data.parents[0].key;
+            data.data["parent_entry"]["title"] = data.data.parents[0].title.value;
+            data.data["parent_entry"]["entry_type"] = data.data.parents[0].entry_type;
+        }
+
         // @ts-ignore
         document.getElementsByClassName("editor-details")[0].innerHTML = Handlebars.templates.bibliography_editor_entry(data.data);
         let select = document.getElementById("bibedit_entry_type") as HTMLSelectElement;
         select.value = data.data.entry_type[0].toUpperCase() + data.data.entry_type.slice(1);
+
+        let parent_select = document.getElementById("bibedit_entry_parent_type") as HTMLSelectElement;
+        if(data.data["parent_entry"] && data.data["parent_entry"]["entry_type"]) {
+            parent_select.value = data.data["parent_entry"]["entry_type"][0].toUpperCase()+data.data["parent_entry"]["entry_type"].slice(1);
+        }
 
         // Add change listeners:
         // @ts-ignore
