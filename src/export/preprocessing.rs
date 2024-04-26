@@ -362,31 +362,8 @@ pub fn render_content_block(block: NewContentBlock, endnote_storage: &mut Vec<(u
 
 pub fn render_text(text: String, endnote_storage: &mut Vec<(uuid::Uuid, String)>, dict: &Standard, citation_bib: &HashMap<String, String>) -> String{
     let re: Regex = Regex::new(r#"<span(?:[^>]*?\bnote-type="([^"]+)")?(?:[^>]*?\bnote-content="([^"]+)")?[^>]*>.*?</span>"#).unwrap(); //TODO: DO NOT RECOMPILE REGEX, it's bad for performance
-    let re3 = Regex::new(r#"<citation data-key="([^"]*)">C</citation>"#).unwrap();
 
-    // First Step: Convert Citations to Endnotes
-    let res = re3.replace_all(&text, |caps: &regex::Captures| {
-        let key = match caps.get(1){
-            Some(key) => key.as_str(),
-            None => return String::new()
-        };
-
-        // TODO: add setting if citations should be rendered as endnotes, in text or as footnotes
-        match citation_bib.get(key){
-            Some(citation) => {
-                format!("<span note-type=\"endnote\" note-content=\"{}\">C</span>", citation.clone())
-            },
-            None => {
-                eprintln!("Citation with key {} not found", key);
-                String::from("!!INVALID CITATION!!")
-            }
-        }
-    });
-
-    // Second Step: Convert Footnotes and Endnotes to HTML
-    let binding = res.to_string();
-
-    let res = re.replace_all(&binding, |caps: &regex::Captures| {
+    let res = re.replace_all(&text, |caps: &regex::Captures| {
         let note_type = match caps.get(1){
             Some(note_type) => note_type.as_str(),
             None => return String::new()
@@ -408,7 +385,6 @@ pub fn render_text(text: String, endnote_storage: &mut Vec<(uuid::Uuid, String)>
         }
     });
 
-    // Third Step: Convert Custom Styles to HTML
     let re2 = Regex::new(r#"<customstyle(?:[^>]*?\binline-style="([^"]*?)")?(?:[^>]*?\bclasses="([^"]*?)")?[^>]*>(.*?)</customstyle>"#).unwrap();
     let binding = res.to_string();
     let res2 = re2.replace_all(&binding, |caps: &regex::Captures| {
@@ -418,8 +394,28 @@ pub fn render_text(text: String, endnote_storage: &mut Vec<(uuid::Uuid, String)>
         format!(r#"<span class="{}" style="{}">{}</span>"#, classes, inline_style, content)
     });
 
-    // Fourth Step: Hyphenate Text
-    hyphenate_text(res2.to_string(), dict)
+    let re3 = Regex::new(r#"<citation data-key="([^"]*)">C</citation>"#).unwrap();
+    let binding = res2.to_string();
+    let res3 = re3.replace_all(&binding, |caps: &regex::Captures| {
+        let key = match caps.get(1){
+            Some(key) => key.as_str(),
+            None => return String::new()
+        };
+
+        // TODO: add setting if citations should be rendered as endnotes, in text or as footnotes
+        match citation_bib.get(key){
+            Some(citation) => {
+                let uuid = uuid::Uuid::new_v4();
+                endnote_storage.push((uuid, citation.clone()));
+                format!("<sup class=\"endnote\"><a href=\"#note-{}\">{}</a></sup>", uuid, endnote_storage.len())
+            },
+            None => {
+                eprintln!("Citation with key {} not found", key);
+                String::from("!!INVALID CITATION!!")
+            }
+        }
+    });
+    hyphenate_text(res3.to_string(), dict)
 }
 
 pub fn render_citations(project: &ProjectDataV2, csl_data: Arc<CslData>) -> HashMap<String, String>{
