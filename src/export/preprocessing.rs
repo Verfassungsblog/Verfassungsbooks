@@ -304,7 +304,7 @@ pub fn render_section(section: Section, data_storage: Arc<DataStorage>, citation
     let mut endnotes = vec![];
     for i in 0..endnote_storage.len(){
         let end = endnote_storage.get(i).unwrap();
-        endnotes.push(PreparedEndnote{ num: i+1, id: end.0, content: end.1.clone() });
+        endnotes.push(PreparedEndnote{ num: i+1, id: end.0, content: unescape_html(&end.1.clone()) });
     }
 
     PreparedSection{
@@ -360,10 +360,42 @@ pub fn render_content_block(block: NewContentBlock, endnote_storage: &mut Vec<(u
     }
 }
 
+fn escape_html(text: &str) -> String{
+    text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")
+}
+fn unescape_html(text: &str) -> String{
+    text.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"")
+}
+
 pub fn render_text(text: String, endnote_storage: &mut Vec<(uuid::Uuid, String)>, dict: &Standard, citation_bib: &HashMap<String, String>) -> String{
     let re: Regex = Regex::new(r#"<span(?:[^>]*?\bnote-type="([^"]+)")?(?:[^>]*?\bnote-content="([^"]+)")?[^>]*>.*?</span>"#).unwrap(); //TODO: DO NOT RECOMPILE REGEX, it's bad for performance
+    let re3 = Regex::new(r#"<citation data-key="([^"]*)">C</citation>"#).unwrap();
 
-    let res = re.replace_all(&text, |caps: &regex::Captures| {
+    // First Step: Convert Citations to Endnotes
+    let res = re3.replace_all(&text, |caps: &regex::Captures| {
+        let key = match caps.get(1){
+            Some(key) => key.as_str(),
+            None => return String::new()
+        };
+
+        // TODO: add setting if citations should be rendered as endnotes, in text or as footnotes
+        match citation_bib.get(key){
+            Some(citation) => {
+                let test = format!("<span note-type=\"endnote\" note-content=\"{}\"></span>", escape_html(citation));
+                println!("Citation got converted to: {}", test);
+                test
+            },
+            None => {
+                eprintln!("Citation with key {} not found", key);
+                String::from("!!INVALID CITATION!!")
+            }
+        }
+    });
+
+    // Second Step: Convert Footnotes and Endnotes to HTML
+    let binding = res.to_string();
+
+    let res = re.replace_all(&binding, |caps: &regex::Captures| {
         let note_type = match caps.get(1){
             Some(note_type) => note_type.as_str(),
             None => return String::new()
@@ -375,7 +407,7 @@ pub fn render_text(text: String, endnote_storage: &mut Vec<(uuid::Uuid, String)>
 
         if note_type == "endnote" {
             let uuid = uuid::Uuid::new_v4();
-            endnote_storage.push((uuid, note_content.to_string()));
+            endnote_storage.push((uuid, escape_html(note_content)));
             return format!("<sup class=\"endnote\"><a href=\"#note-{}\">{}</a></sup>", uuid, endnote_storage.len())
         }else if note_type == "footnote" {
             let uuid = uuid::Uuid::new_v4();
@@ -393,8 +425,6 @@ pub fn render_text(text: String, endnote_storage: &mut Vec<(uuid::Uuid, String)>
         let content = caps.get(3).map_or("", |m| m.as_str());
         format!(r#"<span class="{}" style="{}">{}</span>"#, classes, inline_style, content)
     });
-
-    let re3 = Regex::new(r#"<citation data-key="([^"]*)">C</citation>"#).unwrap();
     let binding = res2.to_string();
     let res3 = re3.replace_all(&binding, |caps: &regex::Captures| {
         let key = match caps.get(1){
