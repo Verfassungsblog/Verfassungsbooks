@@ -102,6 +102,7 @@ pub struct PreparedSection{
 #[derive(Serialize, Deserialize)]
 pub struct PreparedEndnote{
     pub num: usize,
+    pub id: uuid::Uuid,
     pub content: String,
 }
 

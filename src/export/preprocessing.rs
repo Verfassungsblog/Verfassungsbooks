@@ -290,7 +290,7 @@ pub fn render_section(section: Section, data_storage: Arc<DataStorage>, citation
     let mut content = vec![];
 
     // Store all endnote contents for this section. They will be rendered at the end of the section based on their order in the storage
-    let mut endnote_storage: Vec<String> = vec![];
+    let mut endnote_storage: Vec<(uuid::Uuid, String)> = vec![];
 
     for content_block in section.children{
         content.push(render_content_block(content_block, &mut endnote_storage, &dict, &citation_bib));
@@ -303,7 +303,8 @@ pub fn render_section(section: Section, data_storage: Arc<DataStorage>, citation
 
     let mut endnotes = vec![];
     for i in 0..endnote_storage.len(){
-        endnotes.push(PreparedEndnote{ num: i+1, content: endnote_storage.get(i).unwrap().clone() });
+        let end = endnote_storage.get(i).unwrap();
+        endnotes.push(PreparedEndnote{ num: i+1, id: end.0, content: end.1.clone() });
     }
 
     PreparedSection{
@@ -316,7 +317,7 @@ pub fn render_section(section: Section, data_storage: Arc<DataStorage>, citation
     }
 }
 
-pub fn render_content_block(block: NewContentBlock, endnote_storage: &mut Vec<String>, dict: &Standard, citation_bib: &HashMap<String, String>) -> PreparedContentBlock{
+pub fn render_content_block(block: NewContentBlock, endnote_storage: &mut Vec<(uuid::Uuid, String)>, dict: &Standard, citation_bib: &HashMap<String, String>) -> PreparedContentBlock{
     let css_classes_raw = block.css_classes.join(" ");
     let css_classes = if block.css_classes.len() > 0{
         format!(" class='{}'", block.css_classes.join(" "))
@@ -359,7 +360,7 @@ pub fn render_content_block(block: NewContentBlock, endnote_storage: &mut Vec<St
     }
 }
 
-pub fn render_text(text: String, endnote_storage: &mut Vec<String>, dict: &Standard, citation_bib: &HashMap<String, String>) -> String{
+pub fn render_text(text: String, endnote_storage: &mut Vec<(uuid::Uuid, String)>, dict: &Standard, citation_bib: &HashMap<String, String>) -> String{
     let re: Regex = Regex::new(r#"<span(?:[^>]*?\bnote-type="([^"]+)")?(?:[^>]*?\bnote-content="([^"]+)")?[^>]*>.*?</span>"#).unwrap(); //TODO: DO NOT RECOMPILE REGEX, it's bad for performance
 
     let res = re.replace_all(&text, |caps: &regex::Captures| {
@@ -373,8 +374,9 @@ pub fn render_text(text: String, endnote_storage: &mut Vec<String>, dict: &Stand
         };
 
         if note_type == "endnote" {
-            endnote_storage.push(note_content.to_string());
-            return format!("<sup class=\"endnote\"><a href=\"#note-{}\">{}</a></sup>", endnote_storage.len(), endnote_storage.len())
+            let uuid = uuid::Uuid::new_v4();
+            endnote_storage.push((uuid, note_content.to_string()));
+            return format!("<sup class=\"endnote\"><a href=\"#note-{}\">{}</a></sup>", uuid, endnote_storage.len())
         }else if note_type == "footnote" {
             let uuid = uuid::Uuid::new_v4();
             return format!("<span class=\"footnote\" id=\"footnote-{}\"><a class=\"footnote-marker\" href=\"#footnote-call-{}\"></a>{}</span><a class=\"footnote-call\" href=\"#footnote-{}\" id=\"footnote-call-{}\"></a>", uuid, uuid,  note_content, uuid, uuid)
@@ -403,8 +405,9 @@ pub fn render_text(text: String, endnote_storage: &mut Vec<String>, dict: &Stand
         // TODO: add setting if citations should be rendered as endnotes, in text or as footnotes
         match citation_bib.get(key){
             Some(citation) => {
-                endnote_storage.push(citation.clone());
-                format!("<sup class=\"endnote\"><a href=\"#note-{}\">{}</a></sup>", endnote_storage.len(), endnote_storage.len())
+                let uuid = uuid::Uuid::new_v4();
+                endnote_storage.push((uuid, citation.clone()));
+                format!("<sup class=\"endnote\"><a href=\"#note-{}\">{}</a></sup>", uuid, endnote_storage.len())
             },
             None => {
                 eprintln!("Citation with key {} not found", key);
