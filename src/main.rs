@@ -49,7 +49,7 @@ async fn rocket() -> _ {
         std::fs::create_dir_all(format!("{}/projects", settings.data_path)).unwrap(); //Intentionally panic if directory creation fails
         //Create empty DataStorage
         println!("Creating empty data storage...");
-        let mut data_storage = data_storage::DataStorage::new();
+        let data_storage = data_storage::DataStorage::new();
         //Create new admin user
         let salt = argon2::password_hash::SaltString::generate(&mut OsRng);
         const PASSWORD_CHARACTERS: [char; 92] = [

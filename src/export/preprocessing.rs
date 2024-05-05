@@ -12,11 +12,11 @@ use rocket::form::validate::Contains;
 use qrcode::QrCode;
 use base64::prelude::*;
 use hayagriva::{BibliographyDriver, BibliographyRequest, BufWriteFormat, CitationItem, CitationRequest};
-use hayagriva::citationberg::{IndependentStyle, LocaleCode};
-use crate::data_storage::{OldBibEntry, DataStorage, ProjectDataV2};
+use hayagriva::citationberg::{LocaleCode};
+use crate::data_storage::{DataStorage, ProjectDataV2};
 use crate::export::{PreparedContentBlock, PreparedEndnote, PreparedLanguage, PreparedLicense, PreparedMetadata, PreparedProject, PreparedSection, PreparedSectionMetadata};
 use crate::export::rendering_manager::RenderingError;
-use crate::projects::{BlockData, Language, NewContentBlock, ProjectSettings, Section, SectionOrToc};
+use crate::projects::{BlockData, Language, NewContentBlock, Section, SectionOrToc};
 use crate::settings::Settings;
 use crate::utils::csl::CslData;
 
@@ -89,7 +89,7 @@ pub fn render_project(prepared_project: PreparedProject, project_id: uuid::Uuid,
     }
 }
 
-fn handlebars_qrcode_helper(h: &Helper, _: &Handlebars, _: &Context, rc: &mut RenderContext, out: &mut dyn Output) -> HelperResult{
+fn handlebars_qrcode_helper(h: &Helper, _: &Handlebars, _: &Context, _rc: &mut RenderContext, out: &mut dyn Output) -> HelperResult{
     let param = h.param(0).ok_or(RenderErrorReason::ParamNotFoundForIndex("qrcode", 0))?;
 
     let val : String = param.value().render();
@@ -348,7 +348,7 @@ pub fn render_content_block(block: NewContentBlock, endnote_storage: &mut Vec<(u
         BlockData::Quote{text, caption, alignment} => {
             format!("<blockquote class=\"align-{} {}\"><p>{}</p><footer>{}</footer></blockquote>", alignment, css_classes_raw, render_text(text, endnote_storage, dict, citation_bib), render_text(caption, endnote_storage, dict, citation_bib))
         }
-        BlockData::Image {file, caption, with_border, with_background, stretched} => {
+        BlockData::Image {file, caption, with_border: _, with_background: _, stretched: _} => {
             // We use filename since all images are copied from te uploads directory to our temporary working dir and file.url represents the public url
             format!("<img src=\"{}\" alt=\"{}\" {}/>", file.filename, caption.unwrap_or_default(), css_classes)
         }
@@ -460,7 +460,7 @@ pub fn render_citations(project: &ProjectDataV2, csl_data: Arc<CslData>) -> Hash
     }
 
     let mut items = Vec::new();
-    for (entry) in bib.iter(){
+    for entry in bib.iter(){
         let cit_entry = CitationItem::with_entry(entry);
         items.push(cit_entry);
     }

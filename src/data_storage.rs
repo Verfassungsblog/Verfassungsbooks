@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, HashMap};
-use std::{fmt, fs};
-use std::fmt::Display;
+use std::{fs};
+
 use std::path::Path;
 use std::str::FromStr;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
@@ -10,17 +10,16 @@ use argon2::{Argon2, PasswordHasher};
 use argon2::password_hash::rand_core::OsRng;
 use serde::{Deserialize, Serialize};
 use bincode::{Encode, Decode};
-use bincode::error::DecodeError;
-use hayagriva::citationberg::LongShortForm;
-use hayagriva::lang::{SentenceCase, TitleCase};
-use hayagriva::Library;
+
+
+
+
 use crate::projects::{Person, ProjectMetadata, ProjectSettings, Section, SectionOrToc};
 use crate::projects::api::ApiError;
 use crate::settings::Settings;
 use hayagriva::types::*;
 use reqwest::Url;
-use serde::de::Visitor;
-use serde::ser::SerializeMap;
+
 use unic_langid_impl::LanguageIdentifier;
 
 /// Storage for small data like users, passwords and login attempts
@@ -213,7 +212,7 @@ impl DataStorage{
                         return Err(())
                     },
                 };
-            }else if(*version == 2){
+            }else if *version == 2 {
                 // Load new project format
                 let mut file = match std::fs::File::open(format!("{}/{}", &path, file_path)) {
                     Ok(file) => file,
@@ -613,7 +612,7 @@ impl ProjectStorage {
                                 return Err(())
                             },
                         };
-                    }else if(*version == 2){
+                    }else if *version == 2 {
                         // Load new project format
                         let mut file = match std::fs::File::open(format!("{}/{}", &npath, project_path)) {
                             Ok(file) => file,
@@ -2012,7 +2011,7 @@ mod tests {
     #[rocket::tokio::test]
     async fn test_save_project_to_disk() {
         setup_test_environment();
-        let test_project = OldProjectData {
+        let test_project = ProjectDataV2 {
             name: "Test Project".to_string(),
             description: None,
             template_id: Default::default(),

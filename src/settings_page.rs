@@ -1,12 +1,12 @@
 use std::sync::Arc;
 use rocket::State;
 use rocket_dyn_templates::Template;
-use crate::data_storage::{DataStorage, InnerDataStorageV2, User};
+use crate::data_storage::{DataStorage, User};
 use crate::session::session_guard::Session;
 
 #[get("/settings")]
 pub async fn settings_page(_session: Session, data_storage: &State<Arc<DataStorage>>) -> Template {
-    let data_storage = data_storage.clone();
+    let data_storage = data_storage;
     let users : Vec<User> = data_storage.data.read().unwrap().login_data.iter().map(|x|x.1.read().unwrap().clone()).collect();
     Template::render("settings", users)
 }
@@ -33,7 +33,7 @@ pub mod api{
     #[post("/api/users", data = "<new_user>")]
     pub async fn add_user(new_user: Json<NewUser>, _session: Session, data_storage: &State<Arc<DataStorage>>, settings: &State<Settings>) -> Json<ApiResult<User>>{
         let new_user = new_user.into_inner();
-        let mut data_storage = data_storage.clone();
+        let data_storage = data_storage;
 
         // Check if user with this email already exists
         if data_storage.data.read().unwrap().login_data.iter().any(|x| x.1.read().unwrap().email == new_user.email){
@@ -90,7 +90,7 @@ pub mod api{
         };
 
         let new_user = new_user.into_inner();
-        let data_storage = data_storage.clone();
+        let data_storage = data_storage;
 
         let mut data = data_storage.data.write().unwrap();
 
@@ -127,7 +127,7 @@ pub mod api{
             return ApiResult::new_error(ApiError::BadRequest("Cannot delete own user".to_string()));
         }
 
-        let data_storage = data_storage.clone();
+        let data_storage = data_storage;
         let mut data = data_storage.data.write().unwrap();
 
         match data.login_data.remove(&id){

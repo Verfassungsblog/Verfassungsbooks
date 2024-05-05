@@ -1,4 +1,4 @@
-use crate::data_storage::{DataStorage, ProjectTemplateV1, ProjectTemplateV2};
+use crate::data_storage::{DataStorage, ProjectTemplateV2};
 use crate::projects::{SectionMetadata, NewContentBlock, NewContentBlockEditorJSFormat};
 use crate::projects::SectionOrToc;
 use rocket::serde::json::Json;
@@ -53,7 +53,7 @@ impl<T> ApiResult<T>{
 /// Delete project
 /// DELETE /api/projects/<project_id>
 #[delete("/api/projects/<project_id>")]
-pub async fn delete_project(project_id: String, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<()>> {
+pub async fn delete_project(project_id: String, _session: Session, _settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<()>> {
     let project_id = match uuid::Uuid::parse_str(&project_id) {
         Ok(project_id) => project_id,
         Err(e) => {
@@ -433,7 +433,7 @@ pub async fn get_csl_styles(_session: Session, settings: &State<Settings>) -> Js
     match tokio::fs::read_dir(path).await{
         Ok(mut dir) => {
             loop{
-                let entry = match dir.next_entry().await{
+                let _entry = match dir.next_entry().await{
                     Ok(entry) => {
                         match entry{
                             Some(entry) => {
@@ -1536,7 +1536,7 @@ pub async fn upload_to_project(project_id: String, form: Form<ImageUpload<'_>>, 
     };
 
     let project_storage = Arc::clone(project_storage);
-    let project = match project_storage.get_project(&project_id, settings).await{
+    let _project = match project_storage.get_project(&project_id, settings).await{
         Ok(project) => project,
         Err(_) => {
             eprintln!("Couldn't get project with id {}", project_id);
@@ -1563,7 +1563,7 @@ pub async fn upload_to_project(project_id: String, form: Form<ImageUpload<'_>>, 
     //let extension = image.name().and_then(|name| name.split('.').last()); //TODO find working solution
 
     // Generate new filename
-    let mut filename = uuid::Uuid::new_v4().to_string();
+    let filename = uuid::Uuid::new_v4().to_string();
     /*if let Some(extension) = extension{
         filename = format!("{}.{}", filename, extension);
     }*/

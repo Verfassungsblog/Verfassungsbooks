@@ -18,7 +18,7 @@ pub async fn show_bib_editor(project_id: String, _session: Session, settings: &S
 
     let project_storage = Arc::clone(project_storage);
 
-    let project_entry = match project_storage.get_project(&project_id, settings).await{
+    let _project_entry = match project_storage.get_project(&project_id, settings).await{
         Ok(project_entry) => project_entry.clone(),
         Err(_) => {
             eprintln!("Couldn't get project with id {}", project_id);
@@ -30,16 +30,15 @@ pub async fn show_bib_editor(project_id: String, _session: Session, settings: &S
 }
 
 pub mod api{
-    use std::future::Future;
-    use std::sync::{Arc, RwLock};
+    
+    use std::sync::{Arc};
     use hayagriva::types::EntryType;
-    use hayagriva::{Entry, Library};
-    use rocket::form::Form;
-    use rocket::http::hyper::body::HttpBody;
+    
+
     use rocket::serde::json::Json;
     use rocket::State;
     use serde::{Deserialize, Serialize};
-    use crate::data_storage::{BibEntryV2, OldBibEntry, OldProjectData, ProjectStorage};
+    use crate::data_storage::{BibEntryV2, ProjectStorage};
     use crate::projects::api::{ApiError, ApiResult};
     use crate::session::session_guard::Session;
     use crate::settings::Settings;
@@ -61,7 +60,7 @@ pub mod api{
             },
         };
 
-        let project_storage_cpy = project_storage.clone();
+        let project_storage_cpy = project_storage;
         let project = match project_storage_cpy.get_project(&project_id, &settings).await{
             Ok(project) => project.clone(),
             Err(_) => {
@@ -85,7 +84,7 @@ pub mod api{
             },
         };
 
-        let project_storage_cpy = project_storage.clone();
+        let project_storage_cpy = project_storage;
         let project = match project_storage_cpy.get_project(&project_id, &settings).await{
             Ok(project) => project.clone(),
             Err(_) => {
@@ -114,7 +113,7 @@ pub mod api{
             },
         };
 
-        let project_storage_cpy = project_storage.clone();
+        let project_storage_cpy = project_storage;
         let project = match project_storage_cpy.get_project(&project_id, &settings).await{
             Ok(project) => project.clone(),
             Err(_) => {
@@ -151,7 +150,7 @@ pub mod api{
         let new_bib_entry = new_bib_entry.into_inner();
         let entry = BibEntryV2::new(new_bib_entry.key.clone(), new_bib_entry.entry_type);
 
-        let project_storage_cpy = project_storage.clone();
+        let project_storage_cpy = project_storage;
         let project = match project_storage_cpy.get_project(&project_id, &settings).await{
             Ok(project) => project.clone(),
             Err(_) => {
@@ -179,7 +178,7 @@ pub mod api{
 
         let bib_entry = bib_entry.into_inner();
 
-        let project_storage_cpy = project_storage.clone();
+        let project_storage_cpy = project_storage;
         let project = match project_storage_cpy.get_project(&project_id, &settings).await{
             Ok(project) => project.clone(),
             Err(_) => {

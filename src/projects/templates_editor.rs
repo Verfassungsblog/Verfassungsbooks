@@ -1,14 +1,14 @@
-use std::collections::BTreeMap;
+
 use std::sync::Arc;
 use rocket::http::Status;
 use rocket::State;
-use crate::data_storage::{DataStorage, ProjectTemplateV1, ProjectTemplateV2};
+use crate::data_storage::{DataStorage, ProjectTemplateV2};
 use crate::session::session_guard::Session;
 use crate::settings::Settings;
 
 /// Get a list of all templates
 #[get("/templates")]
-pub async fn list_templates(_session: Session, data_storage: &State<Arc<DataStorage>>) -> Result<rocket_dyn_templates::Template, Status>{
+pub async fn list_templates(_session: Session, _data_storage: &State<Arc<DataStorage>>) -> Result<rocket_dyn_templates::Template, Status>{
     Ok(rocket_dyn_templates::Template::render("templates", ()))
 }
 
@@ -32,7 +32,7 @@ pub async fn form_create_template(_session: Session, settings: &State<Settings>,
         description: template.description.clone(),
         export_formats: vec![],
     }; //TODO: create default export format for preview
-    let mut data_storage = data_storage.clone();
+    let data_storage = data_storage;
     data_storage.insert_template(template, settings).await.unwrap();
     Ok(rocket::response::Redirect::to("/templates"))
 }

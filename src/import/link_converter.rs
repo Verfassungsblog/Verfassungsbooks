@@ -80,8 +80,8 @@ async fn send_export_translation_request(entry: serde_json::Value, settings: &Se
 }
 
 pub mod test{
-    use super::*;
-    use crate::settings::Settings;
+    
+    
 
     #[tokio::test]
     async fn test_send_translation_request(){

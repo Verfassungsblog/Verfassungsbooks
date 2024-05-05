@@ -51,7 +51,7 @@ impl WordpressAPI {
         let url = format!("https://{}/wp-json/wp/v2/posts", self.base_url);
 
         let client = self.build_client()?;
-        let mut request = client.request(reqwest::Method::GET, &url);
+        let request = client.request(reqwest::Method::GET, &url);
 
         let mut query: Vec<(String, String)> = Vec::new();
         if let Some(page) = page {
@@ -125,7 +125,7 @@ impl WordpressAPI {
     pub async fn get_categories(&self, page: Option<usize>, per_page: Option<usize>, search: Option<String>, exclude: Option<Vec<usize>>, include: Option<Vec<usize>>, slug: Option<String>, hide_empty: Option<bool>, parent: Option<usize>, post: Option<usize>) -> Result<Vec<Category>, WordpressAPIError>{
         let client = self.build_client()?;
         let url = format!("https://{}/wp-json/wp/v2/categories", self.base_url);
-        let mut request = client.request(reqwest::Method::GET, &url);
+        let request = client.request(reqwest::Method::GET, &url);
         let mut query: Vec<(String, String)> = Vec::new();
         if let Some(page) = page {
             query.push(("page".to_string(), page.to_string()));

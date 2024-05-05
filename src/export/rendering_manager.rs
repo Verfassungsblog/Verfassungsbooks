@@ -138,7 +138,7 @@ impl RenderingManager{
         rendering_manager.clone()
     }
     fn render(rendering_manager: Arc<RenderingManager>, request_id: uuid::Uuid) -> Result<(), RenderingError>{
-        let mut project_id = uuid::Uuid::default();
+        let project_id;
 
         let project_data: ProjectDataV2 = { // Introduction of a new scope to drop the lock on the request
             let mut storage = rendering_manager.requests_archive.write().unwrap();

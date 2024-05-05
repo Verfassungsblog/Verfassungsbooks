@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 use std::sync::Arc;
-use config::File;
+
 use rocket::form::Form;
 use rocket::fs::TempFile;
 use rocket::http::ContentType;
@@ -32,7 +32,7 @@ struct WordpressImport{
 }
 
 #[post("/api/import/upload", data = "<upload>")]
-pub async fn import_from_upload(mut upload: Form<FileUpload<'_>>, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>, import_processor: &State<Arc<ImportProcessor>>) -> Json<ApiResult<uuid::Uuid>>{
+pub async fn import_from_upload(mut upload: Form<FileUpload<'_>>, _session: Session, settings: &State<Settings>, _project_storage: &State<Arc<ProjectStorage>>, import_processor: &State<Arc<ImportProcessor>>) -> Json<ApiResult<uuid::Uuid>>{
     println!("Uploading files to project {}", upload.project_id);
 
     let mut file_paths: VecDeque<(String, ContentType)> = VecDeque::new();
@@ -87,7 +87,7 @@ pub async fn import_from_upload(mut upload: Form<FileUpload<'_>>, _session: Sess
 }
 
 #[post("/api/import/wordpress", data = "<job>")]
-pub async fn import_from_wordpress(job: Json<WordpressImport>, _session: Session, settings: &State<Settings>, import_processor: &State<Arc<ImportProcessor>>) -> Json<ApiResult<uuid::Uuid>>{
+pub async fn import_from_wordpress(job: Json<WordpressImport>, _session: Session, _settings: &State<Settings>, import_processor: &State<Arc<ImportProcessor>>) -> Json<ApiResult<uuid::Uuid>>{
     let id = Uuid::new_v4();
 
     let import_job = ImportJob{

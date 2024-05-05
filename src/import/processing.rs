@@ -1,21 +1,18 @@
 use async_recursion::async_recursion;
 use std::collections::{HashMap, VecDeque};
-use std::future::Future;
-use std::io::{BufRead, Read};
-use std::iter;
+
 use std::sync::{Arc, RwLock};
-use bincode::de::read::Reader;
-use hayagriva::{io, Library};
-use hayagriva::io::BibLaTeXError;
+use hayagriva::{io};
+
 use html_parser::{Dom, Node};
-use pandoc::{InputFormat, InputKind, OutputFormat, OutputKind, PandocError, PandocOutput};
-use rocket::fs::TempFile;
+use pandoc::{InputFormat, InputKind, OutputFormat, OutputKind, PandocOutput};
+
 use rocket::http::ContentType;
 use serde::{Deserialize, Serialize};
 use crate::data_storage::{BibEntryV2, ProjectDataV2, ProjectStorage};
 use crate::settings::Settings;
 use tokio::io::AsyncReadExt;
-use crate::import::wordpress::{Post, WordpressAPI, WordpressAPIError};
+use crate::import::wordpress::{WordpressAPI, WordpressAPIError};
 use crate::projects::{BlockData, BlockType, Identifier, IdentifierType, NewContentBlock, Section, SectionMetadata, SectionOrToc};
 use crate::utils::block_id_generator::generate_id;
 
@@ -114,7 +111,7 @@ impl ImportProcessor{
         processor
     }
 
-    async fn process_job(&self, mut job: Arc<RwLock<ImportJob>>, project_storage: Arc<ProjectStorage>){
+    async fn process_job(&self, job: Arc<RwLock<ImportJob>>, project_storage: Arc<ProjectStorage>){
         let job = job.clone();
 
         let project_id = job.read().unwrap().project_id.clone();
@@ -311,7 +308,7 @@ impl ImportProcessor{
         }
 
 
-        let mut section = Section{
+        let section = Section{
             id: Some(uuid::Uuid::new_v4()),
             css_classes: vec![],
             sub_sections: vec![],
@@ -987,8 +984,8 @@ impl ImportProcessor{
             }
         };
 
-        let mut project_storage = self.project_storage.clone();
-        let mut project = project_storage.get_project(&project_id, settings).await.unwrap().clone();
+        let project_storage = self.project_storage.clone();
+        let project = project_storage.get_project(&project_id, settings).await.unwrap().clone();
         for entry in bib.iter(){
             let converted = BibEntryV2::from(entry);
             project.write().unwrap().bibliography.insert(converted.key.clone(), converted);

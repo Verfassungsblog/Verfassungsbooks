@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+
 use std::sync::Arc;
 use rocket::State;
 use rocket_dyn_templates::Template;
@@ -52,7 +52,7 @@ pub fn list_persons(_session: Session, data_storage: &State<Arc<DataStorage>>, o
     let next_offset = if num_of_pages > current_page {Some(offset + limit)} else {None};
     let previous_offset = if current_page > 1 {Some(offset - limit)} else {None};
 
-    let mut data = ListData{
+    let data = ListData{
         persons: selected_persons,
         next_offset,
         previous_offset,

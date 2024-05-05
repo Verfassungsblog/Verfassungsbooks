@@ -19,7 +19,7 @@ pub async fn show_editor(project_id: String, _session: Session, settings: &State
 
     let project_storage = Arc::clone(project_storage);
 
-    let project_entry = match project_storage.get_project(&project_id, settings).await{
+    let _project_entry = match project_storage.get_project(&project_id, settings).await{
         Ok(project_entry) => project_entry.clone(),
         Err(_) => {
             eprintln!("Couldn't get project with id {}", project_id);
