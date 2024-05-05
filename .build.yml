@@ -17,6 +17,8 @@ tasks:
       npm install -g handlebars
       npm install -g typescript
       npm install -g webpack webpack-cli
+      cd Verfassungsbooks/typescript
+      npm install
   - build: |
       source ~/.bashrc
       handlebars -v
