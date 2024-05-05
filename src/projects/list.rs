@@ -4,9 +4,10 @@ use rocket_dyn_templates::Template;
 use rocket::State;
 use crate::data_storage::ProjectStorage;
 use crate::session::session_guard::Session;
+use crate::settings::Settings;
 
 #[get("/")]
-pub fn list_projects(_session: Session, project_storage: &State<Arc<ProjectStorage>>) -> Template {
+pub fn list_projects(_session: Session, project_storage: &State<Arc<ProjectStorage>>, settings: &State<Settings>) -> Template {
     // Get all projects
     let mut projects = vec![];
 
@@ -25,7 +26,14 @@ pub fn list_projects(_session: Session, project_storage: &State<Arc<ProjectStora
         });
     }
 
-    let mut data = BTreeMap::new();
-    data.insert("projects", projects);
-    Template::render("dashboard", data)
+    #[derive(serde::Serialize)]
+    struct DashboardData<'a>{
+        projects: Vec<TempProject>,
+        version: &'a str
+    }
+
+    Template::render("dashboard", DashboardData{
+        projects,
+        version: &settings.version
+    })
 }

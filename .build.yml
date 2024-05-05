@@ -24,7 +24,7 @@ tasks:
       handlebars -v
       cd Verfassungsbooks
       cargo build --release
-      echo "$(git rev-parse --abbrev-ref HEAD)-$(git rev-parse --short HEAD)" > version.txt
+      echo "$branch_name-$(git rev-parse --short HEAD)" > version.txt
 artifacts:
   - Verfassungsbooks/target/release/Verfassungsbooks
   - Verfassungsbooks/config/default.toml

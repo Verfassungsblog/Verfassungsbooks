@@ -19,17 +19,21 @@ pub struct Settings{
     pub max_import_threads: u64,
     pub chromium_path: Option<String>,
     pub zotero_translation_server: String,
+    pub version: String,
 }
 
 impl Settings{
     pub fn new() -> Result<Self, ConfigError>{
         let run_mode = env::var("RUN_MODE").unwrap_or_else(|_| "development".into());
+        // Read version String from version.txt
+        let version = std::fs::read_to_string("version.txt").unwrap_or_else(|_| "unknown".into());
 
         let s = Config::builder().add_source(File::with_name("config/default"))
             .add_source( File::with_name(&format!("config/{}", run_mode))
                              .required(false),)
             .add_source(File::with_name("config/local").required(false))
             .add_source(Environment::with_prefix("app"))
+            .set_override("version", version)?
             .build()?;
 
         s.try_deserialize()

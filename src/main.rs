@@ -36,7 +36,6 @@ fn forward_to_login<'r>() -> Redirect {
     Redirect::to("/login")
 }
 
-
 /// Starts the web server, mounts all routes and attaches the [SessionStorage][session::session_storage::SessionStorage] and [Settings][settings::Settings] structs.
 #[launch]
 async fn rocket() -> _ {
