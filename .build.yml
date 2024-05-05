@@ -3,12 +3,10 @@ packages:
   - rustup
   - nodejs
   - npm
+  - tar
 sources:
   - https://git.sr.ht/~verfassungsblog/Verfassungsbooks
 tasks:
-  - env-setup: |
-      branch_name=$(echo $GIT_REF | rev | cut -d'/' -f1 | rev)
-      echo "Branch name: $branch_name"
   - setup: |
       rustup default stable
       npm config set prefix ~/.npm
@@ -20,16 +18,24 @@ tasks:
       cd Verfassungsbooks/typescript
       npm install
   - build: |
+      branch_name=$(echo $GIT_REF | rev | cut -d'/' -f1 | rev)
       source ~/.bashrc
       handlebars -v
       cd Verfassungsbooks
       cargo build --release
       echo "$branch_name-$(git rev-parse --short HEAD)" > version.txt
+  - packaging: |
+      cd Verfassungsbooks
+      mkdir packaged
+      cp target/release/Verfassungsbooks packaged/
+      mkdir -p packaged/config
+      cp config/default.toml packaged/config/
+      cp Rocket.toml packaged/
+      cp version.txt packaged/
+      cp -R static packaged/static
+      tar -czf verfassungsbooks-bundled.tar.gz packaged/
 artifacts:
-  - Verfassungsbooks/target/release/Verfassungsbooks
-  - Verfassungsbooks/config/default.toml
-  - Verfassungsbooks/Rocket.toml
-  - Verfassungsbooks/version.txt
+  - Verfassungsbooks/verfassungsbooks-bundled.tar.gz
 triggers:
   - action: email
     condition: failure
