@@ -6,6 +6,10 @@ packages:
   - tar
 sources:
   - https://git.sr.ht/~verfassungsblog/Verfassungsbooks
+secrets:
+  - e0cce48a-4ebb-406d-886b-a5d1c6bcf234
+environment:
+  deploy: verfassungsbot@anghenfil.de
 tasks:
   - setup: |
       rustup default stable
@@ -36,7 +40,15 @@ tasks:
       cp Rocket.toml packaged/
       cp version.txt packaged/
       cp -R static packaged/static
-      tar -czf verfassungsbooks-bundled.tar.gz packaged/*
+      cd packaged && tar -vczf ../verfassungsbooks-bundled.tar.gz *
+  - deploy: |
+      branch_name=$(echo $GIT_REF | rev | cut -d'/' -f1 | rev)
+      if [ "$branch_name" == "staging" ]; then
+          echo "Deploying to staging"
+          scp Verfassungsbooks/verfassungsbooks-bundled.tar.gz $deploy:/upload/
+          touch trigger
+          scp trigger $deploy:/upload/
+      fi
 artifacts:
   - Verfassungsbooks/verfassungsbooks-bundled.tar.gz
 triggers:
