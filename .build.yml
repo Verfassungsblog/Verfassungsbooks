@@ -36,6 +36,7 @@ tasks:
       mkdir packaged/data
       cp -R data/csl_locales packaged/data/
       cp -R data/csl_styles packaged/data/
+      cp -R templates packaged/templates
       cp config/default.toml packaged/config/
       cp Rocket.toml packaged/
       cp version.txt packaged/
