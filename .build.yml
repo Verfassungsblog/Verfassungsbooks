@@ -4,6 +4,7 @@ packages:
   - nodejs
   - npm
   - tar
+  - openssh
 sources:
   - https://git.sr.ht/~verfassungsblog/Verfassungsbooks
 secrets:
