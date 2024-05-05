@@ -19,7 +19,7 @@ tasks:
       npm install -g handlebars
       npm install -g typescript
       npm install -g webpack webpack-cli
-      cd Verfassungsbooks/typescript
+      cd Verfassungsbooks/typescript 
       npm install
   - build: |
       branch_name=$(echo $GIT_REF | rev | cut -d'/' -f1 | rev)
