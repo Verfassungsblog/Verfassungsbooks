@@ -8,4 +8,8 @@ Developer: [kd@verfassungsblog.de](mailto:kd@verfassungsblog.de)
 
 General inquires and feedback: [oa@verfassungsblog.de](mailto:oa@verfassungsblog.de)
 
-Test
+## Build Status
+Master Branch: 
+[![Master Branch](https://builds.sr.ht/~verfassungsblog/Verfassungsbooks/commits/master.svg)](https://builds.sr.ht/~verfassungsblog/Verfassungsbooks/commits/master?)
+
+Staging Branch: [![Staging Branch](https://builds.sr.ht/~verfassungsblog/Verfassungsbooks/commits/staging.svg)](https://builds.sr.ht/~verfassungsblog/Verfassungsbooks/commits/staging?)
