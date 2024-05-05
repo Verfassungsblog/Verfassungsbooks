@@ -1,0 +1,20 @@
+image: archlinux
+packages:
+  - rustup
+  - nodejs
+  - npm
+sources:
+  - https://git.sr.ht/~verfassungsblog/Verfassungsbooks
+tasks:
+  - debug: |
+      printenv
+  - setup: |
+      rustup default stable
+      npm install -g handlebars
+  - build: |
+      cd Verfassungsbooks
+      cargo build --release
+artifacts:
+  - Verfassungsbooks/target/release/Verfassungsbooks
+  - Verfassungsbooks/config/default.toml
+  - Verfassungsbooks/Rocket.toml
