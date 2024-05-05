@@ -6,13 +6,19 @@ packages:
 sources:
   - https://git.sr.ht/~verfassungsblog/Verfassungsbooks
 tasks:
-  - debug: |
+  - env-setup: |
       printenv
+      branch_name=$(echo $GIT_REF | rev | cut -d'/' -f1 | rev)
+      echo "Branch name: $branch_name"
+      cd Verfassungsbooks
+      git checkout $branch_name
   - setup: |
       rustup default stable
+      npm config set prefix ~/.npm
+      mkdir -p ~/.npm/bin
+      echo 'export PATH=~/.local/bin/:$PATH' >> ~/.bashrc
       npm install -g handlebars
   - build: |
-      cd Verfassungsbooks
       cargo build --release
 artifacts:
   - Verfassungsbooks/target/release/Verfassungsbooks
