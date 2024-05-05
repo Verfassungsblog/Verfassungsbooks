@@ -13,12 +13,18 @@ tasks:
       rustup default stable
       npm config set prefix ~/.npm
       mkdir -p ~/.npm/bin
-      echo 'export PATH=~/.npm/bin/:$PATH' >> ~/.bashrc
+      echo 'export PATH="$HOME/.npm/bin:$PATH"' >> ~/.bashrc
       npm install -g handlebars
   - build: |
+      source ~/.bashrc
+      handlebars -v
       cd Verfassungsbooks
       cargo build --release
 artifacts:
   - Verfassungsbooks/target/release/Verfassungsbooks
   - Verfassungsbooks/config/default.toml
   - Verfassungsbooks/Rocket.toml
+triggers:
+  - action: email
+    condition: failure
+    to: kd@verfassungsblog.de
