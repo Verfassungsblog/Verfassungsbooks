@@ -44,7 +44,7 @@ tasks:
       cd packaged && tar -vczf ../verfassungsbooks-bundled.tar.gz *
   - deploy: |
       branch_name=$(echo $GIT_REF | rev | cut -d'/' -f1 | rev)
-      if [ "$branch_name" == "test" ]; then
+      if [ "$branch_name" == "staging" ]; then
           echo "Deploying to staging"
           scp -o StrictHostKeyChecking=no Verfassungsbooks/verfassungsbooks-bundled.tar.gz $deploy:/upload/
           touch trigger
