@@ -4,7 +4,6 @@ packages:
   - nodejs
   - npm
   - tar
-  - openssh
 sources:
   - https://git.sr.ht/~verfassungsblog/Verfassungsbooks
 secrets:
@@ -46,9 +45,9 @@ tasks:
       branch_name=$(echo $GIT_REF | rev | cut -d'/' -f1 | rev)
       if [ "$branch_name" == "test" ]; then
           echo "Deploying to staging"
-          scp Verfassungsbooks/verfassungsbooks-bundled.tar.gz $deploy:/upload/
+          scp -o StrictHostKeyChecking=no Verfassungsbooks/verfassungsbooks-bundled.tar.gz $deploy:/upload/
           touch trigger
-          scp trigger $deploy:/upload/
+          scp -o StrictHostKeyChecking=no trigger $deploy:/upload/
       fi
 artifacts:
   - Verfassungsbooks/verfassungsbooks-bundled.tar.gz
