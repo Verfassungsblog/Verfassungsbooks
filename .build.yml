@@ -15,7 +15,7 @@ tasks:
       mkdir -p ~/.npm/bin
       echo 'export PATH="$HOME/.npm/bin:$PATH"' >> ~/.bashrc
       npm install -g handlebars
-      npm install -g tsc
+      npm install -g typescript
       npm install -g webpack webpack-cli
   - build: |
       source ~/.bashrc
