@@ -1,4 +1,4 @@
-use crate::data_storage::{DataStorage, ProjectTemplate};
+use crate::data_storage::{DataStorage, ProjectTemplateV1, ProjectTemplateV2};
 use crate::projects::{SectionMetadata, NewContentBlock, NewContentBlockEditorJSFormat};
 use crate::projects::SectionOrToc;
 use rocket::serde::json::Json;
@@ -1661,7 +1661,7 @@ pub async fn set_project_template(project_id: String, template_id: Json<uuid::Uu
 /// List all templates
 /// GET /api/templates
 #[get("/api/templates")]
-pub async fn list_templates(_session: Session, data_storage: &State<Arc<DataStorage>>) -> Json<ApiResult<Vec<ProjectTemplate>>> {
+pub async fn list_templates(_session: Session, data_storage: &State<Arc<DataStorage>>) -> Json<ApiResult<Vec<ProjectTemplateV2>>> {
     let data_storage = Arc::clone(data_storage);
 
     let templates = data_storage.data.read().unwrap().templates.clone().iter().map(|x|x.1.read().unwrap().clone()).collect();

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use rocket::State;
 use rocket_dyn_templates::Template;
-use crate::data_storage::{DataStorage, InnerDataStorage, User};
+use crate::data_storage::{DataStorage, InnerDataStorageV2, User};
 use crate::session::session_guard::Session;
 
 #[get("/settings")]

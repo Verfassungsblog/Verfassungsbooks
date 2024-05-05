@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 use std::collections::BTreeMap;
-use crate::data_storage::{OldProjectData, ProjectDataV2, ProjectTemplate};
+use crate::data_storage::{ProjectDataV2, ProjectTemplateV2};
 use std::sync::Arc;
-use hayagriva::Library;
 use rocket::http::Status;
 use rocket::response::Redirect;
 use rocket::State;
@@ -15,7 +14,7 @@ use crate::settings::Settings;
 #[get("/projects/create")]
 pub async fn show_create_project(_session: Session, data_storage: &State<Arc<DataStorage>>) -> Result<Template, Status> {
     // Get list of all templates
-    let templates : Vec<ProjectTemplate> = data_storage.data.read().unwrap().templates.iter().map(|(_id, entry) | entry.clone().read().unwrap().clone()).collect();
+    let templates : Vec<ProjectTemplateV2> = data_storage.data.read().unwrap().templates.iter().map(|(_id, entry) | entry.clone().read().unwrap().clone()).collect();
 
     let mut data = BTreeMap::new();
     data.insert("templates", templates);

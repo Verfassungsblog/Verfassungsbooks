@@ -27,26 +27,48 @@ use unic_langid_impl::LanguageIdentifier;
 ///
 /// This data is stored in memory permanently and doesn't get unloaded
 pub struct DataStorage{
-    pub data: RwLock<InnerDataStorage>,
+    pub data: RwLock<InnerDataStorageV2>,
     file_locked: AtomicBool,
 }
 
 #[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
-pub struct InnerDataStorage{
+pub struct InnerDataStorageV1{
     /// HashMap with users, id as HashMap keys
     #[bincode(with_serde)]
     pub login_data: HashMap<uuid::Uuid, Arc<RwLock<User>>>,
     #[bincode(with_serde)]
     pub persons: HashMap<uuid::Uuid, Arc<RwLock<Person>>>,
     #[bincode(with_serde)]
-    pub templates: HashMap<uuid::Uuid, Arc<RwLock<ProjectTemplate>>>
+    pub templates: HashMap<uuid::Uuid, Arc<RwLock<ProjectTemplateV1>>>
+}
+
+#[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
+pub struct InnerDataStorageV2{
+    /// HashMap with users, id as HashMap keys
+    #[bincode(with_serde)]
+    pub login_data: HashMap<uuid::Uuid, Arc<RwLock<User>>>,
+    #[bincode(with_serde)]
+    pub persons: HashMap<uuid::Uuid, Arc<RwLock<Person>>>,
+    #[bincode(with_serde)]
+    pub templates: HashMap<uuid::Uuid, Arc<RwLock<ProjectTemplateV2>>>
+}
+
+impl From<InnerDataStorageV1> for InnerDataStorageV2{
+    fn from(value: InnerDataStorageV1) -> Self {
+        println!("Migrating data storage from V1 to V2. You have to migrate your templates manually. Your old templates where moved to data/templates-old"); // TODO: move
+        InnerDataStorageV2{
+            login_data: value.login_data,
+            persons: value.persons,
+            templates: HashMap::new(),
+        }
+    }
 }
 
 impl DataStorage{
     /// Creates a new empty [DataStorage]
     pub fn new() -> Self {
         DataStorage {
-            data: RwLock::new(InnerDataStorage{
+            data: RwLock::new(InnerDataStorageV2{
                 login_data: Default::default(),
                 persons: Default::default(),
                 templates: Default::default(),
@@ -55,7 +77,7 @@ impl DataStorage{
         }
     }
 
-    pub async fn insert_template(&self, template: ProjectTemplate, settings: &Settings) -> Result<(), ()>{
+    pub async fn insert_template(&self, template: ProjectTemplateV2, settings: &Settings) -> Result<(), ()>{
         // Create template directory inside data if it doesn't exist
         if !Path::new(&format!("{}/templates/{}", settings.data_path, template.id)).exists(){
             if let Err(e) =  tokio::fs::create_dir_all(&format!("{}/templates/{}", settings.data_path, template.id)).await{
@@ -103,22 +125,114 @@ impl DataStorage{
     /// Path is defined as data_path from settings + /data.bincode
     pub async fn load_from_disk(settings: &Settings) -> Result<Self, ()>{
         let mut data_storage = DataStorage::new();
-        let path = format!("{}/data.bincode", settings.data_path);
+
+        let path = format!("{}", settings.data_path);
 
         let res = rocket::tokio::task::spawn_blocking(move || {
-            let mut file = match std::fs::File::open(path) {
-                Ok(file) => file,
+            let files = match std::fs::read_dir(&path){
+                Ok(files) => files,
                 Err(e) => {
-                    eprintln!("io error while loading data_storage file into memory: {}", e);
+                    eprintln!("io error while loading data_storage directory: {}. Check that your data_path is set correctly and we have sufficient file permissions.", e);
                     return Err(())
-                },
+                }
             };
-            match bincode::decode_from_std_read(&mut file, bincode::config::standard()) {
-                Ok(project) => Ok(project),
-                Err(e) => {
-                    eprintln!("bincode decode error while loading project file into memory: {}. Check if the saved data needs migration.", e);
-                    Err(())
-                },
+
+            let mut file_versions: Vec<(u64, String)> = vec![];
+
+            // Iterate through dir entries and find all data files with version number
+            for file in files{
+                match file{
+                    Ok(file) => {
+                        if let Ok(file_type) = file.file_type(){
+                            if file_type.is_file(){
+                                let fname = file.file_name().clone();
+                                let fname = fname.to_str().unwrap_or("");
+                                let parts: Vec<&str> = fname.split(".").collect();
+
+                                // First part = "data"
+                                // Second part = version
+                                // Third part = "bincode"
+
+                                if parts.len() == 3 && parts[0] == "data"{
+                                    // parse version as usize
+                                    let version = match parts[1].parse::<u64>(){
+                                        Ok(version) => version,
+                                        Err(e) => {
+                                            eprintln!("error while loading data_storage file into memory: couldn't parse version number: {}. Skipping file.", e);
+                                            continue
+                                        }
+                                    };
+
+                                    file_versions.push((version, fname.to_string()));
+                                }
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("io error while loading data_storage directory entry: {}. Skipping file.", e);
+                        continue
+                    }
+                }
+            }
+
+            // Order file versions
+            file_versions.sort_by(|a, b| a.0.cmp(&b.0));
+
+            // Load the latest version of the data storage
+            if file_versions.is_empty(){
+                eprintln!("error while loading data storage into memory: no storage files found in data directory.");
+                return Err(())
+            }
+            let (version, file_path) = file_versions.last().unwrap();
+            if *version == 1 {
+                // Load old data format
+                let mut file = match std::fs::File::open(format!("{}/{}", &path, file_path)) {
+                    Ok(file) => file,
+                    Err(e) => {
+                        eprintln!("io error while loading data file into memory: {}", e);
+                        return Err(())
+                    },
+                };
+
+                // Move told templates directory to templates-old
+                if Path::exists(Path::new(&format!("{}/templates", &path))){
+                    if let Err(e) = fs::rename(format!("{}/templates", &path), format!("{}/templates-old", &path)){
+                        eprintln!("error while moving templates directory to templates-old: {}", e);
+                        return Err(())
+                    }
+                    if let Err(e) = std::fs::create_dir_all(format!("{}/templates", &path)){
+                        eprintln!("error while creating new templates directory: {}", e);
+                        return Err(())
+                    }
+                }
+
+                match bincode::decode_from_std_read::<InnerDataStorageV1, _, _>(&mut file, bincode::config::standard()) {
+                    Ok(data) => return Ok(InnerDataStorageV2::from(data)),
+                    Err(e) => {
+                        eprintln!("bincode decode error while loading data storage with version {} into memory: {}.", version, e);
+                        return Err(())
+                    },
+                };
+            }else if(*version == 2){
+                // Load new project format
+                let mut file = match std::fs::File::open(format!("{}/{}", &path, file_path)) {
+                    Ok(file) => file,
+                    Err(e) => {
+                        eprintln!("io error while loading project file into memory: {}", e);
+                        return Err(())
+                    },
+                };
+                let project = match bincode::decode_from_std_read(&mut file, bincode::config::standard()) {
+                    Ok(data) => data,
+                    Err(e) => {
+                        eprintln!("bincode decode error while loading project file with version {} into memory: {}.", version, e);
+                        return Err(())
+                    },
+                };
+                return Ok(project);
+            }else{
+                eprintln!("error while loading data storage into memory: unknown file version {}.", version);
+                return Err(())
             }
         }).await;
 
@@ -149,7 +263,7 @@ impl DataStorage{
 
         // Save login data
         let cpy = self.data.read().unwrap().clone();
-        let path = format!("{}/data.bincode", settings.data_path);
+        let path = format!("{}/data.2.bincode", settings.data_path);
 
         match rocket::tokio::task::spawn_blocking(move || {
             let mut file = match std::fs::File::create(path) {
@@ -440,7 +554,7 @@ impl ProjectStorage {
 
         let res = rocket::tokio::task::spawn_blocking(move || {
             // Load a list of all files in project directory
-            match fs::read_dir(npath.clone()){
+            match fs::read_dir(&npath){
                 Ok(paths) => {
                     let mut project_versions : Vec<(u64, String)> = vec![];
 
@@ -450,9 +564,9 @@ impl ProjectStorage {
                                 let fname = entry.file_name().clone();
                                 let fname = fname.to_str().unwrap_or("");
                                 let parts: Vec<&str> = fname.split(".").collect();
-                                // First part = project
+                                // First part = "project"
                                 // Second part = version
-                                // Third part = bincode
+                                // Third part = "bincode"
 
                                 if parts.len() == 3 && parts[0] == "project"{
                                     // parse version as usize
@@ -485,7 +599,7 @@ impl ProjectStorage {
                     let (version, project_path) = project_versions.last().unwrap();
                     if *version == 1 {
                         // Load old project format
-                        let mut file = match std::fs::File::open(format!("{}/{}", npath.clone(), project_path)) {
+                        let mut file = match std::fs::File::open(format!("{}/{}", &npath, project_path)) {
                             Ok(file) => file,
                             Err(e) => {
                                 eprintln!("io error while loading project file into memory: {}", e);
@@ -501,7 +615,7 @@ impl ProjectStorage {
                         };
                     }else if(*version == 2){
                         // Load new project format
-                        let mut file = match std::fs::File::open(format!("{}/{}", npath.clone(), project_path)) {
+                        let mut file = match std::fs::File::open(format!("{}/{}", &npath, project_path)) {
                             Ok(file) => file,
                             Err(e) => {
                                 eprintln!("io error while loading project file into memory: {}", e);
@@ -685,7 +799,7 @@ pub struct OldProjectData {
     pub settings: Option<ProjectSettings>,
     pub sections: Vec<SectionOrToc>,
     #[bincode(with_serde)]
-    pub bibliography: HashMap<String, OldBibEntry> //TODO: add prefix & suffix support
+    pub bibliography: HashMap<String, OldBibEntry>
 }
 
 
@@ -1591,11 +1705,42 @@ impl User{
 }
 
 #[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
-pub struct ProjectTemplate {
+pub struct ProjectTemplateV1 {
     #[bincode(with_serde)]
     pub id: uuid::Uuid,
     pub name: String,
     pub description: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
+pub struct ProjectTemplateV2 {
+    #[bincode(with_serde)]
+    pub id: uuid::Uuid,
+    pub name: String,
+    pub description: String,
+    pub export_formats: Vec<ExportFormat>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
+pub enum ExportType{
+    PDF,
+    DOCX,
+    DOC,
+    HTML,
+    LATEX,
+    EPUB,
+    ODT,
+    MOBI
+}
+
+#[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
+pub struct ExportFormat{
+    pub slug: String,
+    pub name: String,
+    pub export_type: ExportType,
+    pub used_as_preview: bool,
+    pub add_cover: bool,
+    pub add_backcover: bool,
 }
 
 pub async fn save_data_worker(data_storage: Arc<DataStorage>, project_storage: Arc<ProjectStorage>, settings: Settings){

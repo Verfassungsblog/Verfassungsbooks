@@ -1,6 +1,6 @@
 import * as pdfjs from 'pdfjs-dist';
 
-import {send_get_rendering_status, send_render_project, send_update_content_blocks} from "./api_requests";
+import {send_get_rendering_status, send_render_project} from "./api_requests";
 
 let status_timer : NodeJS.Timeout|null = null;
 pdfjs.GlobalWorkerOptions.workerSrc =
