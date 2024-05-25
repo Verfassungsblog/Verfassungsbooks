@@ -1,5 +1,5 @@
 use std::collections::{BTreeMap, HashMap};
-use std::{fs};
+use std::fs;
 
 use std::path::Path;
 use std::str::FromStr;
@@ -1677,22 +1677,40 @@ pub fn get_section_by_path<'a>(project: &'a RwLockReadGuard<ProjectDataV2>, path
 
 
 #[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
-pub struct User{
+/// Represents a user in the data storage.
+pub struct User {
     #[bincode(with_serde)]
+    /// The unique identifier for the user.
     pub id: uuid::Uuid,
+    /// The email address of the user.
     pub email: String,
+    /// The name of the user.
     pub name: String,
+    /// The hashed password of the user.
     pub password_hash: String,
+    /// The timestamp until which the user is locked out (if applicable).
     pub locked_until: Option<u64>,
-    pub login_attempts: Vec<u64>
+    /// The list of login attempts made by the user.
+    pub login_attempts: Vec<u64>,
 }
 
-impl User{
-    pub fn new(email: String, name: String, password: String) -> Self{
+impl User {
+    /// Creates a new user with the specified email, name, and password.
+    ///
+    /// # Arguments
+    ///
+    /// * `email` - The email of the user.
+    /// * `name` - The name of the user.
+    /// * `password` - The password of the user.
+    ///
+    /// # Returns
+    ///
+    /// A new `User` instance with the specified email, name, and password.
+    pub fn new(email: String, name: String, password: String) -> Self {
         let salt = argon2::password_hash::SaltString::generate(&mut OsRng);
-        let password_hash = Argon2::default().hash_password(&password.as_bytes(),&salt).unwrap().to_string();
+        let password_hash = Argon2::default().hash_password(&password.as_bytes(), &salt).unwrap().to_string();
 
-        User{
+        User {
             id: uuid::Uuid::new_v4(),
             email,
             name,
