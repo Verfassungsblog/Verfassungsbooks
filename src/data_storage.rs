@@ -2005,6 +2005,7 @@ mod tests {
             max_import_threads: 2,
             chromium_path: None,
             zotero_translation_server: "https://translation-server.anghenfil.de".to_string(),
+            version: String::from("test"),
         }
     }
 
