@@ -15,3 +15,5 @@
 /static/js
 /.idea
 /version.txt
+.vscode/tasks.json
+.vscode/launch.json
