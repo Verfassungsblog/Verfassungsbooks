@@ -1,37 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <link rel="stylesheet" href="/css/bootstrap.min.css">
-    <link rel="stylesheet" href="/css/app.css">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verfassungsbooks</title>
-</head>
-<body>
-<nav class="navbar navbar-expand-lg">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="#">Verfassungsbooks</a>
-        <div class="collapse navbar-collapse" id="navbarSupportedContent">
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                <li class="nav-item">
-                    <a class="nav-link active" aria-current="page" href="/">Dashboard</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/persons">Writers & Editors</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/settings">Settings</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/templates">Templates</a>
-                </li>
-            </ul>
-        </div>
-        <div class="d-flex justify-content-end me-1">
-            <a href="/logout" class="nav-link">Logout</a>
-        </div>
-    </div>
-</nav>
+{{> header page_name="Home" home_active=true}}
 
 <div class="container-fluid mt-3">
     <div class="row mb-1">
@@ -40,13 +7,13 @@
         </div>
     </div>
     <div class="project_list">
-        <div class="row project_list_row">
+        <div class="row list_row">
             <div class="col d-flex align-content-center flex-wrap">
                 <b>Name</b>
             </div>
         </div>
         {{#each projects}}
-        <div class="row project_list_row">
+        <div class="row list_row">
             <div class="col d-flex align-content-center flex-wrap">
                 <a href="/projects/{{this.id}}">{{this.name}}</a>
             </div>
@@ -59,5 +26,6 @@
         <span class="text-muted">Version: {{version}}</span>
     </div>
 </footer>
+<script src="/js/general.js"></script>
 </body>
 </html>

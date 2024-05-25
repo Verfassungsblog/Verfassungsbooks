@@ -2290,6 +2290,7 @@ var Editor;
         }
     })(ContentBlockParser = Editor.ContentBlockParser || (Editor.ContentBlockParser = {}));
 })(Editor || (Editor = {}));
+var _a;
 var Tools;
 (function (Tools) {
     function hide_all(class_name) {
@@ -2331,6 +2332,17 @@ var Tools;
     }
     Tools.show_alert = show_alert;
 })(Tools || (Tools = {}));
+// Add click listener for mobile navbar
+(_a = document.getElementById("show_mobile_navbar")) === null || _a === void 0 ? void 0 : _a.addEventListener("click", function () {
+    console.log("Adding click listener for mobile navbar");
+    let navbar = document.getElementById("mobile_navbar");
+    if (navbar !== null) {
+        navbar.classList.toggle("hide");
+    }
+    else {
+        console.log("Navbar is null");
+    }
+});
 /// <reference path="ProjectOverview.ts" />
 /// <reference path="SectionView.ts" />
 /// <reference path="./ContentBlockParser.ts" />

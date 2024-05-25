@@ -37,12 +37,12 @@ h3 {
 }
 
 
-.project_list_row {
+.list_row {
     height: 40px;
     border-bottom: 1px solid lightgrey;
 }
 
-.project_list_row a {
+.list_row a {
     text-decoration: none;
 }
 
@@ -53,16 +53,26 @@ h3 {
 }
 
 .navbar {
-    background-color: var(--dark-blue);
-    color: white;
+    background-color: white;
+    color: black;
+    border-bottom: 1px solid #f3f3f3;
+    font-size: 10pt; 
+    padding: 2px;
 }
 
 .navbar-brand {
-    color: white !important;
+    color: black !important;
+    margin-right: 50px;
+    font-size: initial;
 }
-
+.nav-item{
+    margin-right: 10px;
+}
 .nav-link {
-    color: white !important;
+    padding: 1px;
+}
+.nav-link.active{
+    padding: 0 !important;
 }
 
 #editor-sidebar {
@@ -490,6 +500,17 @@ customstyle{
     display: flex;
     flex-direction: row;
 }
+.stacked-nav{
+    border-top: 1px solid #f3f3f3
+}
+.stacked-nav ul{
+    list-style-type: none;
+    padding: 10px 10px 0px 10px
+}
+.stacked-nav ul li{
+    margin-bottom: 10px;
+    cursor: pointer;
+}
 #wizard-pandoc-upload-progress{
     width: 100%;
 }
@@ -516,4 +537,12 @@ customstyle{
 }
 .dropdown:hover .dropdown-content{
     display: block;
+}
+.templates_list{
+    background-color: white;
+    border-radius: 5px;
+    padding: 10px 20px;
+}
+.templates_list a{
+    text-decoration: none;
 }
