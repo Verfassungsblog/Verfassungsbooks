@@ -69,7 +69,7 @@ pub async fn delete_project(project_id: String, _session: Session, _settings: &S
 }
 
 #[get("/api/projects/<project_id>/metadata")]
-pub async fn get_project_metadata(project_id: String, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<Option<ProjectMetadata>>> {
+pub async fn get_project_metadata(project_id: String, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>, data_storage: &State<Arc<DataStorage>>) -> Json<ApiResult<Option<ProjectMetadata>>> {
     let project_id = match uuid::Uuid::parse_str(&project_id) {
         Ok(project_id) => project_id,
         Err(e) => {
@@ -79,6 +79,7 @@ pub async fn get_project_metadata(project_id: String, _session: Session, setting
     };
 
     let project_storage = Arc::clone(project_storage);
+    let data_storage = Arc::clone(data_storage);
 
     let project_entry = match project_storage.get_project(&project_id, settings).await{
         Ok(project_entry) => project_entry.clone(),
@@ -89,11 +90,33 @@ pub async fn get_project_metadata(project_id: String, _session: Session, setting
     };
 
     let metadata = project_entry.read().unwrap().metadata.clone();
+    if let Some(mut metadata) = metadata{
+        let old_metadata = metadata.clone();
 
-    // TODO: Check if all authors and editors still exist, if not, remove them from the metadata and save the project
+        let valid_persons: Vec<uuid::Uuid> = {
+            let data_read = data_storage.data.read().unwrap();
+            data_read.persons.keys().cloned().collect()
+        };
+        if let Some(mut authors) = metadata.authors{
+            authors.retain_mut(|author| valid_persons.contains(&author));
+            metadata.authors = Some(authors);
+        }
+        if let Some(mut editors) = metadata.editors{
+            editors.retain_mut(|editor| valid_persons.contains(&editor));
+            metadata.editors = Some(editors);
+        }
 
-    ApiResult::new_data(metadata)
+        if metadata != old_metadata{
+            {
+                let mut project = project_storage.get_project(&project_id, settings).await.unwrap();
+                project.write().unwrap().metadata = Some(metadata.clone());
+            }
+        }
 
+        ApiResult::new_data(Some(metadata))
+    }else{
+        ApiResult::new_data(None)
+    }
 }
 pub trait Patch<P, T>{
     fn patch(&mut self, patch: P) -> T;
@@ -1147,8 +1170,15 @@ pub async fn move_content_child_of(project_id: String, content_id: String, paren
 /// GET /api/projects/<project_id>/sections/<content_id>
 /// Get a section, but strip out subsections
 #[get("/api/projects/<project_id>/sections/<content_path>")]
-pub async fn get_section(project_id: &str, content_path: &str, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<Section>> {
-    let project_id = match uuid::Uuid::parse_str(&project_id) {
+pub async fn get_section(
+    project_id: &str,
+    content_path: &str,
+    _session: Session,
+    settings: &State<Settings>,
+    project_storage: &State<Arc<ProjectStorage>>,
+    data_storage: &State<Arc<DataStorage>>
+) -> Json<ApiResult<Section>> {
+    let project_id = match uuid::Uuid::parse_str(project_id) {
         Ok(project_id) => project_id,
         Err(e) => {
             println!("Couldn't parse project id: {}", e);
@@ -1158,8 +1188,8 @@ pub async fn get_section(project_id: &str, content_path: &str, _session: Session
 
     let mut path = vec![];
 
-    for part in content_path.split(":"){
-        match uuid::Uuid::parse_str(part){
+    for part in content_path.split(":") {
+        match uuid::Uuid::parse_str(part) {
             Ok(part) => path.push(part),
             Err(e) => {
                 println!("Couldn't parse content path: {}", e);
@@ -1170,29 +1200,55 @@ pub async fn get_section(project_id: &str, content_path: &str, _session: Session
 
     println!("Path: {:?}", path);
 
-    if path.len() == 0{
+    if path.is_empty() {
         println!("Couldn't parse content path: path is empty");
         return ApiResult::new_error(ApiError::BadRequest("Couldn't parse content path".to_string()));
     }
 
     let project_storage = Arc::clone(project_storage);
+    let data_storage = Arc::clone(data_storage);
 
-    let project = match project_storage.get_project(&project_id, settings).await {
-        Ok(project) => project,
+    let project_entry = match project_storage.get_project(&project_id, settings).await {
+        Ok(project_entry) => project_entry,
         Err(_) => {
             println!("Couldn't get project with id {}", project_id);
             return ApiResult::new_error(ApiError::NotFound);
         },
     };
 
-    let project = project.read().unwrap();
+    let project_read_guard = project_entry.read().unwrap();
 
-    let section = crate::data_storage::get_section_by_path(&project, &path);
+    let section = crate::data_storage::get_section_by_path(&project_read_guard, &path);
 
-    // TODO: check if authors and editors still exist, if not, remove them and save section
-    match section{
-        Ok(section) => ApiResult::new_data(section.clone_without_subsections()),
-        Err(e) => ApiResult::new_error(e)
+    match section {
+        Ok(mut section) => {
+            let mut section_without_subsection = section.clone_without_subsections();
+
+            // Check if all persons in section metadata are still valid
+            let old_metadata = section_without_subsection.metadata.clone();
+            let valid_persons: Vec<uuid::Uuid> = {
+                let data_read_guard = data_storage.data.read().unwrap();
+                data_read_guard.persons.keys().cloned().collect()
+            };
+
+            let mut metadata = section_without_subsection.metadata.clone();
+            metadata.authors.retain_mut(|x| valid_persons.contains(x));
+            metadata.editors.retain_mut(|x| valid_persons.contains(x));
+
+            if metadata != old_metadata {
+                // Save edited metadata
+                drop(project_read_guard); // Drop the read lock before acquiring a write lock
+                let mut project_write_guard = project_entry.write().unwrap();
+                let section = match crate::data_storage::get_section_by_path_mut(&mut project_write_guard, &path) {
+                    Ok(section) => section,
+                    Err(e) => return ApiResult::new_error(e),
+                };
+                section.metadata = metadata.clone();
+                section_without_subsection.metadata = metadata;
+            }
+            ApiResult::new_data(section_without_subsection)
+        },
+        Err(e) => ApiResult::new_error(e),
     }
 }
 
