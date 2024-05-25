@@ -82,7 +82,7 @@ pub mod api{
 
     /// Update a user
     #[patch("/api/users/<id>", data = "<new_user>")]
-    pub async fn update_user(id: String, new_user: Json<PatchUser>, _session: Session, data_storage: &State<Arc<DataStorage>>) -> Json<ApiResult<User>>{
+    pub fn update_user(id: String, new_user: Json<api::PatchUser>, _session: Session, data_storage: &State<Arc<DataStorage>>) -> Json<ApiResult<User>>{
         // Parse id or return error
         let id = match uuid::Uuid::parse_str(&id){
             Ok(id) => id,
