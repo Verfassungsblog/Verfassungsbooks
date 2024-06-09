@@ -180,6 +180,16 @@ label{
     padding-left: 3px;
     padding-right: 3px;
 }
+.btn-sm-square{
+    width: 35px;
+    height: 35px;
+    padding: 2px;
+}
+.btn-xsm-square{
+    width: 25px;
+    height: 25px;
+    padding: 0px;
+}
 .hide{
     display: none;
 }
@@ -545,4 +555,39 @@ customstyle{
 }
 .templates_list a{
     text-decoration: none;
+}
+#template_editor_sidebar{
+    background-color: white;
+    height: calc(100vh - 47px);
+    border-right: 1px solid var(--silver);
+    padding-top: 5px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+#template_editor_sidebar_title{
+    border-bottom: 1px solid var(--silver);
+    cursor: pointer;
+    padding: 5px 0px 5px 0px;
+}
+.template_editor_sidebar_entry{
+    padding: 5px 0px 5px 0px;
+    background-color: var(--light-gray);
+    margin-top: 10px;
+    cursor: pointer;
+}
+.template_editor_assets_menu{
+    border-bottom: 1px solid var(--silver);
+}
+#template_editor_assets_menu_new_folder_dialog{
+    width: 400px;
+    padding: 10px;
+    background-color: white;
+    opacity: 0.95;
+}
+#template_editor_asset_rows_before{
+    height: 10px;
+}
+#template_editor_asset_rows_after{
+    height: 20px;
 }

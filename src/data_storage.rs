@@ -79,7 +79,7 @@ impl DataStorage{
     pub async fn insert_template(&self, template: ProjectTemplateV2, settings: &Settings) -> Result<(), ()>{
         // Create template directory inside data if it doesn't exist
         if !Path::new(&format!("{}/templates/{}", settings.data_path, template.id)).exists(){
-            if let Err(e) =  tokio::fs::create_dir_all(&format!("{}/templates/{}", settings.data_path, template.id)).await{
+            if let Err(e) =  tokio::fs::create_dir_all(&format!("{}/templates/{}/assets", settings.data_path, template.id)).await{
                 eprintln!("error while creating template directory: {}", e);
                 return Err(())
             }
@@ -1747,7 +1747,10 @@ pub enum ExportType{
     LATEX,
     EPUB,
     ODT,
-    MOBI
+    MOBI,
+    XML,
+    JSON,
+    PLAIN
 }
 
 #[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]

@@ -1,5 +1,6 @@
 app_title = "Verfassungsbooks"
 project_cache_time = 1800
+#WARNING: CURRENTLY NOT USED IN ALL PLACES, leave it on data for now
 data_path = "data"
 # Time until data storage write fails in ms
 file_lock_timeout = 1000

@@ -20,6 +20,7 @@ use crate::utils::csl::CslData;
 mod settings;
 pub mod session;
 pub mod projects;
+pub mod templates_editor;
 pub mod persons;
 pub mod data_storage;
 pub mod utils;
@@ -118,9 +119,17 @@ async fn rocket() -> _ {
         .mount("/css", rocket::fs::FileServer::from("static/css"))
         .mount("/js", rocket::fs::FileServer::from("static/js"))
         .mount("/", routes![
-            projects::templates_editor::list_templates,
-            projects::templates_editor::create_template,
-            projects::templates_editor::form_create_template,
+            templates_editor::user_interface::list_templates,
+            templates_editor::user_interface::create_template,
+            templates_editor::user_interface::form_create_template,
+            templates_editor::user_interface::get_template,
+            templates_editor::api::get_template,
+            templates_editor::api::update_template,
+            templates_editor::api::get_assets,
+            templates_editor::api::create_folder_asset,
+            templates_editor::api::create_file_asset,
+            templates_editor::api::move_asset,
+            templates_editor::api::delete_assets,
             utils::lobid_proxy::search_gnd, session::logout::logout_page, session::login::login_page, session::login::process_login_form, projects::create::show_create_project, projects::api::get_csl_styles, projects::create::process_create_project, projects::list::list_projects, projects::editor::show_editor, projects::bibliography_editor::show_bib_editor, projects::bibliography_editor::api::get_library, projects::bibliography_editor::api::update_bib_entry, projects::api::get_project_template, projects::api::set_project_template, projects::api::list_templates, projects::bibliography_editor::api::get_bib_entry, projects::bibliography_editor::api::search_bib_entry, projects::bibliography_editor::api::add_bib_entry, projects::api::get_project_metadata, projects::api::get_project_settings, projects::api::set_project_metadata, projects::api::set_project_settings, projects::api::add_author_to_project, projects::api::add_editor_to_project, projects::api::remove_editor_from_project, projects::api::remove_author_from_project, projects::api::add_keyword_to_project, projects::api::remove_keyword_from_project, projects::api::add_identifier_to_project, projects::api::remove_identifier_from_project, projects::api::update_identifier_in_project, projects::api::delete_project, persons::api::delete_person, persons::list::list_persons, persons::create::show_create_person, persons::api::create_person, persons::api::get_person, persons::api::update_person, persons::api::search_persons, projects::api::patch_project_metadata, projects::api::get_project_contents, projects::api::add_content, projects::api::move_content_after, projects::api::move_content_child_of, projects::api::get_section, projects::api::update_section, projects::api::delete_section, projects::api::get_content_blocks_in_section, projects::api::set_content_blocks_in_section, projects::api::render_project, projects::api::get_rendering_status, projects::api::upload_to_project, import::upload::poll_import_status, projects::api::get_project_upload, import::upload::import_from_wordpress, export::download::download_rendering, settings_page::settings_page, settings_page::api::add_user, settings_page::api::update_user, settings_page::api::delete_user, import::upload::import_from_upload])
         .manage(SessionStorage::new())
         .manage(settings)

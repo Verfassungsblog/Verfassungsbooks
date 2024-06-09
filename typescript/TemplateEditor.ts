@@ -1,0 +1,234 @@
+// Import API functions
+import { TemplateAPI, ProjectTemplateV2} from "./api_requests";
+import * as Tools from "./tools";
+
+let typing_timer: any | null = null;
+let template_api = TemplateAPI();
+let template_data: ProjectTemplateV2 | null = null;
+
+async function tstart(){
+    // Get template_id from URL (last part of the URL)
+    let url = new URL(window.location.href);
+    let template_id = url.pathname.split("/").pop();
+    if(template_id == null){
+        console.error("Template ID not found in URL, cannot continue.");
+        return;
+    }
+
+    // Load the current template data
+
+    try{
+        template_data = await template_api.read_template(template_id);
+        console.log(template_data);
+
+        // Add Sidebar:
+        let sidebar = document.getElementById("template_editor_sidebar");
+        // @ts-ignore
+        sidebar.innerHTML = Handlebars.templates.template_editor_sidebar(template_data);
+
+        // Add Main:
+        show_metadata();
+    }catch(e){
+        console.error("Error loading template data: ", e);
+        // Show error message
+        Tools.show_alert("Error loading Template Editor :( ", "danger");
+    }
+
+    // Add event listeners
+    document.getElementById("template_editor_sidebar_new_export_format_btn").addEventListener("click", add_export_format_handler);
+    document.getElementById("template_editor_global_assets_btn").addEventListener("click", show_global_assets);
+}
+
+function show_metadata(){
+    let main = document.getElementById("template_editor_main_panel");
+    // @ts-ignore
+    main.innerHTML = Handlebars.templates.template_editor_metadata(template_data);
+    let elements = Array.from(document.getElementsByClassName("quickchange"));
+    for(let element of elements){
+        element.addEventListener("input", change_metadata_handler);
+    }
+}
+
+async function show_global_assets(){
+    console.log("Loading global asset list");
+    let main = document.getElementById("template_editor_main_panel");
+    let assets = await template_api.list_global_assets(template_data.id);
+    
+    // @ts-ignore
+    main.innerHTML = Handlebars.templates.template_editor_assets(assets);
+    console.log(assets);
+
+    // Add drag listeners to all asset rows
+    let draggable_rows = Array.from(document.getElementsByClassName("asset_row"));
+    
+    for(let row of draggable_rows){
+        row.addEventListener("dragstart", drag_start_handler);
+    }
+
+    // Add dropzones to folder rows
+    let dropzones = Array.from(document.getElementsByClassName("folder_row_top"));
+    for(let dropzone of dropzones){
+        dropzone.addEventListener("drop", drop_handler);
+        dropzone.addEventListener("dragover", drag_over_handler);
+    }
+    // Add global dropzone
+    var dropzone_before = document.getElementById("template_editor_asset_rows_before");
+    var dropzone_after = document.getElementById("template_editor_asset_rows_after");
+    dropzone_before.addEventListener("drop", drop_handler);
+    dropzone_before.addEventListener("dragover", drag_over_handler);
+    dropzone_after.addEventListener("drop", drop_handler);
+    dropzone_after.addEventListener("dragover", drag_over_handler);
+
+    // Add menu listeners
+    document.getElementById("template_editor_assets_menu_new_folder_btn").addEventListener("click", new_folder_handler);
+    document.getElementById("template_editor_assets_menu_new_folder_dialog_create").addEventListener("click", create_folder_handler);
+    document.getElementById("template_editor_assets_menu_select_all_btn").addEventListener("click", select_deselect_all_handler);
+    document.getElementById("template_editor_assets_menu_delete_btn").addEventListener("click", delete_selected_handler);
+}
+
+function delete_selected_handler(){
+    
+    let checkboxes = Array.from(document.getElementsByClassName("asset_row_check")) as HTMLInputElement[];
+    let checkedCheckboxes = checkboxes.filter(checkbox => checkbox.checked);
+    let selectedPaths = checkedCheckboxes.map(checkbox => checkbox.closest(".asset_row").getAttribute("data-path"));
+    console.log(selectedPaths);
+    // Perform delete operation using selectedPaths
+    try{
+        template_api.delete_assets(template_data.id, selectedPaths);
+        show_global_assets();
+    }catch(e){
+        Tools.show_alert(e, "danger");
+        return;
+    }
+}
+
+function new_folder_handler(){
+    let dialog = document.getElementById("template_editor_assets_menu_new_folder_dialog");
+    dialog.classList.toggle("hide");
+}
+
+async function create_folder_handler(){
+    let folder_name = (document.getElementById("template_editor_assets_menu_new_folder_dialog_name") as HTMLInputElement).value;
+
+    if(folder_name == ""){
+        Tools.show_alert("Folder name cannot be empty", "danger");
+        return;
+    }
+
+    try{
+        await template_api.create_folder(template_data.id, folder_name);
+        show_global_assets();
+    }catch(e){
+        Tools.show_alert(e, "danger");
+        return;
+    }
+}
+
+function drop_handler(event: DragEvent){
+    event.preventDefault();
+    // Old path before being moved
+    var old_path = event.dataTransfer.getData("text");
+    var dropped_element = document.getElementById("Path-"+old_path);
+
+    let new_path;
+    if((event.target as HTMLElement).classList.contains("template_editor_global_drop_zone")){
+        // New Path after being moved: Just the filename
+        new_path = dropped_element.getAttribute("data-name");
+    }else{
+        var current_folder = (event.target as HTMLElement).closest(".folder_row");
+        var folder_content = current_folder.getElementsByClassName("folder_contents")[0];
+        //folder_content.appendChild(dropped_element); no longer needed since we will update the whole list
+
+        // New Path after being moved: Current Folder Path + Filename
+        new_path = current_folder.getAttribute("data-path")+"/"+dropped_element.getAttribute("data-name");
+    }
+
+    if (old_path != new_path){
+        let overwrite_option = false;
+        // Check if new_path already exists
+        let existing_element = document.getElementById("Path-"+new_path);
+        if(existing_element){
+            let confirm = window.confirm("An element with the same name already exists in this folder. Do you want to replace it?");
+            if(confirm){
+                overwrite_option = true;
+            }else{
+                return;
+            }
+        }
+
+        console.log("Moving ", old_path, " to ", new_path);
+        try{
+            template_api.move_global_asset(template_data.id, old_path, new_path, overwrite_option);
+            show_global_assets();
+        }catch(e){
+            Tools.show_alert(e, "danger");
+            return;
+        }
+    }
+}
+
+function drag_over_handler(event: DragEvent){
+    event.preventDefault();
+}
+
+function drag_start_handler(event: DragEvent){
+    event.dataTransfer.setData("text", (event.target as HTMLElement).getAttribute("data-path"));
+}
+
+function add_export_format_handler(){
+    let name = (document.getElementById("template_editor_sidebar_new_export_format_name") as HTMLInputElement).value;
+    let format_type = (document.getElementById("template_editor_sidebar_new_export_format_type") as HTMLSelectElement).value;
+
+    console.log(name, format_type);
+}
+
+function change_metadata_handler(){
+    // Wait for 1 second after the last keypress before saving
+    if(typing_timer != null){
+        clearTimeout(typing_timer);
+    }
+    typing_timer = setInterval(save_metadata, 1000)
+}
+
+function select_deselect_all_handler(){
+    let checkboxes = Array.from(document.getElementsByClassName("asset_row_check"));
+
+    // Check if all are checked
+    let all_checked = true;
+    for(let checkbox of checkboxes){
+        if(!(checkbox as HTMLInputElement).checked){
+            all_checked = false;
+            break;
+        }
+    }
+
+    if(all_checked){
+        for(let checkbox of checkboxes){
+            (checkbox as HTMLInputElement).checked = false;
+        }
+    }else{
+        for(let checkbox of checkboxes){
+            (checkbox as HTMLInputElement).checked = true;
+        }
+    }
+}
+
+function save_metadata(){
+    clearTimeout(typing_timer);
+    let template_name = document.getElementById("template_name").innerText.trim() || null;
+    let template_description = document.getElementById("template_description").innerHTML.trim() || null;
+
+    if (!template_name || !template_description){
+        return;
+    }
+    template_data.name = template_name;
+    template_data.description = template_description;
+    console.log(template_data);
+
+    // Save the metadata
+    template_api.update_template(template_data);
+}
+
+window.addEventListener("load", async function(){
+    tstart();
+});

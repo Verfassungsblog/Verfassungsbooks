@@ -1,0 +1,4 @@
+<label for="template_name">Template Name</label>
+<h1 id="template_name" contenteditable="true" class="quickchange">{{name}}</h1>
+<label for="template_description">Template Description</label>
+<p id="template_description" contenteditable="true" class="quickchange">{{{description}}}</p>

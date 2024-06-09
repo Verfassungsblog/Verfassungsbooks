@@ -32,6 +32,7 @@ pub enum ApiError{
     BadRequest(String),
     Unauthorized,
     InternalServerError,
+    Conflict(String),
     Other(String),
 }
 

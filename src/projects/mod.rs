@@ -775,4 +775,3 @@ pub mod editor;
 pub mod list;
 pub mod api;
 pub mod bibliography_editor;
-pub mod templates_editor;

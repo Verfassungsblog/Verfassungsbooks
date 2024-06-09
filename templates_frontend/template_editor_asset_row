@@ -1,0 +1,25 @@
+{{#if File}}
+    <div class="asset_row file_row" draggable="true" id="Path-{{File.path}}" data-path="{{File.path}}" data-name="{{File.name}}">
+        <div class="d-flex align-items-center">
+            <input id="Checkbox-Path-{{File.path}}" type="checkbox" class="form-check me-3 asset_row_check">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-file-earmark" viewBox="0 0 16 16">
+                <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5z"></path>
+            </svg><label for="Checkbox-Path-{{File.path}}" class="ms-1">{{File.name}}</label>
+        </div>
+    </div>
+{{/if}}
+{{#if Folder}}
+    <div class="asset_row folder_row" draggable="true" id="Path-{{Folder.path}}" data-path="{{Folder.path}}" data-name="{{Folder.name}}">
+        <div class="d-flex align-items-center folder_row_top">
+            <input id="Checkbox-Path-{{Folder.path}}" type="checkbox" class="form-check me-3 asset_row_check">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-folder" viewBox="0 0 16 16">
+                <path d="M.54 3.87.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.991-1.819l-.637-7a2 2 0 0 1 .342-1.31zM2.19 4a1 1 0 0 0-.996 1.09l.637 7a1 1 0 0 0 .995.91h10.348a1 1 0 0 0 .995-.91l.637-7A1 1 0 0 0 13.81 4zm4.69-1.707A1 1 0 0 0 6.172 2H2.5a1 1 0 0 0-1 .981l.006.139q.323-.119.684-.12h5.396z"/>
+              </svg><label for="Checkbox-Path-{{Folder.path}}" class="ms-1">{{Folder.name}}</label>
+        </div>
+        <div class="ms-3 folder_contents">
+            {{#each Folder.assets}}
+                {{> template_editor_asset_row}}
+            {{/each}}
+        </div>
+    </div>
+{{/if}}
