@@ -501,7 +501,61 @@ export function TemplateAPI(){
         }
 
         return response_data.data;
-    
+    }
+
+    async function get_asset_file(template_id: string, path: string){
+        const response = await fetch(`/api/templates/${template_id}/assets/files/${path}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to get asset file: ${response.status}`);
+        }
+        const contentType = response.headers.get('Content-Type');
+        console.log("Content type: "+contentType)
+
+        let result;
+        if (contentType && contentType.startsWith('text/')) {
+            // If it's a text file, read it as text
+            result = {
+                type: 'text',
+                data: await response.text(),
+            };
+        } else {
+            // If it's not a text file, get it as a blob
+            result = {
+                type: 'blob',
+                data: await response.blob(),
+            };
+        }
+        return result;
+    }
+
+    async function update_asset_text_file(template_id: string, path: string, content: string){
+        const response = await fetch(`/api/templates/${template_id}/assets/files/${path}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                content: content
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to update asset: ${response.status}`);
+        }
+
+        const response_data: ApiResult<null> = await response.json();
+
+        if (response_data.error) {
+            throw new Error(`${apiErrorToString(response_data.error)}`);
+        }
+
+        return response_data.data;
     }
 
     return{
@@ -511,6 +565,8 @@ export function TemplateAPI(){
         upload_file,
         list_global_assets,
         move_global_asset,
-        delete_assets
+        delete_assets,
+        get_asset_file,
+        update_asset_text_file
     }
 }

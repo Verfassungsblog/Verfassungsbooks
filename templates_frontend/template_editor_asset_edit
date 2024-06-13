@@ -1,0 +1,7 @@
+<div class="d-flex align-items-baseline justify-content-between">
+    <p data-old-name="{{name}}" contenteditable="true" id="template_editor_asset_edit_name">{{name}}</p>
+    <button id="template_editor_asset_edit_save_btn" data-path="{{path}}" type="button" disabled style="height: fit-content" class="btn btn-sm btn-success">Save Changes</button>
+</div>
+<div id="template_editor_assset_edit_editor">
+
+</div>

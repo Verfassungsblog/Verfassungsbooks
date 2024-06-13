@@ -1,8 +1,9 @@
 use crate::data_storage::{DataStorage, ProjectTemplateV2};
+use rocket::http::Status;
 use uuid::Uuid;
 use rocket::State;
 use rocket::form::Form;
-use rocket::fs::TempFile;
+use rocket::fs::{NamedFile, TempFile};
 use std::path::Path;
 use std::sync::Arc;
 use rocket::serde::json::Json;
@@ -113,6 +114,13 @@ fn sanitize_path(path: &str) -> String {
     // Entfernen von `../` und `./`
     let path = path.replace("../", "").replace("./", "");
 
+    // Remove leading / if present
+    let path = if path.starts_with("/") {
+        &path[1..]
+    } else {
+        &path
+    };
+
     // Erlaubte Zeichen sind alphanumerische Zeichen, Unterstrich, Bindestrich, Punkt und Schrägstrich
     let allowed_chars = |c: &char| c.is_alphanumeric() || *c == '_' || *c == '-' || *c == '.' || *c == '/';
     path.chars().filter(allowed_chars).collect()
@@ -206,13 +214,17 @@ pub async fn create_file_asset(_session: Session, template_id: String, asset: Fo
 
     let mut file = asset.into_inner().file;
 
-    let filename = match file.name(){
+    let filename = match file.raw_name(){
         Some(name) => name,
         None => {
             eprintln!("No file name provided");
             return ApiResult::new_error(ApiError::BadRequest("No file name provided".to_string()));
         }
     };
+
+    let filename = sanitize_path(filename.dangerous_unsafe_unsanitized_raw().as_str());
+
+    println!("Filename: {}", filename);
 
     let mut path;
 
@@ -225,7 +237,7 @@ pub async fn create_file_asset(_session: Session, template_id: String, asset: Fo
         }else{
             let filename_splitted = filename.split('.').collect::<Vec<&str>>();
 
-            let new_filename = if filename_splitted.len() == 1{ // File has to extension, add number to end
+            let new_filename = if filename_splitted.len() == 1{ // File has no extension, add number to end
                 format!("{}_{}", filename, i)
             }else{
                 // Get all parts except the last one
@@ -404,7 +416,7 @@ fn get_assets_recursive(current_path: &str, path_to_asset: Option<&String>) -> R
         } else {
             let file = AssetFile {
                 name: entry.file_name().to_string_lossy().to_string(),
-                mime_type: None,
+                mime_type: None, //TODO: remove if not needed
                 path: path_to_asset
             };
             assets.push(Asset::File(file));
@@ -412,6 +424,81 @@ fn get_assets_recursive(current_path: &str, path_to_asset: Option<&String>) -> R
     }
 
     Ok(assets)
+}
+
+/// GET /api/templates/<template_id>/assets/files/<path>
+/// Get an specific File asset in the global assets folder of the template
+#[get("/api/templates/<template_id>/assets/files/<path..>")]
+pub async fn get_asset_file(_session: Session, template_id: String, path: PathBuf) -> Result<NamedFile, Status>{
+    //Parse template_id to uuid
+    let template_id = match Uuid::parse_str(&template_id){
+        Ok(template_id) => template_id,
+        Err(e) => {
+            eprintln!("Couldn't parse template id: {}", e);
+            return Err(Status::NotFound);
+        }
+    };
+
+    // Get the path to the global assets folder
+    let path = match safe_path_combine(&format!("data/templates/{}/assets", template_id), &path.to_string_lossy()){ //TODO use path to data directory from config
+        Ok(path) => path,
+        Err(_) => {
+            eprintln!("Error getting asset, invalid path.");
+            return Err(Status::BadRequest);
+        }
+    };
+
+    match NamedFile::open(path).await{
+        Ok(file) => Ok(file),
+        Err(e) => {
+            eprintln!("Error getting asset: {}", e);
+            Err(Status::NotFound)
+        }
+    }
+}
+
+#[derive(serde::Deserialize)]
+pub struct UpdateAssetRequest{
+    pub content: String,
+}
+
+/// PUT /api/templates/<template_id>/assets/files/<path>
+/// Updates a text-based asset in the global assets folder of the template
+/// The asset must be a text-based file, e.g. .txt, .html, .css, .js
+#[put("/api/templates/<template_id>/assets/files/<path..>", data = "<content>")]
+pub async fn update_asset_file(_session: Session, template_id: String, path: PathBuf, content: Json<UpdateAssetRequest>) -> Json<ApiResult<()>> {
+    //Parse template_id to uuid
+    let template_id = match Uuid::parse_str(&template_id){
+        Ok(template_id) => template_id,
+        Err(e) => {
+            eprintln!("Couldn't parse template id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        }
+    };
+
+
+    // Get the path to the global assets folder
+    let path = match safe_path_combine(&format!("data/templates/{}/assets", template_id), &path.to_string_lossy()){ //TODO use path to data directory from config
+        Ok(path) => path,
+        Err(_) => {
+            eprintln!("Error updating asset, invalid path.");
+            return ApiResult::new_error(ApiError::BadRequest("Invalid path".to_string()));
+        }
+    };
+
+    // Check if file exists
+    if !path.exists(){
+        return ApiResult::new_error(ApiError::NotFound);
+    }
+
+    // Update the file
+    match tokio::fs::write(&path, content.into_inner().content).await{
+        Ok(_) => ApiResult::new_data(()),
+        Err(e) => {
+            eprintln!("Error updating asset: {}", e);
+            ApiResult::new_error(ApiError::InternalServerError)
+        }
+    }
 }
 
 /// POST /api/templates/<template_id>/assets/move
