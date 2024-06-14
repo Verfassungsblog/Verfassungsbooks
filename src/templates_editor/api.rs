@@ -12,6 +12,7 @@ use crate::session::session_guard::Session;
 use std::io;
 use std::fs;
 use std::path::PathBuf;
+use crate::templates_editor::export_steps::ExportFormat;
 
 /// Contains API endpoints for the templates editor.
 
@@ -558,6 +559,67 @@ pub async fn move_asset(_session: Session, template_id: String, asset: Json<Move
         }
     }
 
+}
+
+#[post("/api/templates/<template_id>/export_formats", data = "<data>")]
+pub async fn add_export_format(_session: Session, template_id: String, data_storage: &State<Arc<DataStorage>>, data: Json<ExportFormat>) -> Json<ApiResult<ExportFormat>>{
+
+    // Clone data storage
+    let mut data_storage = data_storage.clone();
+
+    let template_id = match Uuid::parse_str(&template_id) {
+        Ok(template_id) => template_id,
+        Err(e) => {
+            eprintln!("Couldn't parse template id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        }
+    };
+
+    // Get the format to be added
+    let format = data.into_inner();
+
+    // Add folder in file system
+    let base_path = format!("data/templates/{}/formats", template_id);
+    let base_path = Path::new(&base_path).canonicalize().unwrap();
+
+    let new_path = match safe_path_combine(&base_path.to_str().unwrap(), &format.slug){
+        Ok(path) => path,
+        Err(_) => {
+            eprintln!("Error creating export Format, invalid slug.");
+            return ApiResult::new_error(ApiError::BadRequest("Invalid Slug".to_string()));
+        }
+    };
+
+    if new_path.exists(){
+        return ApiResult::new_error(ApiError::BadRequest("An export format with this slug already exists.".to_string()))
+    }
+
+    let template_exists;
+    {
+        // Here we're assuming exported_formats is locked with a Mutex
+        let lock = data_storage.data.read().unwrap();
+        template_exists = match lock.templates.get(&template_id){
+            Some(template) => {
+                template.write().unwrap().export_formats.push(format.clone());
+                true
+            },
+            None => {
+                false
+            }
+        };
+    }
+
+    if !template_exists {
+        return ApiResult::new_error(ApiError::NotFound)
+    }
+
+    match tokio::fs::create_dir_all(new_path).await{
+        Ok(_) => ApiResult::new_data(format),
+        Err(e) => {
+            eprintln!("Couldn't create folder for new export format: {}", e);
+            ApiResult::new_error(ApiError::InternalServerError)
+        }
+    }
 }
 #[derive(serde::Deserialize)]
 pub struct MoveAssetRequest {

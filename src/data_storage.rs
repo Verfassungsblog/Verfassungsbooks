@@ -21,6 +21,7 @@ use hayagriva::types::*;
 use reqwest::Url;
 
 use unic_langid_impl::LanguageIdentifier;
+use crate::templates_editor::export_steps::ExportFormat;
 
 /// Storage for small data like users, passwords and login attempts
 ///
@@ -80,6 +81,10 @@ impl DataStorage{
         // Create template directory inside data if it doesn't exist
         if !Path::new(&format!("{}/templates/{}", settings.data_path, template.id)).exists(){
             if let Err(e) =  tokio::fs::create_dir_all(&format!("{}/templates/{}/assets", settings.data_path, template.id)).await{
+                eprintln!("error while creating template directory: {}", e);
+                return Err(())
+            }
+            if let Err(e) =  tokio::fs::create_dir_all(&format!("{}/templates/{}/formats", settings.data_path, template.id)).await{
                 eprintln!("error while creating template directory: {}", e);
                 return Err(())
             }
@@ -1738,30 +1743,6 @@ pub struct ProjectTemplateV2 {
     pub export_formats: Vec<ExportFormat>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
-pub enum ExportType{
-    PDF,
-    DOCX,
-    DOC,
-    HTML,
-    LATEX,
-    EPUB,
-    ODT,
-    MOBI,
-    XML,
-    JSON,
-    PLAIN
-}
-
-#[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
-pub struct ExportFormat{
-    pub slug: String,
-    pub name: String,
-    pub export_type: ExportType,
-    pub used_as_preview: bool,
-    pub add_cover: bool,
-    pub add_backcover: bool,
-}
 
 pub async fn save_data_worker(data_storage: Arc<DataStorage>, project_storage: Arc<ProjectStorage>, settings: Settings){
     tokio::spawn(async move {

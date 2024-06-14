@@ -7,24 +7,13 @@
                 <div class="mt-2">
                     <span class="fw-bold">Export Formats:</span>
                 </div>
-                <div class="template_editor_sidebar_entry">PDF</div>
+                {{#each export_formats}}
+                    <div class="template_editor_sidebar_entry" data-slug="{{slug}}">{{name}}</div>
+                {{/each}}
             </div>
             <div id="template_editor_sidebar_bottom">
-                <input type="text" class="form-control" placeholder="Export Format Name" id="template_editor_sidebar_new_export_format_name">
                 <div class="input-group mt-1">
-                    <select class="form-select" id="template_editor_sidebar_new_export_format_type">
-                        <option value="pdf">PDF</option>
-                        <option value="docx">DOCX</option>
-                        <option value="doc">DOC</option>
-                        <option value="html">HTML</option>
-                        <option value="latex">LATEX</option>
-                        <option value="epub">EPUB</option>
-                        <option value="odt">ODT</option>
-                        <option value="mobi">MOBI</option>
-                        <option value="xml">XML</option>
-                        <option value="json">JSON</option>
-                        <option value="plain">Plaintext</option>
-                    </select>   
+                     <input type="text" class="form-control" placeholder="Export Format Name" id="template_editor_sidebar_new_export_format_name">
                     <button type="button" class="btn btn-outline-success" id="template_editor_sidebar_new_export_format_btn">Add</button>
                 </div>
             </div>

@@ -48,6 +48,33 @@ Handlebars.partials['editor_sidebar_section'] = template({"1":function(container
     + ((stack1 = lookupProperty(helpers,"each").call(alias1,(depth0 != null ? lookupProperty(depth0,"sub_sections") : depth0),{"name":"each","hash":{},"fn":container.program(1, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":10,"column":8},"end":{"line":15,"column":17}}})) != null ? stack1 : "")
     + "    </div>\n    <div class=\"editor_sidebar_contents_section_after_dropzone\">\n    </div>\n</div>";
 },"usePartial":true,"useData":true});
+Handlebars.partials['template_editor_sidebar'] = template({"1":function(container,depth0,helpers,partials,data) {
+    var helper, alias1=depth0 != null ? depth0 : (container.nullContext || {}), alias2=container.hooks.helperMissing, alias3="function", alias4=container.escapeExpression, lookupProperty = container.lookupProperty || function(parent, propertyName) {
+        if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
+          return parent[propertyName];
+        }
+        return undefined
+    };
+
+  return "                    <div class=\"template_editor_sidebar_entry\" data-slug=\""
+    + alias4(((helper = (helper = lookupProperty(helpers,"slug") || (depth0 != null ? lookupProperty(depth0,"slug") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"slug","hash":{},"data":data,"loc":{"start":{"line":11,"column":74},"end":{"line":11,"column":82}}}) : helper)))
+    + "\">"
+    + alias4(((helper = (helper = lookupProperty(helpers,"name") || (depth0 != null ? lookupProperty(depth0,"name") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"name","hash":{},"data":data,"loc":{"start":{"line":11,"column":84},"end":{"line":11,"column":92}}}) : helper)))
+    + "</div>\n";
+},"compiler":[8,">= 4.3.0"],"main":function(container,depth0,helpers,partials,data) {
+    var stack1, helper, alias1=depth0 != null ? depth0 : (container.nullContext || {}), lookupProperty = container.lookupProperty || function(parent, propertyName) {
+        if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
+          return parent[propertyName];
+        }
+        return undefined
+    };
+
+  return "            <div id=\"template_editor_sidebar_main\">\n                <div id=\"template_editor_sidebar_title\">Template "
+    + container.escapeExpression(((helper = (helper = lookupProperty(helpers,"name") || (depth0 != null ? lookupProperty(depth0,"name") : depth0)) != null ? helper : container.hooks.helperMissing),(typeof helper === "function" ? helper.call(alias1,{"name":"name","hash":{},"data":data,"loc":{"start":{"line":2,"column":65},"end":{"line":2,"column":73}}}) : helper)))
+    + "</div>\n                <div id=\"template_editor_global_assets_btn\" class=\"template_editor_sidebar_entry d-flex align-items-center\">\n                    <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" fill=\"currentColor\" class=\"bi bi-file-earmark\" viewBox=\"0 0 16 16\">\n                        <path d=\"M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5z\"/>\n                    </svg><span class=\"ms-2\">Global Assets</span></div>\n                <div class=\"mt-2\">\n                    <span class=\"fw-bold\">Export Formats:</span>\n                </div>\n"
+    + ((stack1 = lookupProperty(helpers,"each").call(alias1,(depth0 != null ? lookupProperty(depth0,"export_formats") : depth0),{"name":"each","hash":{},"fn":container.program(1, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":10,"column":16},"end":{"line":12,"column":25}}})) != null ? stack1 : "")
+    + "            </div>\n            <div id=\"template_editor_sidebar_bottom\">\n                <div class=\"input-group mt-1\">\n                     <input type=\"text\" class=\"form-control\" placeholder=\"Export Format Name\" id=\"template_editor_sidebar_new_export_format_name\">\n                    <button type=\"button\" class=\"btn btn-outline-success\" id=\"template_editor_sidebar_new_export_format_btn\">Add</button>\n                </div>\n            </div>";
+},"useData":true});
 Handlebars.partials['editor_section_editors_li'] = template({"compiler":[8,">= 4.3.0"],"main":function(container,depth0,helpers,partials,data) {
     var helper, alias1=depth0 != null ? depth0 : (container.nullContext || {}), alias2=container.hooks.helperMissing, alias3="function", alias4=container.escapeExpression, lookupProperty = container.lookupProperty || function(parent, propertyName) {
         if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
@@ -65,6 +92,20 @@ Handlebars.partials['editor_section_editors_li'] = template({"compiler":[8,">= 4
     + " "
     + alias4(((helper = (helper = lookupProperty(helpers,"last_names") || (depth0 != null ? lookupProperty(depth0,"last_names") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"last_names","hash":{},"data":data,"loc":{"start":{"line":1,"column":77},"end":{"line":1,"column":91}}}) : helper)))
     + " <button class=\"img-btn section_metadata_editors_remove\"><svg xmlns=\"http://www.w3.org/2000/svg\" height=\"20\" viewBox=\"0 -960 960 960\" width=\"20\" fill=\"red\"><path d=\"M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z\"/></svg></button>\n</li>";
+},"useData":true});
+Handlebars.partials['template_editor_metadata'] = template({"compiler":[8,">= 4.3.0"],"main":function(container,depth0,helpers,partials,data) {
+    var stack1, helper, alias1=depth0 != null ? depth0 : (container.nullContext || {}), alias2=container.hooks.helperMissing, alias3="function", lookupProperty = container.lookupProperty || function(parent, propertyName) {
+        if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
+          return parent[propertyName];
+        }
+        return undefined
+    };
+
+  return "<label for=\"template_name\">Template Name</label>\n<h1 id=\"template_name\" contenteditable=\"true\" class=\"quickchange\">"
+    + container.escapeExpression(((helper = (helper = lookupProperty(helpers,"name") || (depth0 != null ? lookupProperty(depth0,"name") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"name","hash":{},"data":data,"loc":{"start":{"line":2,"column":66},"end":{"line":2,"column":74}}}) : helper)))
+    + "</h1>\n<label for=\"template_description\">Template Description</label>\n<p id=\"template_description\" contenteditable=\"true\" class=\"quickchange\">"
+    + ((stack1 = ((helper = (helper = lookupProperty(helpers,"description") || (depth0 != null ? lookupProperty(depth0,"description") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"description","hash":{},"data":data,"loc":{"start":{"line":4,"column":72},"end":{"line":4,"column":89}}}) : helper))) != null ? stack1 : "")
+    + "</p>";
 },"useData":true});
 Handlebars.partials['editor_add_identifier_row'] = template({"compiler":[8,">= 4.3.0"],"main":function(container,depth0,helpers,partials,data) {
     var helper, alias1=depth0 != null ? depth0 : (container.nullContext || {}), alias2=container.hooks.helperMissing, alias3="function", alias4=container.escapeExpression, lookupProperty = container.lookupProperty || function(parent, propertyName) {
@@ -127,6 +168,22 @@ Handlebars.partials['persons_edit'] = template({"1":function(container,depth0,he
     + ((stack1 = lookupProperty(helpers,"each").call(alias1,(depth0 != null ? lookupProperty(depth0,"bios") : depth0),{"name":"each","hash":{},"fn":container.program(1, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":37,"column":8},"end":{"line":44,"column":17}}})) != null ? stack1 : "")
     + "    </div>\n</div>\n<div class=\"row mt-1\">\n    <label class=\"col-sm-3 col-form-label\">Add Biography</label>\n    <div class=\"col-9 d-flex\">\n        <select class=\"form-select\" id=\"add_biography_lang\" style=\"width: 200px;\" aria-label=\"Language\">\n            <option value=\"none\" disabled selected>Select Language</option>\n            <option value=\"DE\" id=\"add_biography_lang_DE\">German</option>\n            <option value=\"EN\" id=\"add_biography_lang_EN\">English</option>\n        </select>\n        <button class=\"btn btn-secondary ms-1\" type=\"button\" id=\"add_bio_btn\">Add</button>\n    </div>\n</div>\n<hr>\n<div class=\"row mt-1\">\n    <div class=\"col\">\n        <button class=\"btn btn-danger\" type=\"button\" id=\"delete_person_btn\">Delete Person</button>\n    </div>\n</div>";
 },"useData":true});
+Handlebars.partials['template_editor_asset_edit'] = template({"compiler":[8,">= 4.3.0"],"main":function(container,depth0,helpers,partials,data) {
+    var helper, alias1=depth0 != null ? depth0 : (container.nullContext || {}), alias2=container.hooks.helperMissing, alias3="function", alias4=container.escapeExpression, lookupProperty = container.lookupProperty || function(parent, propertyName) {
+        if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
+          return parent[propertyName];
+        }
+        return undefined
+    };
+
+  return "<div class=\"d-flex align-items-baseline justify-content-between\">\n    <p data-old-name=\""
+    + alias4(((helper = (helper = lookupProperty(helpers,"name") || (depth0 != null ? lookupProperty(depth0,"name") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"name","hash":{},"data":data,"loc":{"start":{"line":2,"column":22},"end":{"line":2,"column":30}}}) : helper)))
+    + "\" contenteditable=\"true\" id=\"template_editor_asset_edit_name\">"
+    + alias4(((helper = (helper = lookupProperty(helpers,"name") || (depth0 != null ? lookupProperty(depth0,"name") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"name","hash":{},"data":data,"loc":{"start":{"line":2,"column":92},"end":{"line":2,"column":100}}}) : helper)))
+    + "</p>\n    <button id=\"template_editor_asset_edit_save_btn\" data-path=\""
+    + alias4(((helper = (helper = lookupProperty(helpers,"path") || (depth0 != null ? lookupProperty(depth0,"path") : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"path","hash":{},"data":data,"loc":{"start":{"line":3,"column":64},"end":{"line":3,"column":72}}}) : helper)))
+    + "\" type=\"button\" disabled style=\"height: fit-content\" class=\"btn btn-sm btn-success\">Save Changes</button>\n</div>\n<div id=\"template_editor_assset_edit_editor\">\n\n</div>";
+},"useData":true});
 Handlebars.partials['editor_keyword_gnd_search'] = template({"compiler":[8,">= 4.3.0"],"main":function(container,depth0,helpers,partials,data) {
     var helper, alias1=depth0 != null ? depth0 : (container.nullContext || {}), alias2=container.hooks.helperMissing, alias3="function", alias4=container.escapeExpression, lookupProperty = container.lookupProperty || function(parent, propertyName) {
         if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
@@ -171,6 +228,66 @@ Handlebars.partials['editor_keyword_li'] = template({"1":function(container,dept
     + ((stack1 = lookupProperty(helpers,"if").call(alias1,(depth0 != null ? lookupProperty(depth0,"gnd") : depth0),{"name":"if","hash":{},"fn":container.program(1, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":2,"column":58},"end":{"line":2,"column":156}}})) != null ? stack1 : "")
     + "</div>\n    <button class=\"img-btn project_metadata_keywords_remove\"><svg xmlns=\"http://www.w3.org/2000/svg\" height=\"20\" viewBox=\"0 -960 960 960\" width=\"20\" fill=\"white\"><path d=\"M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z\"/></svg></button>\n</div>";
 },"useData":true});
+Handlebars.partials['template_editor_asset_row'] = template({"1":function(container,depth0,helpers,partials,data) {
+    var stack1, alias1=container.lambda, alias2=container.escapeExpression, lookupProperty = container.lookupProperty || function(parent, propertyName) {
+        if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
+          return parent[propertyName];
+        }
+        return undefined
+    };
+
+  return "    <div class=\"asset_row file_row\" draggable=\"true\" id=\"Path-"
+    + alias2(alias1(((stack1 = (depth0 != null ? lookupProperty(depth0,"File") : depth0)) != null ? lookupProperty(stack1,"path") : stack1), depth0))
+    + "\" data-path=\""
+    + alias2(alias1(((stack1 = (depth0 != null ? lookupProperty(depth0,"File") : depth0)) != null ? lookupProperty(stack1,"path") : stack1), depth0))
+    + "\" data-name=\""
+    + alias2(alias1(((stack1 = (depth0 != null ? lookupProperty(depth0,"File") : depth0)) != null ? lookupProperty(stack1,"name") : stack1), depth0))
+    + "\">\n        <div class=\"d-flex align-items-center\">\n            <input id=\"Checkbox-Path-"
+    + alias2(alias1(((stack1 = (depth0 != null ? lookupProperty(depth0,"File") : depth0)) != null ? lookupProperty(stack1,"path") : stack1), depth0))
+    + "\" type=\"checkbox\" class=\"form-check me-3 asset_row_check\">\n            <div class=\"file_row_icon+name\">\n                <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" fill=\"currentColor\" class=\"bi bi-file-earmark\" viewBox=\"0 0 16 16\">\n                    <path d=\"M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5z\"></path>\n                </svg><label class=\"ms-1\">"
+    + alias2(alias1(((stack1 = (depth0 != null ? lookupProperty(depth0,"File") : depth0)) != null ? lookupProperty(stack1,"name") : stack1), depth0))
+    + "</label>\n            </div>\n        </div>\n    </div>\n";
+},"3":function(container,depth0,helpers,partials,data) {
+    var stack1, alias1=container.lambda, alias2=container.escapeExpression, lookupProperty = container.lookupProperty || function(parent, propertyName) {
+        if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
+          return parent[propertyName];
+        }
+        return undefined
+    };
+
+  return "    <div class=\"asset_row folder_row\" draggable=\"true\" id=\"Path-"
+    + alias2(alias1(((stack1 = (depth0 != null ? lookupProperty(depth0,"Folder") : depth0)) != null ? lookupProperty(stack1,"path") : stack1), depth0))
+    + "\" data-path=\""
+    + alias2(alias1(((stack1 = (depth0 != null ? lookupProperty(depth0,"Folder") : depth0)) != null ? lookupProperty(stack1,"path") : stack1), depth0))
+    + "\" data-name=\""
+    + alias2(alias1(((stack1 = (depth0 != null ? lookupProperty(depth0,"Folder") : depth0)) != null ? lookupProperty(stack1,"name") : stack1), depth0))
+    + "\">\n        <div class=\"d-flex align-items-center folder_row_top\">\n            <input id=\"Checkbox-Path-"
+    + alias2(alias1(((stack1 = (depth0 != null ? lookupProperty(depth0,"Folder") : depth0)) != null ? lookupProperty(stack1,"path") : stack1), depth0))
+    + "\" type=\"checkbox\" class=\"form-check me-3 asset_row_check\">\n            <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" fill=\"currentColor\" class=\"bi bi-folder\" viewBox=\"0 0 16 16\">\n                <path d=\"M.54 3.87.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.991-1.819l-.637-7a2 2 0 0 1 .342-1.31zM2.19 4a1 1 0 0 0-.996 1.09l.637 7a1 1 0 0 0 .995.91h10.348a1 1 0 0 0 .995-.91l.637-7A1 1 0 0 0 13.81 4zm4.69-1.707A1 1 0 0 0 6.172 2H2.5a1 1 0 0 0-1 .981l.006.139q.323-.119.684-.12h5.396z\"/>\n              </svg><label class=\"ms-1\">"
+    + alias2(alias1(((stack1 = (depth0 != null ? lookupProperty(depth0,"Folder") : depth0)) != null ? lookupProperty(stack1,"name") : stack1), depth0))
+    + "</label>\n        </div>\n        <div class=\"ms-3 folder_contents\">\n"
+    + ((stack1 = lookupProperty(helpers,"each").call(depth0 != null ? depth0 : (container.nullContext || {}),((stack1 = (depth0 != null ? lookupProperty(depth0,"Folder") : depth0)) != null ? lookupProperty(stack1,"assets") : stack1),{"name":"each","hash":{},"fn":container.program(4, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":22,"column":12},"end":{"line":24,"column":21}}})) != null ? stack1 : "")
+    + "        </div>\n    </div>\n";
+},"4":function(container,depth0,helpers,partials,data) {
+    var stack1, lookupProperty = container.lookupProperty || function(parent, propertyName) {
+        if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
+          return parent[propertyName];
+        }
+        return undefined
+    };
+
+  return ((stack1 = container.invokePartial(lookupProperty(partials,"template_editor_asset_row"),depth0,{"name":"template_editor_asset_row","data":data,"indent":"                ","helpers":helpers,"partials":partials,"decorators":container.decorators})) != null ? stack1 : "");
+},"compiler":[8,">= 4.3.0"],"main":function(container,depth0,helpers,partials,data) {
+    var stack1, alias1=depth0 != null ? depth0 : (container.nullContext || {}), lookupProperty = container.lookupProperty || function(parent, propertyName) {
+        if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
+          return parent[propertyName];
+        }
+        return undefined
+    };
+
+  return ((stack1 = lookupProperty(helpers,"if").call(alias1,(depth0 != null ? lookupProperty(depth0,"File") : depth0),{"name":"if","hash":{},"fn":container.program(1, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":1,"column":0},"end":{"line":12,"column":7}}})) != null ? stack1 : "")
+    + ((stack1 = lookupProperty(helpers,"if").call(alias1,(depth0 != null ? lookupProperty(depth0,"Folder") : depth0),{"name":"if","hash":{},"fn":container.program(3, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":13,"column":0},"end":{"line":27,"column":7}}})) != null ? stack1 : "");
+},"usePartial":true,"useData":true});
 Handlebars.partials['editor_export_wizard'] = template({"compiler":[8,">= 4.3.0"],"main":function(container,depth0,helpers,partials,data) {
     return "<h1>Export</h1>\n<div id=\"wizard-start\" class=\"wizard-card\">\n    Select output format(s):\n    <div class=\"export-wizard-formats\">\n        <div class=\"form-check\">\n          <input class=\"form-check-input\" type=\"checkbox\" value=\"\" id=\"export-wizard-formats-pdf-with-cover\">\n          <label class=\"form-check-label\" for=\"export-wizard-formats-pdf-with-cover\">\n            PDF with cover and back cover if available\n          </label>\n        </div>\n        <div class=\"form-check\">\n          <input class=\"form-check-input\" type=\"checkbox\" value=\"\" id=\"export-wizard-formats-pdf-without-cover\">\n          <label class=\"form-check-label\" for=\"export-wizard-formats-pdf-without-cover\">\n            Print PDF without cover and back cover\n          </label>\n        </div>\n        <div class=\"form-check\">\n          <input class=\"form-check-input\" type=\"checkbox\" value=\"\" id=\"export-wizard-formats-epub\">\n            <label class=\"form-check-label\" for=\"xport-wizard-formats-epub\">\n                EPUB\n            </label>\n        </div>\n        <div class=\"form-check\">\n          <input class=\"form-check-input\" type=\"checkbox\" value=\"\" id=\"export-wizard-formats-docx\">\n            <label class=\"form-check-label\" for=\"export-wizard-formats-docx\">\n                Docx (Word)\n            </label>\n        </div>\n        <div class=\"form-check\">\n                  <input class=\"form-check-input\" type=\"checkbox\" value=\"\" id=\"export-wizard-formats-odt\">\n                    <label class=\"form-check-label\" for=\"export-wizard-formats-odt\">\n                        ODT (Libre Office)\n                    </label>\n        </div>\n        <div class=\"form-check\">\n                  <input class=\"form-check-input\" type=\"checkbox\" value=\"\" id=\"export-wizard-formats-html\">\n                    <label class=\"form-check-label\" for=\"export-wizard-formats-html\">\n                        HTML\n                    </label>\n                </div>\n    </div>\n    What do you want to export?\n    <div class=\"form-check\">\n      <input class=\"form-check-input\" type=\"radio\" name=\"flexRadioDefault\" id=\"export-wizard-select-all\" checked>\n      <label class=\"form-check-label\" for=\"export-wizard-select-all\">\n        The whole Project\n      </label>\n    </div>\n    <div class=\"form-check\">\n      <input class=\"form-check-input\" type=\"radio\" name=\"flexRadioDefault\" id=\"export-wizard-select-chapter\">\n      <label class=\"form-check-label\" for=\"export-wizard-select-chapter\">\n        Only selected chapters\n      </label>\n    </div>\n</div>";
 },"useData":true});
@@ -418,6 +535,27 @@ Handlebars.partials['editor_import_wizard'] = template({"compiler":[8,">= 4.3.0"
 Handlebars.partials['bibliography_editor_sidebar'] = template({"compiler":[8,">= 4.3.0"],"main":function(container,depth0,helpers,partials,data) {
     return "<div class=\"editor-sidebar-structure\">\n    <b>Bibliography Entries</b>\n    <div id=\"editor_sidebar_contents\">\n\n    </div>\n</div>\n<div class=\"editor-sidebar-structure-ctl\">\n    <input class=\"form-control mb-1\" placeholder=\"Key (e.g. maxmustermann-1)\" id=\"bibeditor_sidebar_add_entry_key\">\n    <div class=\"input-group\">\n        <select class=\"form-select\" id=\"bibeditor_sidebar_add_entry_type\">\n            <option value=\"Article\" title=\"A short text, possibly of journalistic or scientific nature, appearing in some greater publication.\">Article</option>\n            <option value=\"Chapter\" title=\"A section of a greater containing work.\">Chapter</option>\n            <option value=\"Book\" title=\"Long-form work published pysically as a set of bound sheets.\">Book</option>\n            <option value=\"Entry\" title=\"A short segment of media on some subject matter. Could appear in a work of reference or a data set\">Entry</option>\n            <option value=\"Anthos\" title=\"Text published within an Anthology.\">Anthos</option>\n            <option value=\"Report\" title=\"A document compiled by authors that may be affiliated to an organization. Presents information for a specific audience or purpose.\">Report</option>\n            <option value=\"Thesis\" title=\"Scholarly work delivered to fulfill degree requirements at a higher education institution.\">Thesis</option>\n            <option value=\"Web\" title=\"Piece of content that can be found on the internet and is native to the medium, like an animation, a web app, or a form of content not found elsewhere. Do not use this entry type when referencing a textual blog article, instead use an Article with a Blog parent.\">Web</option>\n            <option value=\"Scene\" title=\"A part of a show or another type of performed media, typically all taking place in the same location.\">Scene</option>\n            <option value=\"Artwork\" title=\"A form of artistic/creative expression.\">Artwork</option>\n            <option value=\"Patent\" title=\"A technical document deposited at a government agency that describes an invention to legally limit the rights of reproduction to the inventors.\">Patent</option>\n            <option value=\"Case\" title=\"Reference to a legal case that was or is to be heard at a court of law.\">Case</option>\n            <option value=\"Newspaper\" title=\"The issue of a newspaper that was published on a given day.\">Newspaper</option>\n            <option value=\"Legislation\" title=\"Legal document or draft there of that is, is to be, or was to be enacted into binding law.\">Legislation</option>\n            <option value=\"Manuscript\" title=\"A document that is not yet published.\">Manuscript</option>\n            <option value=\"Post\" title=\"A post on a social media platform.\">Post</option>\n            <option value=\"Misc\" title=\"Items that do not match any of the other Entry type composites.\">Misc</option>\n            <option value=\"Performance\" title=\"A live performance.\">Performance</option>\n            <option value=\"Periodical\" title=\"A publication that periodically publishes issues with unique content. This includes scientific journals and news magazines.\">Periodical</option>\n            <option value=\"Proceedings\" title=\"The official published record of the events at a professional conference.\">Proceedings</option>\n            <option value=\"Blog\" title=\"Set of self-published articles on a website.\">Blog</option>\n            <option value=\"Reference\" title=\"A work of reference. This could be a manual or a dictionary.\">Reference</option>\n            <option value=\"Conference\" title=\"Professional conference. This Entry type implies that the item referenced has been an event at the conference itself. If you instead want to reference a paper published in the published proceedings of the conference, use an Article with a Proceedings parent.\">Conference</option>\n            <option value=\"Anthology\" title=\"Collection of different texts on a single topic/theme.\">Anthology</option>\n            <option value=\"Repository\" title=\"Publicly visible storage of the source code for a particular software and its modifications over time.\">Repository</option>\n            <option value=\"Thread\" title=\"Written discussion on the internet triggered by an original post. Could be on a forum, social network, or Q&A site.\">Thread</option>\n            <option value=\"Video\" title=\"Motion picture of any form, possibly with accompanying audio.\">Video</option>\n            <option value=\"Audio\" title=\"Recorded audible sound of any kind.\">Audio</option>\n            <option value=\"Exhibition\" title=\"A curated set of artworks.\">Exhibition</option>\n            <option value=\"Original\" title=\"A prior publication of the same item.\">Original</option>\n        </select>\n        <button type=\"button\" class=\"btn btn-outline-success\" id=\"bibeditor_sidebar_add_entry_btn\">Add</button>\n    </div>\n</div>";
 },"useData":true});
+Handlebars.partials['template_editor_assets'] = template({"1":function(container,depth0,helpers,partials,data) {
+    var stack1, lookupProperty = container.lookupProperty || function(parent, propertyName) {
+        if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
+          return parent[propertyName];
+        }
+        return undefined
+    };
+
+  return ((stack1 = container.invokePartial(lookupProperty(partials,"template_editor_asset_row"),depth0,{"name":"template_editor_asset_row","data":data,"indent":"            ","helpers":helpers,"partials":partials,"decorators":container.decorators})) != null ? stack1 : "");
+},"compiler":[8,">= 4.3.0"],"main":function(container,depth0,helpers,partials,data) {
+    var stack1, lookupProperty = container.lookupProperty || function(parent, propertyName) {
+        if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {
+          return parent[propertyName];
+        }
+        return undefined
+    };
+
+  return "<h1 class=\"mt-3\">Global Assets</h1>\n<div class=\"row\">\n    <div class=\"template_editor_asset_edit_col col col-6\">\n        <div class=\"mt-2 template_editor_assets_menu d-flex\">\n            <button id=\"template_editor_assets_menu_select_all_btn\" class=\"btn btn-xsm-square justify-content-center align-items-center d-flex\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" fill=\"currentColor\" class=\"bi bi-check2-all\" viewBox=\"0 0 16 16\">\n                <path d=\"M12.354 4.354a.5.5 0 0 0-.708-.708L5 10.293 1.854 7.146a.5.5 0 1 0-.708.708l3.5 3.5a.5.5 0 0 0 .708 0zm-4.208 7-.896-.897.707-.707.543.543 6.646-6.647a.5.5 0 0 1 .708.708l-7 7a.5.5 0 0 1-.708 0\"/>\n                <path d=\"m5.354 7.146.896.897-.707.707-.897-.896a.5.5 0 1 1 .708-.708\"/>\n            </svg></button>\n            <button id=\"template_editor_assets_menu_new_folder_btn\" class=\"btn btn-xsm-square justify-content-center align-items-center d-flex ms-2\">\n                <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" fill=\"currentColor\" class=\"bi bi-folder-plus\" viewBox=\"0 0 16 16\">\n                    <path d=\"m.5 3 .04.87a2 2 0 0 0-.342 1.311l.637 7A2 2 0 0 0 2.826 14H9v-1H2.826a1 1 0 0 1-.995-.91l-.637-7A1 1 0 0 1 2.19 4h11.62a1 1 0 0 1 .996 1.09L14.54 8h1.005l.256-2.819A2 2 0 0 0 13.81 3H9.828a2 2 0 0 1-1.414-.586l-.828-.828A2 2 0 0 0 6.172 1H2.5a2 2 0 0 0-2 2m5.672-1a1 1 0 0 1 .707.293L7.586 3H2.19q-.362.002-.683.12L1.5 2.98a1 1 0 0 1 1-.98z\"/>\n                    <path d=\"M13.5 9a.5.5 0 0 1 .5.5V11h1.5a.5.5 0 1 1 0 1H14v1.5a.5.5 0 1 1-1 0V12h-1.5a.5.5 0 0 1 0-1H13V9.5a.5.5 0 0 1 .5-.5\"/>\n                </svg>\n            </button>\n            <button id=\"template_editor_assets_menu_upload_btn\" class=\"btn btn-xsm-square justify-content-center align-items-center\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" fill=\"currentColor\" class=\"bi bi-upload\" viewBox=\"0 0 16 16\">\n                <path d=\"M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5\"/>\n                <path d=\"M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z\"/>\n            </svg></button>\n            <button id=\"template_editor_assets_menu_delete_btn\" class=\"btn btn-xsm-square justify-content-center align-items-center d-flex\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" fill=\"red\" class=\"bi bi-trash3\" viewBox=\"0 0 16 16\">\n                <path d=\"M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5M11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47M8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5\"/>\n            </svg></button>\n        </div>\n        <div id=\"template_editor_assets_menu_new_folder_dialog\" class=\"input-group hide\" style=\"position: absolute;\">\n            <input type=\"text\" class=\"form-control\" id=\"template_editor_assets_menu_new_folder_dialog_name\" placeholder=\"Folder Name\">\n            <button class=\"btn btn-sm btn-primary\" id=\"template_editor_assets_menu_new_folder_dialog_create\">Create</button>\n        </div>\n        <div id=\"template_editor_assets_contextmenu\" class=\"hide\" data-context-path=\"\">\n            <div class=\"contextmenu_entry\" id=\"template_editor_assets_contextmenu_rename\">Rename</div>\n        </div>\n        <div id=\"template_editor_assets_contextmenu_rename_dialog\" class=\"hide input-group\">\n            <input type=\"text\" class=\"form-control\" id=\"template_editor_assets_contextmenu_rename_dialog_input\">\n            <button class=\"btn btn-sm btn-primary\" id=\"template_editor_assets_contextmenu_rename_dialog_btn\">Rename</button>\n        </div>\n        <div class=\"m-2 col col-6 template_editor_asset_rows\">\n            <div id=\"template_editor_asset_rows_before\" class=\"template_editor_global_drop_zone\"></div>\n"
+    + ((stack1 = lookupProperty(helpers,"each").call(depth0 != null ? depth0 : (container.nullContext || {}),(depth0 != null ? lookupProperty(depth0,"assets") : depth0),{"name":"each","hash":{},"fn":container.program(1, data, 0),"inverse":container.noop,"data":data,"loc":{"start":{"line":36,"column":12},"end":{"line":38,"column":21}}})) != null ? stack1 : "")
+    + "            <div id=\"template_editor_asset_rows_after\" class=\"template_editor_global_drop_zone\"></div>\n        </div>       \n    </div>\n    <div id=\"template_editor_asset_edit\" class=\"col col-lg-6 template_editor_asset_edit_col\">\n        \n\n    </div>\n</div>";
+},"usePartial":true,"useData":true});
 Handlebars.partials['editor_add_editors_li'] = template({"compiler":[8,">= 4.3.0"],"main":function(container,depth0,helpers,partials,data) {
     var helper, alias1=depth0 != null ? depth0 : (container.nullContext || {}), alias2=container.hooks.helperMissing, alias3="function", alias4=container.escapeExpression, lookupProperty = container.lookupProperty || function(parent, propertyName) {
         if (Object.prototype.hasOwnProperty.call(parent, propertyName)) {

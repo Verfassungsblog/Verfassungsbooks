@@ -558,6 +558,34 @@ export function TemplateAPI(){
         return response_data.data;
     }
 
+    async function create_export_format(template_id: string, name: string): Promise<any>{
+        let data = {
+            name: name,
+            export_steps: [] as any[],
+            slug: slugify(name)
+        }
+
+        const response = await fetch(`/api/templates/${template_id}/export_formats/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to create export format: ${response.status}`);
+        }
+
+        const response_data: ApiResult<null> = await response.json();
+
+        if (response_data.error) {
+            throw new Error(`${apiErrorToString(response_data.error)}`);
+        }
+
+        return response_data.data;
+    }
+
     return{
         read_template,
         update_template,
@@ -567,6 +595,18 @@ export function TemplateAPI(){
         move_global_asset,
         delete_assets,
         get_asset_file,
-        update_asset_text_file
+        update_asset_text_file,
+        create_export_format
     }
+}
+
+function slugify(text: string): string {
+    return text
+        .trim() // trim leading and trailing spaces
+        .toLowerCase() // convert text to lowercase
+        .replace(/\s+/g, '-') // replace spaces with -
+        .normalize('NFD') // decompose accented characters
+        .replace(/[\u0300-\u036f]/g, '') // remove diacritics
+        .replace(/[^a-z0-9 -]/g, '') // remove invalid characters
+        .replace(/-+/g, '-'); // collapse multiple -'s
 }

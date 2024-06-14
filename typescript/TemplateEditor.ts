@@ -1,6 +1,7 @@
 // Import API functions
 import { TemplateAPI, ProjectTemplateV2} from "./api_requests";
 import * as Tools from "./tools";
+
 import {EditorView, basicSetup} from "codemirror"
 import {html} from "@codemirror/lang-html"
 
@@ -57,18 +58,6 @@ async function tstart(){
     });
 }
 
-function show_contextmenu_rename_dialog(){
-    let context = document.getElementById("template_editor_assets_contextmenu").getAttribute("data-context-path");
-    if(!context){
-        return;
-    }
-
-    let dialog = document.getElementById("template_editor_assets_contextmenu_rename_dialog") as HTMLElement;
-    let name_input = document.getElementById("template_editor_assets_contextmenu_rename_dialog_input") as HTMLInputElement;
-    name_input.value = document.getElementById("Path-"+context).getAttribute("data-name");
-    dialog.setAttribute("data-path", context);
-    dialog.classList.remove("hide");
-}
 
 function show_metadata(){
     let main = document.getElementById("template_editor_main_panel");
@@ -129,6 +118,19 @@ async function show_global_assets(){
     // Add contextmenu listener
     document.getElementById("template_editor_assets_contextmenu_rename").addEventListener("click", show_contextmenu_rename_dialog);
     document.getElementById("template_editor_assets_contextmenu_rename_dialog_btn").addEventListener("click", save_new_asset_name);
+}
+
+function show_contextmenu_rename_dialog(){
+    let context = document.getElementById("template_editor_assets_contextmenu").getAttribute("data-context-path");
+    if(!context){
+        return;
+    }
+
+    let dialog = document.getElementById("template_editor_assets_contextmenu_rename_dialog") as HTMLElement;
+    let name_input = document.getElementById("template_editor_assets_contextmenu_rename_dialog_input") as HTMLInputElement;
+    name_input.value = document.getElementById("Path-"+context).getAttribute("data-name");
+    dialog.setAttribute("data-path", context);
+    dialog.classList.remove("hide");
 }
 
 async function save_new_asset_name(){
@@ -352,11 +354,15 @@ function drag_start_handler(event: DragEvent){
     event.dataTransfer.setData("text", (event.target as HTMLElement).getAttribute("data-path"));
 }
 
-function add_export_format_handler(){
+async function add_export_format_handler() {
     let name = (document.getElementById("template_editor_sidebar_new_export_format_name") as HTMLInputElement).value;
-    let format_type = (document.getElementById("template_editor_sidebar_new_export_format_type") as HTMLSelectElement).value;
 
-    console.log(name, format_type);
+    try {
+        let res = await template_api.create_export_format(template_data.id, name)
+        await tstart();
+    } catch (e) {
+        Tools.show_alert(e, "danger");
+    }
 }
 
 function change_metadata_handler(){
