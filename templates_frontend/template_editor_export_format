@@ -1,19 +1,19 @@
 <div class="card mt-3">
-    <div class="card-header d-flex align-items-center card-collapse-or-expand" data-state="expanded">
-        <span class="card-collapse-or-expand-sign">-</span> Export Format Metadata
+    <div class="card-header d-flex align-items-center card-collapse-or-expand" {{#if collapse_status.metadata}} data-state="expanded"{{else}} data-state="collapsed"{{/if}} data-card="metadata">
+        <span class="card-collapse-or-expand-sign">{{#if collapse_status.metadata}}-{{else}}+{{/if}}</span> Export Format Metadata
     </div>
-    <div class="card-body">
+    <div class="card-body {{#unless collapse_status.metadata}}hide{{/unless}}">
         <label for="export_format_name">Export Format Name</label>
-        <h1 id="export_format_name">{{name}}</h1>
+        <h1 id="export_format_name">{{export_format_data.name}}</h1>
         <label>Danger Zone</label><br>
         <button type="button" class="btn btn-outline-danger" id="delete_export_format">Delete Export Format</button>
     </div>
 </div>
 <div class="card mt-1">
-    <div class="card-header d-flex align-items-center card-collapse-or-expand" data-state="collapsed">
-        <span class="card-collapse-or-expand-sign">+</span> Assets & Templates
+    <div class="card-header d-flex align-items-center card-collapse-or-expand" {{#if collapse_status.assets}} data-state="expanded"{{else}} data-state="collapsed"{{/if}} data-card="assets">
+        <span class="card-collapse-or-expand-sign">{{#if collapse_status.assets}}-{{else}}+{{/if}}</span> Assets & Templates
     </div>
-    <div class="card-body hide row">
+    <div class="card-body {{#unless collapse_status.assets}}hide{{/unless}} row">
         <div class="col col-6">
                 <div class="mt-2 template_editor_assets_menu d-flex">
                     <button id="template_editor_assets_menu_select_all_btn" class="btn btn-xsm-square justify-content-center align-items-center d-flex"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check2-all" viewBox="0 0 16 16">
@@ -47,7 +47,7 @@
                 </div>
                 <div class="m-2 col col-6 template_editor_asset_rows">
                     <div id="template_editor_asset_rows_before" class="template_editor_global_drop_zone"></div>
-                    {{#each assets}}
+                    {{#each assets.assets}}
                     {{> template_editor_asset_row}}
                     {{/each}}
                     <div id="template_editor_asset_rows_after" class="template_editor_global_drop_zone"></div>
@@ -55,15 +55,14 @@
             </div>
             <div id="template_editor_asset_edit" class="col col-lg-6">
 
-
             </div>
     </div>
 </div>
 <div class="card mt-1">
-    <div class="card-header d-flex align-items-center card-collapse-or-expand" data-state="collapsed">
-        <span class="card-collapse-or-expand-sign">+</span> Export Steps
+    <div class="card-header d-flex align-items-center card-collapse-or-expand" {{#if collapse_status.export_steps}} data-state="expanded"{{else}} data-state="collapsed"{{/if}} data-card="export_steps">
+        <span class="card-collapse-or-expand-sign">{{#if collapse_status.export_steps}}-{{else}}+{{/if}}</span> Export Steps
     </div>
-    <div class="card-body hide">
+    <div class="card-body {{#unless collapse_status.export_steps}}hide{{/unless}}">
 
     </div>
 </div>

@@ -8,7 +8,13 @@ import {html} from "@codemirror/lang-html"
 let typing_timer: any | null = null;
 let template_api = TemplateAPI();
 let template_data: ProjectTemplateV2 | null = null;
+let current_export_format: string | null = null;
 let editor : EditorView | null = null;
+let collapse_status: Record<string, boolean> = {
+    metadata: true,
+    assets: false,
+    export_steps: false
+};
 
 async function tstart(){
     // Get template_id from URL (last part of the URL)
@@ -43,7 +49,7 @@ async function tstart(){
     document.getElementById("template_editor_global_assets_btn").addEventListener("click", show_global_assets);
     let export_format_entries = Array.from(document.getElementsByClassName("template_editor_sidebar_export_format"));
     for(let entry of export_format_entries){
-        entry.addEventListener("click", show_export_format)
+        entry.addEventListener("click", export_format_list_click_lstn)
     }
 
     // Event listeners for context menu:
@@ -61,29 +67,38 @@ async function tstart(){
     });
 }
 
-function show_export_format(e: Event){
+async function export_format_list_click_lstn(e: Event){
     let target = e.target as HTMLElement;
-    let slug = target.getAttribute("data-slug");
-
+    let slug = target.getAttribute("data-slug") as string;
     if(!slug){
         console.error("show_export_format called but slug missing")
         return
     }
+    current_export_format = slug;
+    await show_export_format();
+}
 
-    let export_format_data : any;
-    for(let export_format of template_data.export_formats) {
-        if (export_format.slug === slug) {
-            export_format_data = export_format;
-            break;
-        }
+async function show_export_format(){
+    let data: any = {};
+    data.collapse_status = collapse_status;
+    data.export_format_data = template_data.export_formats[current_export_format];
+    if(!data.export_format_data){
+        console.error("Couldn't find export format data for slug "+current_export_format);
     }
-    if(!export_format_data){
-        console.error("Couldn't find export format data for slug "+slug);
+
+    try{
+        data.assets = await template_api.list_export_format_assets(template_data.id, current_export_format);
+    }catch(e){
+        console.error(e);
+        Tools.show_alert(e, "danger");
+        return;
     }
+    console.log(data);
+
 
     let main = document.getElementById("template_editor_main_panel");
     // @ts-ignore
-    main.innerHTML = Handlebars.templates.template_editor_export_format(export_format_data);
+    main.innerHTML = Handlebars.templates.template_editor_export_format(data);
 
     // Handler to collapse / expand cards
     let collapse_handler = function(e: Event){
@@ -92,15 +107,18 @@ function show_export_format(e: Event){
         let card_body = card.getElementsByClassName("card-body")[0];
         let sign = target.getElementsByClassName("card-collapse-or-expand-sign")[0];
         let state = target.getAttribute("data-state");
+        let card_id = target.getAttribute("data-card") as string;
 
         if(state === "collapsed"){
             card_body.classList.remove("hide");
             sign.innerHTML = "-";
             target.setAttribute("data-state", "extended")
+            collapse_status[card_id] = true;
         }else{
             card_body.classList.add("hide");
             sign.innerHTML = "+";
             target.setAttribute("data-state", "collapsed");
+            collapse_status[card_id] = false;
         }
     }
 
@@ -110,15 +128,65 @@ function show_export_format(e: Event){
     }
 
     // Add delete listener
-    document.getElementById("delete_export_format").addEventListener("click", function(){
+    document.getElementById("delete_export_format").addEventListener("click", async function () {
         // Ask user if sure
-        if(confirm("You are going to delete the export format "+export_format_data.name+", are you sure?") == true){
-            console.log("Deleting export format with slug "+export_format_data.slug)
+        if (confirm("You are going to delete the export format " + data.export_format_data.name + ", are you sure?") == true) {
+            console.log("Deleting export format with slug " + data.export_format_data.slug)
+            try {
+                await template_api.delete_export_format(template_data.id, current_export_format);
+                await tstart();
+            } catch (e) {
+                console.error(e);
+                Tools.show_alert(e, "danger");
+            }
         }
-    })
+    });
+
+    // Add asset listeners
+
+    // Add file click listeners (open/download)
+    let file_rows = Array.from(document.getElementsByClassName("file_row_icon+name"));
+    for(let file_row of file_rows){
+        file_row.addEventListener("click", export_format_file_row_click_handler);
+    }
+    // Add upload listener
+    document.getElementById("template_editor_assets_menu_upload_btn").addEventListener("click", export_format_upload_asset_handler);
+    //Add delete listener
+    document.getElementById("template_editor_assets_menu_delete_btn").addEventListener("click", export_formats_delete_selected_handler);
+    // Add new folder listener
+    document.getElementById("template_editor_assets_menu_new_folder_btn").addEventListener("click", new_folder_handler);
+    document.getElementById("template_editor_assets_menu_new_folder_dialog_create").addEventListener("click", export_formats_create_folder_handler);
+    // Add moving listener
+    // Add dropzones to folder rows
+    let dropzones = Array.from(document.getElementsByClassName("folder_row_top"));
+    for(let dropzone of dropzones){
+        dropzone.addEventListener("drop", drop_handler_for_export_formats);
+        dropzone.addEventListener("dragover", drag_over_handler);
+    }
+    // Add global dropzone
+    var dropzone_before = document.getElementById("template_editor_asset_rows_before");
+    var dropzone_after = document.getElementById("template_editor_asset_rows_after");
+    dropzone_before.addEventListener("drop", drop_handler_for_export_formats);
+    dropzone_before.addEventListener("dragover", drag_over_handler);
+    dropzone_after.addEventListener("drop", drop_handler_for_export_formats);
+    dropzone_after.addEventListener("dragover", drag_over_handler);
+
+    document.getElementById("template_editor_assets_menu_select_all_btn").addEventListener("click", select_deselect_all_handler);
+
+    let asset_rows = Array.from(document.getElementsByClassName("asset_row"));
+    for(let row of asset_rows){
+        // Add drag listeners
+        row.addEventListener("dragstart", drag_start_handler);
+        // Add contextmenu listener
+        row.addEventListener("contextmenu", show_asset_context_menu);
+    }
+    // Add contextmenu listener
+    document.getElementById("template_editor_assets_contextmenu_rename").addEventListener("click", show_contextmenu_rename_dialog);
+    document.getElementById("template_editor_assets_contextmenu_rename_dialog_btn").addEventListener("click", save_new_asset_name_for_export_formats);
 }
 
 function show_metadata(){
+    current_export_format = null;
     let main = document.getElementById("template_editor_main_panel");
     // @ts-ignore
     main.innerHTML = Handlebars.templates.template_editor_metadata(template_data);
@@ -129,6 +197,7 @@ function show_metadata(){
 }
 
 async function show_global_assets(){
+    current_export_format = null;
     console.log("Loading global asset list");
     let main = document.getElementById("template_editor_main_panel");
     let assets = await template_api.list_global_assets(template_data.id);
@@ -214,6 +283,28 @@ async function save_new_asset_name(){
 
 }
 
+async function save_new_asset_name_for_export_formats(){
+    let input = document.getElementById("template_editor_assets_contextmenu_rename_dialog_input") as HTMLInputElement;
+    let dialog = document.getElementById("template_editor_assets_contextmenu_rename_dialog") as HTMLDivElement;
+
+    let path = dialog.getAttribute("data-path");
+    let new_name = input.value;
+    let path_parts = path.split("/");
+    // Change last part of path to new name
+    path_parts[path_parts.length - 1] = new_name;
+    let new_path = path_parts.join("/");
+
+    console.log("Moving " +path+" to "+new_path);
+    try{
+        await template_api.move_asset_for_export_format(template_data.id, path, new_path, current_export_format, false);
+        await show_export_format();
+    }catch(e){
+        Tools.show_alert(e, "danger");
+    }
+    dialog.classList.add("hide");
+
+}
+
 function show_asset_context_menu(e: MouseEvent){
     e.preventDefault();
     let target = e.target as HTMLElement;
@@ -245,6 +336,28 @@ async function file_row_click_handler(){
         }else if(result.type == "text"){
             // Show text edit
             show_text_file_editor(row.getAttribute("data-name"), row.getAttribute("data-path"), result.data as string);
+        }
+        console.log(result);
+    }catch(e){
+        Tools.show_alert(e, "danger");
+        return;
+    }
+}
+
+async function export_format_file_row_click_handler(){
+    let row = this.closest(".file_row");
+    try{
+        let result = await template_api.get_asset_file_for_export_format(template_data.id, current_export_format, row.getAttribute("data-path"));
+        if(result.type == "blob"){
+            const url = URL.createObjectURL(result.data as Blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = row.getAttribute("data-name");
+            a.target = "_blank";
+            a.click();
+        }else if(result.type == "text"){
+            // Show text edit
+            await show_text_file_editor(row.getAttribute("data-name"), row.getAttribute("data-path"), result.data as string);
         }
         console.log(result);
     }catch(e){
@@ -286,8 +399,12 @@ async function update_text_asset(e: Event){
     let content = editor.state.doc.toString();
     
     try{
-        //Update content
-        await template_api.update_asset_text_file(template_data.id, path, content);
+        if(current_export_format){
+            await template_api.update_asset_text_file_for_export_format(template_data.id, path, current_export_format, content);
+        }else{
+            await template_api.update_asset_text_file(template_data.id, path, content);
+        }
+
 
         //Update name if changed
         if(name !== old_name){
@@ -295,12 +412,21 @@ async function update_text_asset(e: Event){
             // Change last part of path to new name
             path_parts[path_parts.length - 1] = name;
             let new_path = path_parts.join("/");
-            await template_api.move_global_asset(template_data.id, path, new_path, false);
-        }
 
+            if(current_export_format){
+                await template_api.move_asset_for_export_format(template_data.id, path, new_path, current_export_format, false);
+            }else{
+                await template_api.move_global_asset(template_data.id, path, new_path, false);
+            }
+        }
         // Disable save button after saving
         target.setAttribute("disabled", "true");
-        await show_global_assets();
+
+        if(current_export_format){
+            await show_export_format();
+        }else{
+            await show_global_assets();
+        }
     }catch(e){
         Tools.show_alert(e, "danger");
         return;
@@ -316,6 +442,24 @@ function upload_asset_handler(){
         try{
             await template_api.upload_file(template_data.id, file);
             show_global_assets();
+        }catch(e){
+            Tools.show_alert(e, "danger");
+            return;
+        }
+    });
+    input.click();
+}
+
+
+function export_format_upload_asset_handler(){
+    var input = document.createElement("input");
+    input.type = "file";
+
+    input.addEventListener("change", async function(){
+        let file = (input.files as FileList)[0];
+        try{
+            await template_api.upload_file_for_export_format(template_data.id, current_export_format, file);
+            await show_export_format();
         }catch(e){
             Tools.show_alert(e, "danger");
             return;
@@ -340,6 +484,22 @@ async function delete_selected_handler(){
     }
 }
 
+async function export_formats_delete_selected_handler(){
+
+    let checkboxes = Array.from(document.getElementsByClassName("asset_row_check")) as HTMLInputElement[];
+    let checkedCheckboxes = checkboxes.filter(checkbox => checkbox.checked);
+    let selectedPaths = checkedCheckboxes.map(checkbox => checkbox.closest(".asset_row").getAttribute("data-path"));
+    console.log(selectedPaths);
+    // Perform delete operation using selectedPaths
+    try{
+        await template_api.delete_assets_for_export_formats(template_data.id, current_export_format, selectedPaths);
+        await show_export_format();
+    }catch(e){
+        Tools.show_alert(e, "danger");
+        return;
+    }
+}
+
 function new_folder_handler(){
     let dialog = document.getElementById("template_editor_assets_menu_new_folder_dialog");
     dialog.classList.toggle("hide");
@@ -355,7 +515,24 @@ async function create_folder_handler(){
 
     try{
         await template_api.create_folder(template_data.id, folder_name);
-        show_global_assets();
+        await show_global_assets();
+    }catch(e){
+        Tools.show_alert(e, "danger");
+        return;
+    }
+}
+
+async function export_formats_create_folder_handler(){
+    let folder_name = (document.getElementById("template_editor_assets_menu_new_folder_dialog_name") as HTMLInputElement).value;
+
+    if(folder_name == ""){
+        Tools.show_alert("Folder name cannot be empty", "danger");
+        return;
+    }
+
+    try{
+        await template_api.create_folder_for_export_format(template_data.id, folder_name, current_export_format);
+        await show_export_format()
     }catch(e){
         Tools.show_alert(e, "danger");
         return;
@@ -398,6 +575,50 @@ async function drop_handler(event: DragEvent){
         try{
             await template_api.move_global_asset(template_data.id, old_path, new_path, overwrite_option);
             show_global_assets();
+        }catch(e){
+            Tools.show_alert(e, "danger");
+            return;
+        }
+    }
+}
+
+async function drop_handler_for_export_formats(event: DragEvent){
+    event.preventDefault();
+    // Old path before being moved
+    var old_path = event.dataTransfer.getData("text");
+    console.log("Old Path:"+old_path);
+    var dropped_element = document.getElementById("Path-"+old_path);
+
+    let new_path;
+    if((event.target as HTMLElement).classList.contains("template_editor_global_drop_zone")){
+        // New Path after being moved: Just the filename
+        new_path = dropped_element.getAttribute("data-name");
+    }else{
+        var current_folder = (event.target as HTMLElement).closest(".folder_row");
+        console.log(dropped_element);
+        console.log(dropped_element.getAttribute("data-name"));
+
+        // New Path after being moved: Current Folder Path + Filename
+        new_path = current_folder.getAttribute("data-path")+"/"+dropped_element.getAttribute("data-name");
+    }
+
+    if (old_path != new_path){
+        let overwrite_option = false;
+        // Check if new_path already exists
+        let existing_element = document.getElementById("Path-"+new_path);
+        if(existing_element){
+            let confirm = window.confirm("An element with the same name already exists in this folder. Do you want to replace it?");
+            if(confirm){
+                overwrite_option = true;
+            }else{
+                return;
+            }
+        }
+
+        console.log("Moving ", old_path, " to ", new_path);
+        try{
+            await template_api.move_asset_for_export_format(template_data.id, old_path, new_path, current_export_format, overwrite_option);
+            await show_export_format();
         }catch(e){
             Tools.show_alert(e, "danger");
             return;

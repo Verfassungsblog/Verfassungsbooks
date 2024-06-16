@@ -11,6 +11,7 @@ use crate::projects::api::{ApiResult, ApiError};
 use crate::session::session_guard::Session;
 use std::io;
 use std::fs;
+use std::future::Future;
 use std::path::PathBuf;
 use crate::templates_editor::export_steps::ExportFormat;
 
@@ -633,15 +634,15 @@ pub async fn delete_export_format(_session: Session, template_id: String, data_s
             return ApiResult::new_error(ApiError::NotFound);
         }
     };
+    let slug = sanitize_path(&slug);
 
-    let templates = &data_storage.data.read().unwrap().templates;
-
-    let template = match templates.get(&template_id){
-        Some(template) => {
-            template.clone()
-        },
-        None => {
-            return ApiResult::new_error(ApiError::NotFound)
+    let template = {
+        let templates_guard = data_storage.data.read().unwrap();
+        let templates = &templates_guard.templates;
+        // This scope ensures that we drop the lock as soon as we finish using it
+        match templates.get(&template_id){
+            Some(template) => template.clone(),
+            None => return ApiResult::new_error(ApiError::NotFound)
         }
     };
 
@@ -651,10 +652,358 @@ pub async fn delete_export_format(_session: Session, template_id: String, data_s
     };
 
     match remove_result{
-        Some(_) => ApiResult::new_data(()),
+        Some(_) => {
+            //Remove folder:
+            let base_path = format!("data/templates/{}/formats/", template_id);
+            let safe_path = safe_path_combine(base_path.as_str(), &slug);
+            match safe_path{
+                Ok(path) => {
+                    match tokio::fs::remove_dir_all(path).await{
+                        Ok(_) => ApiResult::new_data(()),
+                        Err(e) => {
+                            eprintln!("Couldn't delete physical folder for export format: {}", e);
+                            ApiResult::new_error(ApiError::InternalServerError)
+                        }
+                    }
+                }
+                Err(_) => {
+                    eprintln!("Couldn't delete physical folder for export format. Couldn't create safe_path");
+                    ApiResult::new_error(ApiError::BadRequest("Invalid Slug".to_string()))
+                }
+            }
+        },
         None => ApiResult::new_error(ApiError::NotFound)
     }
 }
+
+/// GET /api/templates/<template_id>/export_formats/<slug>/assets
+/// List all assets of the export_format
+#[get("/api/templates/<template_id>/export_formats/<slug>/assets")]
+pub async fn get_assets_for_export_format(_session: Session, template_id: String, slug: String) -> Json<ApiResult<AssetList>> {
+    //Parse template_id to uuid
+    let template_id = match Uuid::parse_str(&template_id){
+        Ok(template_id) => template_id,
+        Err(e) => {
+            eprintln!("Couldn't parse template id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        }
+    };
+    let slug = sanitize_path(&slug);
+
+    // Get all entries in the assets folder (via async fs) inside data/templates/<template_id>/assets
+    let res = tokio::task::spawn_blocking(move || {
+        let path = format!("data/templates/{}/formats/{}", template_id, slug);
+        match get_assets_recursive(&path, None){
+            Ok(assets) => ApiResult::new_data(AssetList{assets}),
+            Err(e) => {
+                eprintln!("Error getting assets: {}", e);
+                ApiResult::new_error(ApiError::InternalServerError)
+            }
+        }
+    }).await;
+
+    match res {
+        Ok(assets) => assets,
+        Err(e) => {
+            eprintln!("Error getting assets: {}", e);
+            ApiResult::new_error(ApiError::InternalServerError)
+        }
+    }
+}
+
+/// GET /api/templates/<template_id>/export_formats/<slug>/assets/files/<path>
+/// Get an specific File asset in the folder of the export format
+#[get("/api/templates/<template_id>/export_formats/<slug>/assets/files/<path..>")]
+pub async fn get_asset_file_for_export_format(_session: Session, template_id: String, path: PathBuf, slug: String) -> Result<NamedFile, Status>{
+    //Parse template_id to uuid
+    let template_id = match Uuid::parse_str(&template_id){
+        Ok(template_id) => template_id,
+        Err(e) => {
+            eprintln!("Couldn't parse template id: {}", e);
+            return Err(Status::NotFound);
+        }
+    };
+    let slug = sanitize_path(&slug);
+
+    // Get the path to the export format folder
+    let path = match safe_path_combine(&format!("data/templates/{}/formats/{}", template_id, slug), &path.to_string_lossy()){ //TODO use path to data directory from config
+        Ok(path) => path,
+        Err(_) => {
+            eprintln!("Error getting asset, invalid path.");
+            return Err(Status::BadRequest);
+        }
+    };
+
+    match NamedFile::open(path).await{
+        Ok(file) => Ok(file),
+        Err(e) => {
+            eprintln!("Error getting asset: {}", e);
+            Err(Status::NotFound)
+        }
+    }
+}
+
+/// POST /api/templates/<template_id>/export_formats/<slug>/assets/file
+/// Creates a new asset in the export format folder
+#[post("/api/templates/<template_id>/export_formats/<slug>/assets/file", data = "<asset>")]
+pub async fn create_file_asset_for_export_format(_session: Session, template_id: String, slug: String, asset: Form<NewAssetFile<'_>>) -> Json<ApiResult<()>> {
+    //Parse template_id to uuid
+    let template_id = match Uuid::parse_str(&template_id){
+        Ok(template_id) => template_id,
+        Err(e) => {
+            eprintln!("Couldn't parse template id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        }
+    };
+
+    let slug = sanitize_path(&slug);
+
+    let mut file = asset.into_inner().file;
+
+    let filename = match file.raw_name(){
+        Some(name) => name,
+        None => {
+            eprintln!("No file name provided");
+            return ApiResult::new_error(ApiError::BadRequest("No file name provided".to_string()));
+        }
+    };
+
+    let filename = sanitize_path(filename.dangerous_unsafe_unsanitized_raw().as_str());
+
+    let mut path;
+
+    loop{
+        let mut i = 0;
+
+
+        path = if i == 0{
+            format!("data/templates/{}/formats/{}/{}", template_id, slug, filename)
+        }else{
+            let filename_splitted = filename.split('.').collect::<Vec<&str>>();
+
+            let new_filename = if filename_splitted.len() == 1{ // File has no extension, add number to end
+                format!("{}_{}", filename, i)
+            }else{
+                // Get all parts except the last one
+                let filename_without_extension = filename_splitted.clone().iter().take(filename_splitted.len()-1).map(|s| format!("{}.", s)).collect::<String>();
+                format!("{}_{}.{}", filename_without_extension, i, filename_splitted.last().unwrap())
+            };
+
+            format!("data/templates/{}/formats/{}/{}", template_id, slug, new_filename)
+        };
+        // Check if file already exists
+        if Path::new(&path).exists(){
+            i += 1;
+        }else{
+            break;
+        }
+    }
+    match file.copy_to(path).await{
+        Ok(_) => return ApiResult::new_data(()),
+        Err(e) => {
+            eprintln!("Error copying file: {}", e);
+            return ApiResult::new_error(ApiError::InternalServerError);
+        }
+    }
+}
+
+/// DELETE /api/templates/<template_id>/export_formats/<slug>/assets
+/// Deletes an asset in the export format folder of the template
+#[delete("/api/templates/<template_id>/export_formats/<slug>/assets", data = "<paths>")]
+pub async fn delete_assets_for_export_format(_session: Session, template_id: String, paths: Json<DeleteAssetRequest>, slug: String) -> Json<ApiResult<()>> {
+    //Parse template_id to uuid
+    let template_id = match Uuid::parse_str(&template_id){
+        Ok(template_id) => template_id,
+        Err(e) => {
+            eprintln!("Couldn't parse template id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        }
+    };
+
+    let slug = sanitize_path(&slug);
+
+    let base_path_raw = Path::new(&format!("data/templates/{}/formats/{}", template_id, slug)).canonicalize().unwrap();
+    let base_path = base_path_raw.to_str().unwrap();
+
+    for path in &paths.paths{
+        let path = match safe_path_combine(&base_path, &path){
+            Ok(path) => path,
+            Err(e) => {
+                eprintln!("Error deleting asset, invalid path.");
+                return ApiResult::new_error(ApiError::BadRequest("Invalid path".to_string()));
+            }
+        };
+
+        // Check if directory or file
+        if path.is_dir(){
+            match tokio::fs::remove_dir_all(path).await{
+                Ok(_) => (),
+                Err(_) => {
+                    eprintln!("Error deleting asset.");
+                    return ApiResult::new_error(ApiError::InternalServerError);
+                }
+            }
+        }else{
+            match tokio::fs::remove_file(path).await{
+                Ok(_) => (),
+                Err(_) => {
+                    eprintln!("Error deleting asset.");
+                    return ApiResult::new_error(ApiError::InternalServerError);
+                }
+            }
+        }
+    }
+
+    ApiResult::new_data(())
+}
+
+/// POST /api/templates/<template_id>/export_formats/<slug>/assets/folder
+/// Creates a new asset in the export format folder of the template
+#[post("/api/templates/<template_id>/export_formats/<slug>/assets/folder", data = "<asset>")]
+pub async fn create_folder_asset_for_export_format(_session: Session, template_id: String, asset: Json<NewAssetFolder>, slug: String) -> Json<ApiResult<()>> {
+    //Parse template_id to uuid
+    let template_id = match Uuid::parse_str(&template_id){
+        Ok(template_id) => template_id,
+        Err(e) => {
+            eprintln!("Couldn't parse template id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        }
+    };
+
+    let slug = sanitize_path(&slug);
+
+    let name = asset.name.replace("/", "");
+
+    // Get the path to the global assets folder
+    let path = format!("data/templates/{}/formats/{}/{}", template_id, slug, name);
+
+    // Create the folder
+    let res = tokio::task::spawn_blocking(move || {
+        match fs::create_dir(&path){
+            Ok(_) => ApiResult::new_data(()),
+            Err(e) => {
+                match e.kind(){
+                    io::ErrorKind::AlreadyExists => ApiResult::new_error(ApiError::Conflict("Folder already exists".to_string())),
+                    _ => {
+                        eprintln!("Error creating folder: {}", e);
+                        ApiResult::new_error(ApiError::InternalServerError)
+                    }
+                }
+            }
+        }
+    }).await;
+
+    match res {
+        Ok(res) => res,
+        Err(e) => {
+            eprintln!("Error creating folder: {}", e);
+            ApiResult::new_error(ApiError::InternalServerError)
+        }
+    }
+}
+
+/// PUT /api/templates/<template_id>/export_formats/<slug>/assets/files/<path>
+/// Updates a text-based asset in the export format folder of the template
+/// The asset must be a text-based file, e.g. .txt, .html, .css, .js
+#[put("/api/templates/<template_id>/export_formats/<slug>/assets/files/<path..>", data = "<content>")]
+pub async fn update_asset_file_for_export_format(_session: Session, template_id: String, path: PathBuf, content: Json<UpdateAssetRequest>, slug: String) -> Json<ApiResult<()>> {
+    //Parse template_id to uuid
+    let template_id = match Uuid::parse_str(&template_id){
+        Ok(template_id) => template_id,
+        Err(e) => {
+            eprintln!("Couldn't parse template id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        }
+    };
+
+    let slug = sanitize_path(&slug);
+
+    // Get the path to the global assets folder
+    let path = match safe_path_combine(&format!("data/templates/{}/formats/{}", template_id, slug), &path.to_string_lossy()){ //TODO use path to data directory from config
+        Ok(path) => path,
+        Err(_) => {
+            eprintln!("Error updating asset, invalid path.");
+            return ApiResult::new_error(ApiError::BadRequest("Invalid path".to_string()));
+        }
+    };
+
+    // Check if file exists
+    if !path.exists(){
+        return ApiResult::new_error(ApiError::NotFound);
+    }
+
+    // Update the file
+    match tokio::fs::write(&path, content.into_inner().content).await{
+        Ok(_) => ApiResult::new_data(()),
+        Err(e) => {
+            eprintln!("Error updating asset: {}", e);
+            ApiResult::new_error(ApiError::InternalServerError)
+        }
+    }
+}
+
+
+/// POST /api/templates/<template_id>/export_formats/<slug>/assets/move
+/// Moves an asset in the export_format folder of the template
+#[post("/api/templates/<template_id>/export_formats/<slug>/assets/move", data = "<asset>")]
+pub async fn move_asset_for_export_format(_session: Session, template_id: String, asset: Json<MoveAssetRequest>, slug: String) -> Json<ApiResult<()>> {
+    //Parse template_id to uuid
+    let template_id = match Uuid::parse_str(&template_id){
+        Ok(template_id) => template_id,
+        Err(e) => {
+            eprintln!("Couldn't parse template id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        }
+    };
+
+    let slug = sanitize_path(&slug);
+
+    let base_path = format!("data/templates/{}/formats/{}", template_id, slug);
+    let base_path = Path::new(&base_path).canonicalize().unwrap();
+
+    let old_path = match safe_path_combine(&base_path.to_str().unwrap(), &asset.old_path){
+        Ok(path) => path,
+        Err(_) => {
+            eprintln!("Error moving asset, invalid path.");
+            return ApiResult::new_error(ApiError::BadRequest("Invalid path".to_string()));
+        }
+    };
+
+    let new_path = match safe_path_combine(&base_path.to_str().unwrap(), &asset.new_path){
+        Ok(path) => path,
+        Err(_) => {
+            eprintln!("Error moving asset, invalid path.");
+            return ApiResult::new_error(ApiError::BadRequest("Invalid path".to_string()));
+        }
+    };
+
+    // Move the asset
+    let res = tokio::task::spawn_blocking(move || {
+        if !asset.overwrite{
+            // Check if file already exists
+            if new_path.exists(){
+                return ApiResult::new_error(ApiError::Conflict("Target path already exists".to_string()));
+            }
+        }
+
+        match fs::rename(&old_path, &new_path){
+            Ok(_) => ApiResult::new_data(()),
+            Err(_) => {
+                eprintln!("Error moving asset, invalid path.");
+                ApiResult::new_error(ApiError::InternalServerError)
+            }
+        }
+    }).await;
+
+    match res {
+        Ok(res) => res,
+        Err(e) => {
+            eprintln!("Error moving asset: {}", e);
+            ApiResult::new_error(ApiError::InternalServerError)
+        }
+    }
+}
+
 
 #[derive(serde::Deserialize)]
 pub struct MoveAssetRequest {

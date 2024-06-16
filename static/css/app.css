@@ -606,7 +606,7 @@ customstyle{
     overflow: auto;
 }
 #template_editor_assets_contextmenu{
-    position: absolute;
+    position: fixed;
     border: 1px solid var(--silver);
     background-color: white;
     min-width: 200px;
