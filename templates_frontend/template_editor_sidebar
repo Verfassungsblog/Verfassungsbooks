@@ -8,7 +8,7 @@
                     <span class="fw-bold">Export Formats:</span>
                 </div>
                 {{#each export_formats}}
-                    <div class="template_editor_sidebar_entry" data-slug="{{slug}}">{{name}}</div>
+                    <div class="template_editor_sidebar_entry template_editor_sidebar_export_format" data-slug="{{slug}}">{{name}}</div>
                 {{/each}}
             </div>
             <div id="template_editor_sidebar_bottom">

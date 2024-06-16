@@ -563,7 +563,6 @@ pub async fn move_asset(_session: Session, template_id: String, asset: Json<Move
 
 #[post("/api/templates/<template_id>/export_formats", data = "<data>")]
 pub async fn add_export_format(_session: Session, template_id: String, data_storage: &State<Arc<DataStorage>>, data: Json<ExportFormat>) -> Json<ApiResult<ExportFormat>>{
-
     // Clone data storage
     let mut data_storage = data_storage.clone();
 
@@ -596,11 +595,10 @@ pub async fn add_export_format(_session: Session, template_id: String, data_stor
 
     let template_exists;
     {
-        // Here we're assuming exported_formats is locked with a Mutex
         let lock = data_storage.data.read().unwrap();
         template_exists = match lock.templates.get(&template_id){
             Some(template) => {
-                template.write().unwrap().export_formats.push(format.clone());
+                template.write().unwrap().export_formats.insert(format.slug.clone(), format.clone());
                 true
             },
             None => {
@@ -621,6 +619,43 @@ pub async fn add_export_format(_session: Session, template_id: String, data_stor
         }
     }
 }
+
+/// DELETE /api/templates/<template_id>/export_formats/<slug>
+/// Deletes export format with slug <slug> in template with <template_id>
+#[delete("/api/templates/<template_id>/export_formats/<slug>")]
+pub async fn delete_export_format(_session: Session, template_id: String, data_storage: &State<Arc<DataStorage>>, slug: String) -> Json<ApiResult<()>>{
+    let data_storage = data_storage.clone();
+
+    let template_id = match Uuid::parse_str(&template_id) {
+        Ok(template_id) => template_id,
+        Err(e) => {
+            eprintln!("Couldn't parse template id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        }
+    };
+
+    let templates = &data_storage.data.read().unwrap().templates;
+
+    let template = match templates.get(&template_id){
+        Some(template) => {
+            template.clone()
+        },
+        None => {
+            return ApiResult::new_error(ApiError::NotFound)
+        }
+    };
+
+    let remove_result = {
+        let mut template_write = template.write().unwrap();
+        template_write.export_formats.remove(&slug)
+    };
+
+    match remove_result{
+        Some(_) => ApiResult::new_data(()),
+        None => ApiResult::new_error(ApiError::NotFound)
+    }
+}
+
 #[derive(serde::Deserialize)]
 pub struct MoveAssetRequest {
     pub overwrite: bool,

@@ -1740,7 +1740,7 @@ pub struct ProjectTemplateV2 {
     pub id: uuid::Uuid,
     pub name: String,
     pub description: String,
-    pub export_formats: Vec<ExportFormat>,
+    pub export_formats: HashMap<String, ExportFormat>,
 }
 
 

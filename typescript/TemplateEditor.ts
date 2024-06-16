@@ -41,7 +41,10 @@ async function tstart(){
     // Add event listeners
     document.getElementById("template_editor_sidebar_new_export_format_btn").addEventListener("click", add_export_format_handler);
     document.getElementById("template_editor_global_assets_btn").addEventListener("click", show_global_assets);
-
+    let export_format_entries = Array.from(document.getElementsByClassName("template_editor_sidebar_export_format"));
+    for(let entry of export_format_entries){
+        entry.addEventListener("click", show_export_format)
+    }
 
     // Event listeners for context menu:
     document.addEventListener('click', function(event) {
@@ -58,6 +61,62 @@ async function tstart(){
     });
 }
 
+function show_export_format(e: Event){
+    let target = e.target as HTMLElement;
+    let slug = target.getAttribute("data-slug");
+
+    if(!slug){
+        console.error("show_export_format called but slug missing")
+        return
+    }
+
+    let export_format_data : any;
+    for(let export_format of template_data.export_formats) {
+        if (export_format.slug === slug) {
+            export_format_data = export_format;
+            break;
+        }
+    }
+    if(!export_format_data){
+        console.error("Couldn't find export format data for slug "+slug);
+    }
+
+    let main = document.getElementById("template_editor_main_panel");
+    // @ts-ignore
+    main.innerHTML = Handlebars.templates.template_editor_export_format(export_format_data);
+
+    // Handler to collapse / expand cards
+    let collapse_handler = function(e: Event){
+        let target = e.target as HTMLElement;
+        let card = target.closest(".card");
+        let card_body = card.getElementsByClassName("card-body")[0];
+        let sign = target.getElementsByClassName("card-collapse-or-expand-sign")[0];
+        let state = target.getAttribute("data-state");
+
+        if(state === "collapsed"){
+            card_body.classList.remove("hide");
+            sign.innerHTML = "-";
+            target.setAttribute("data-state", "extended")
+        }else{
+            card_body.classList.add("hide");
+            sign.innerHTML = "+";
+            target.setAttribute("data-state", "collapsed");
+        }
+    }
+
+    // Add collapse/expand listeners
+    for(let card of Array.from(document.getElementsByClassName("card-collapse-or-expand"))){
+        card.addEventListener("click", collapse_handler);
+    }
+
+    // Add delete listener
+    document.getElementById("delete_export_format").addEventListener("click", function(){
+        // Ask user if sure
+        if(confirm("You are going to delete the export format "+export_format_data.name+", are you sure?") == true){
+            console.log("Deleting export format with slug "+export_format_data.slug)
+        }
+    })
+}
 
 function show_metadata(){
     let main = document.getElementById("template_editor_main_panel");

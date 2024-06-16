@@ -612,8 +612,14 @@ customstyle{
     min-width: 200px;
     padding: 5px;
     border-radius: 5px;
-    
 }
 .contextmenu_entry{
+    cursor: pointer;
+}
+.card-collapse-or-expand-sign{
+    font-size: 15pt;
+    margin: 2px 10px 2px 0px;
+}
+.card-collapse-or-expand{
     cursor: pointer;
 }

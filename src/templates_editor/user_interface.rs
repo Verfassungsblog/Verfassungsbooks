@@ -1,4 +1,5 @@
 
+use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use rocket::http::Status;
 use rocket::State;
@@ -50,7 +51,7 @@ pub async fn form_create_template(_session: Session, settings: &State<Settings>,
         id: uuid::Uuid::new_v4(),
         name: template.name.clone(),
         description: template.description.clone(),
-        export_formats: vec![],
+        export_formats: HashMap::new(),
     }; //TODO: create default export format for preview
     let data_storage = data_storage;
     data_storage.insert_template(template, settings).await.unwrap();
