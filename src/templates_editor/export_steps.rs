@@ -3,10 +3,16 @@ use rocket::serde::{Deserialize, Serialize};
 
 /// Represents the various Export Steps available
 #[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
-pub enum ExportStep {
+pub enum ExportStepData {
     Raw(RawExportStep),
     Vivliostyle(VivliostyleExportStep),
     Pandoc(PandocExportStep),
+}
+
+#[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
+pub struct ExportStep{
+    name: String,
+    data: ExportStepData
 }
 
 /// Generate text files (e.g. HTML, xml with metadata)
