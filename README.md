@@ -15,6 +15,7 @@ Master Branch:
 Staging Branch: [![Staging Branch](https://builds.sr.ht/~verfassungsblog/Verfassungsbooks/commits/staging.svg)](https://builds.sr.ht/~verfassungsblog/Verfassungsbooks/commits/staging?)
 
 ## Build Instructions
+0. Make sure that you have rustc, cargo and npm installed & in your path
 1. Clone this repository
 2. Install handlebars && tsc : ``npm install -g handlebars typescript``
 3. cd into typescript & run ``npm install``

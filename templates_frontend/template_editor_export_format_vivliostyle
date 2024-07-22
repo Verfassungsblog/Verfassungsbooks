@@ -1,0 +1,15 @@
+<div class="export_step_vivliostyle export_step card mt-1" data-export-step-id="{{id}}" data-export-step-type="vivliostyle">
+    <div class="card-header d-flex justify-content-between">[Vivliostyle Export Step] {{name}} <button class="btn btn-xsm-square justify-content-center align-items-center d-flex export_step_delete_btn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="red" class="bi bi-trash3" viewBox="0 0 16 16">
+        <path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5M11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47M8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5"></path>
+    </svg></button></div>
+    <div class="card-body">
+        <label>Name*</label>
+        <input id="{{id}}_name" class="form-control export_step_vivliostyle_name autosave" type="text" placeholder="e.g. Preview PDF" value="{{name}}">
+        <label>Input File Path*</label>
+        <input id="{{id}}_input_file" class="form-control export_step_vivliostyle_input_file autosave" type="text" placeholder="e.g. main.html" value="{{data.Vivliostyle.input_file}}">
+        <label>Output File*</label>
+        <input id="{{id}}_output_file" class="form-control export_step_vivliostyle_output_file autosave" type="text" placeholder="e.g. main.pdf" value="{{data.Vivliostyle.output_file}}">
+        <label>Press Ready</label>
+        <input id="{{id}}_press_ready" type="checkbox" class="form-check export_step_vivliostyle_press_ready autosave" {{#if data.Vivliostyle.press_ready}}checked{{/if}}>
+    </div>
+</div>

@@ -274,6 +274,41 @@ export async function send_import_from_wordpress(data: any){
     }
 }
 
+export type ExportStepData =
+    | { Raw: RawExportStep }
+    | { Vivliostyle: VivliostyleExportStep }
+    | { Pandoc: PandocExportStep };
+export interface ExportStep {
+    id: string;
+    name: string;
+    data: ExportStepData;
+    files_to_keep: string[];
+}
+
+export interface RawExportStep {
+    entry_point: string;
+    output_file: string;
+}
+
+export interface VivliostyleExportStep {
+    press_ready: boolean;
+    input_file: string;
+    output_file: string;
+}
+
+export interface PandocExportStep {
+    input_file: string;
+    input_format: string;
+    output_file: string;
+    output_format: string;
+    shift_heading_level_by?: number;
+    metadata_file?: string;
+    epub_cover_image_path?: string;
+    epub_title_page?: boolean;
+    epub_metadata_file?: string;
+    epub_embed_fonts?: string[];
+}
+
 export type ApiResult<T> = {
     error?: ApiError;
     data?: T;
@@ -521,6 +556,7 @@ export function TemplateAPI(){
         const response_data: ApiResult<null> = await response.json();
 
         if (response_data.error) {
+            console.log(response_data.error);
             throw new Error(`${apiErrorToString(response_data.error)}`);
         }
 
@@ -641,6 +677,7 @@ export function TemplateAPI(){
         let data = {
             name: name,
             export_steps: [] as any[],
+            output_files: [] as any[],
             slug: slugify(name)
         }
 
@@ -780,6 +817,117 @@ export function TemplateAPI(){
         return response_data.data;
     }
 
+    async function create_export_step(template_id: string, export_format_slug: string, export_step: ExportStep): Promise<any>{
+        const response = await fetch(`/api/templates/${template_id}/export_formats/${export_format_slug}/export_steps`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(export_step)
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to create export step: ${response.status}`);
+        }
+
+        const response_data: ApiResult<null> = await response.json();
+
+        if (response_data.error) {
+            throw new Error(`${apiErrorToString(response_data.error)}`);
+        }
+
+        return response_data.data;
+    }
+
+    async function delete_export_step(template_id: string, slug: string, step_id: string): Promise<any>{
+
+        const response =  await fetch(`/api/templates/${template_id}/export_formats/${slug}/export_steps/${step_id}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to delete export step: ${response.status}`);
+        }
+
+        const response_data: ApiResult<null> = await response.json();
+
+        if (response_data.error) {
+            throw new Error(`${apiErrorToString(response_data.error)}`);
+        }
+
+        return response_data.data;
+    }
+
+    async function update_export_step(template_id: string, export_format_slug: string, export_step: ExportStep): Promise<any>{
+        const response = await fetch(`/api/templates/${template_id}/export_formats/${export_format_slug}/export_steps/${export_step.id}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(export_step)
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to update export step: ${response.status}`);
+        }
+
+        const response_data: ApiResult<null> = await response.json();
+
+        if (response_data.error) {
+            throw new Error(`${apiErrorToString(response_data.error)}`);
+        }
+
+        return response_data.data;
+    }
+
+    async function move_export_step_after(template_id: string, export_format_slug: string, export_step_id: string, move_after: string|null): Promise<any>{
+        let data = {
+            move_after: move_after
+        };
+        const response = await fetch(`/api/templates/${template_id}/export_formats/${export_format_slug}/export_steps/${export_step_id}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to move export step: ${response.status}`);
+        }
+
+        const response_data: ApiResult<null> = await response.json();
+
+        if (response_data.error) {
+            throw new Error(`${apiErrorToString(response_data.error)}`);
+        }
+
+        return response_data.data;
+    }
+
+    async function list_export_steps(template_id: string, slug: string){
+        const response = await fetch(`/api/templates/${template_id}/export_formats/${slug}/export_steps`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to list export steps: ${response.status}`);
+        }
+
+        const response_data: ApiResult<AssetList> = await response.json();
+
+        if (response_data.error) {
+            throw new Error(`Failed to list export steps: ${apiErrorToString(response_data.error)}`);
+        }
+
+        return response_data.data;
+    }
     return{
         read_template,
         update_template,
@@ -798,7 +946,12 @@ export function TemplateAPI(){
         delete_assets_for_export_formats,
         create_folder_for_export_format,
         move_asset_for_export_format,
-        update_asset_text_file_for_export_format
+        update_asset_text_file_for_export_format,
+        create_export_step,
+        delete_export_step,
+        update_export_step,
+        move_export_step_after,
+        list_export_steps
     }
 }
 

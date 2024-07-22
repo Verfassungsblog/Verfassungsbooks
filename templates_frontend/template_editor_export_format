@@ -47,7 +47,7 @@
                 </div>
                 <div class="m-2 col col-6 template_editor_asset_rows">
                     <div id="template_editor_asset_rows_before" class="template_editor_global_drop_zone"></div>
-                    {{#each assets.assets}}
+                    {{#each assets}}
                     {{> template_editor_asset_row}}
                     {{/each}}
                     <div id="template_editor_asset_rows_after" class="template_editor_global_drop_zone"></div>
@@ -62,8 +62,34 @@
     <div class="card-header d-flex align-items-center card-collapse-or-expand" {{#if collapse_status.export_steps}} data-state="expanded"{{else}} data-state="collapsed"{{/if}} data-card="export_steps">
         <span class="card-collapse-or-expand-sign">{{#if collapse_status.export_steps}}-{{else}}+{{/if}}</span> Export Steps
     </div>
-    <div class="card-body {{#unless collapse_status.export_steps}}hide{{/unless}}">
-
-    </div>
+        <div class="card-body {{#unless collapse_status.export_steps}}hide{{/unless}}">
+            <div id="export_steps_list">
+                {{#each export_format_data.export_steps}}
+                    {{#if data.Raw}}
+                    {{> template_editor_export_format_raw}}
+                    {{/if}}
+                    {{#if data.Vivliostyle}}
+                    {{> template_editor_export_format_vivliostyle}}
+                    {{/if}}
+                    {{#if data.Pandoc}}
+                    {{> template_editor_export_format_pandoc}}
+                    {{/if}}
+                {{/each}}
+            </div>
+            <hr>
+            <label>Add new Export Step:</label>
+            <div class="input-group">
+                <select class="form-select" id="add_export_step_type">
+                    <option value="raw">Raw Export Step (render template)</option>
+                    <option value="pandoc">Pandoc Conversion</option>
+                    <option value="vivliostyle">Vivliostyle (PDF generation)</option>
+                </select>
+                <button type="button" class="btn btn-success" id="add_export_step_btn">Add</button>
+            </div>
+        </div>
 </div>
 </div>
+<p>
+Note on Paths:<br>
+If you're referencing global assets use global_assets/ as prefix. E.g. if you want to include a stylesheet <i>global.css</i> which you uploaded to the global assets use <i>global_assets/global.css</i> as path.
+</p>

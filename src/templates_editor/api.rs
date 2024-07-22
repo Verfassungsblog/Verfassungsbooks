@@ -1,4 +1,4 @@
-use crate::data_storage::{DataStorage, ProjectTemplateV2};
+use crate::data_storage::{DataStorage, ProjectStorage, ProjectTemplateV2};
 use rocket::http::Status;
 use uuid::Uuid;
 use rocket::State;
@@ -13,7 +13,7 @@ use std::io;
 use std::fs;
 use std::future::Future;
 use std::path::PathBuf;
-use crate::templates_editor::export_steps::ExportFormat;
+use crate::templates_editor::export_steps::{ExportFormat, ExportStep};
 
 /// Contains API endpoints for the templates editor.
 
@@ -331,7 +331,7 @@ pub async fn create_folder_asset(_session: Session, template_id: String, asset: 
         }
     };
 
-    let name = asset.name.replace("/", "");
+    let name = sanitize_path(&asset.name);
 
     // Get the path to the global assets folder
     let path = format!("data/templates/{}/assets/{}", template_id, name);
@@ -838,16 +838,16 @@ pub async fn delete_assets_for_export_format(_session: Session, template_id: Str
         if path.is_dir(){
             match tokio::fs::remove_dir_all(path).await{
                 Ok(_) => (),
-                Err(_) => {
-                    eprintln!("Error deleting asset.");
+                Err(e) => {
+                    eprintln!("Error deleting asset: {} ", e);
                     return ApiResult::new_error(ApiError::InternalServerError);
                 }
             }
         }else{
             match tokio::fs::remove_file(path).await{
                 Ok(_) => (),
-                Err(_) => {
-                    eprintln!("Error deleting asset.");
+                Err(e) => {
+                    eprintln!("Error deleting asset: {}", e);
                     return ApiResult::new_error(ApiError::InternalServerError);
                 }
             }
@@ -872,7 +872,7 @@ pub async fn create_folder_asset_for_export_format(_session: Session, template_i
 
     let slug = sanitize_path(&slug);
 
-    let name = asset.name.replace("/", "");
+    let name = sanitize_path(&asset.name);
 
     // Get the path to the global assets folder
     let path = format!("data/templates/{}/formats/{}/{}", template_id, slug, name);
@@ -1010,4 +1010,254 @@ pub struct MoveAssetRequest {
     pub overwrite: bool,
     pub old_path: String,
     pub new_path: String,
+}
+
+/// POST /api/templates/<template_id>/export_formats/<slug>/export_steps/
+/// Creates new Export Step
+#[post("/api/templates/<template_id>/export_formats/<slug>/export_steps", data = "<step>")]
+pub async fn create_export_step(_session: Session, template_id: String, slug: String, step: Json<ExportStep>, data_storage: &State<Arc<DataStorage>>) -> Json<ApiResult<ExportStep>>{
+    //Parse template_id to uuid
+    let template_id = match Uuid::parse_str(&template_id){
+        Ok(template_id) => template_id,
+        Err(e) => {
+            eprintln!("Couldn't parse template id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        }
+    };
+
+    let slug = sanitize_path(&slug);
+
+    let data_storage = Arc::clone(data_storage);
+    let template = match data_storage.data.read().unwrap().templates.get(&template_id){
+        Some(template) => template.clone(),
+        None => {
+            eprintln!("Couldn't find template");
+            return ApiResult::new_error(ApiError::NotFound)
+        }
+    };
+
+    let mut step = step.into_inner();
+    step.id = Some(uuid::Uuid::new_v4());
+
+    match template.write().unwrap().export_formats.get_mut(&slug){
+        None => {
+            eprintln!("Couldn't find export format");
+            return ApiResult::new_error(ApiError::NotFound)
+        }
+        Some(mut export_format) => {
+            export_format.export_steps.push(step.clone())
+        }
+    }
+
+    return ApiResult::new_data(step)
+}
+
+#[derive(serde::Deserialize)]
+pub struct MoveExportStepRequest{
+    /// Element to moved behind. Set to None to move to first position
+    pub move_after: Option<uuid::Uuid>
+}
+
+/// POST /api/templates/<template_id>/export_formats/<slug>/export_steps/<step_id>/move
+/// Moves a export step to a specified position
+#[post("/api/templates/<template_id>/export_formats/<slug>/export_steps/<step_id>/move", data = "<movedata>")]
+pub async fn move_export_step(_session: Session, template_id: String, slug: String, step_id: String, movedata: Json<MoveExportStepRequest>, data_storage: &State<Arc<DataStorage>>) -> Json<ApiResult<()>>{
+    //Parse template_id to uuid
+    let template_id = match Uuid::parse_str(&template_id){
+        Ok(template_id) => template_id,
+        Err(e) => {
+            eprintln!("Couldn't parse template id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        }
+    };
+    //Parse step_id to uuid
+    let step_id = match Uuid::parse_str(&step_id) {
+        Ok(step_id) => step_id,
+        Err(e) => {
+            eprintln!("Couldn't parse step id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        }
+    };
+
+    let slug = sanitize_path(&slug);
+    let move_after = movedata.move_after;
+
+    let data_storage = Arc::clone(data_storage);
+    let template = match data_storage.data.read().unwrap().templates.get(&template_id){
+        Some(template) => template.clone(),
+        None => {
+            eprintln!("Couldn't find template");
+            return ApiResult::new_error(ApiError::NotFound)
+        }
+    };
+
+    match template.write().unwrap().export_formats.get_mut(&slug){
+        None => {
+            eprintln!("Couldn't find export format");
+            return ApiResult::new_error(ApiError::NotFound)
+        }
+        Some(mut export_format) => {
+            // Find export step and move it after move_after:
+            let step_index = export_format.export_steps.iter().position(|step| step.id == Some(step_id));
+            let step_index = match step_index{
+                Some(index) => index,
+                None => return ApiResult::new_error(ApiError::NotFound)
+            };
+            let step = export_format.export_steps.remove(step_index);
+            // Find new position:
+            let new_index = match move_after{
+                Some(move_after) => {
+                    match export_format.export_steps.iter().position(|step| step.id == Some(move_after)){
+                        None => {
+                            return ApiResult::new_error(ApiError::NotFound)
+                        }
+                        Some(index) => index+1
+                    }
+                },
+                None => 0 as usize
+            };
+            export_format.export_steps.insert(new_index, step);
+        }
+    }
+
+    return ApiResult::new_data(())
+}
+
+/// PUT /api/templates/<template_id>/export_formats/<slug>/export_steps/<step_id>
+/// Updates a export step
+#[post("/api/templates/<template_id>/export_formats/<slug>/export_steps/<step_id>", data = "<step>")]
+pub async fn update_export_step(_session: Session, template_id: String, slug: String, step_id: String, step: Json<ExportStep>, data_storage: &State<Arc<DataStorage>>) -> Json<ApiResult<()>>{
+    //Parse template_id to uuid
+    let template_id = match Uuid::parse_str(&template_id){
+        Ok(template_id) => template_id,
+        Err(e) => {
+            eprintln!("Couldn't parse template id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        }
+    };
+
+    let slug = sanitize_path(&slug);
+
+    let data_storage = Arc::clone(data_storage);
+    let template = match data_storage.data.read().unwrap().templates.get(&template_id){
+        Some(template) => template.clone(),
+        None => {
+            eprintln!("Couldn't find template");
+            return ApiResult::new_error(ApiError::NotFound)
+        }
+    };
+
+    let parameter_step_id = match Uuid::parse_str(&step_id){
+        Ok(id) => id,
+        Err(e) => {
+            eprintln!("Couldn't parse step id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        }
+    };
+
+    let mut step = step.into_inner();
+    let step_id = match step.id{
+        Some(id) => id,
+        None => return ApiResult::new_error(ApiError::BadRequest(String::from("Missing step_id")))
+    };
+    if parameter_step_id != step_id{
+        return ApiResult::new_error(ApiError::BadRequest(String::from("step_id mismatches in data and url")))
+    }
+
+    match template.write().unwrap().export_formats.get_mut(&slug){
+        None => {
+            eprintln!("Couldn't find export format");
+            return ApiResult::new_error(ApiError::NotFound)
+        }
+        Some(mut export_format) => {
+            // Find export_step and update
+            let index = match export_format.export_steps.iter().position(|x| x.id == Some(step_id)){
+                Some(id) => id,
+                None => return ApiResult::new_error(ApiError::NotFound)
+            };
+
+            match export_format.export_steps.get_mut(index){
+                Some(old_step) => *old_step = step,
+                None => return ApiResult::new_error(ApiError::NotFound)
+            }
+        }
+    }
+
+    return ApiResult::new_data(())
+}
+
+#[delete("/api/templates/<template_id>/export_formats/<slug>/export_steps/<step_id>")]
+pub async fn delete_export_step(_session: Session, template_id: String, slug: String, step_id: String, data_storage: &State<Arc<DataStorage>>) -> Json<ApiResult<()>>{
+    //Parse template_id and step_id to uuid
+    let template_id = match Uuid::parse_str(&template_id){
+        Ok(template_id) => template_id,
+        Err(e) => {
+            eprintln!("Couldn't parse template id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        }
+    };
+
+    let step_id = match Uuid::parse_str(&step_id){
+        Ok(step_id) => step_id,
+        Err(e) => {
+            eprintln!("Couldn't parse step id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        }
+    };
+
+    let slug = sanitize_path(&slug);
+
+    let data_storage = Arc::clone(data_storage);
+    let template = match data_storage.data.read().unwrap().templates.get(&template_id){
+        Some(template) => template.clone(),
+        None => {
+            eprintln!("Couldn't find template");
+            return ApiResult::new_error(ApiError::NotFound)
+        }
+    };
+
+    match template.write().unwrap().export_formats.get_mut(&slug){
+        Some(export_format) => {
+            export_format.export_steps.retain(|step| step.id != Some(step_id));
+        },
+        None => {
+            eprintln!("Couldn't find export format");
+            return ApiResult::new_error(ApiError::NotFound);
+        }
+    };
+
+    return ApiResult::new_data(())
+}
+
+#[get("/api/templates/<template_id>/export_formats/<slug>/export_steps")]
+pub async fn get_export_steps(_session: Session, template_id: String, slug: String, data_storage: &State<Arc<DataStorage>>) -> Json<ApiResult<Vec<ExportStep>>> {
+    //Parse template_id to uuid
+    let template_id = match Uuid::parse_str(&template_id){
+        Ok(template_id) => template_id,
+        Err(e) => {
+            eprintln!("Couldn't parse template id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        }
+    };
+
+    let slug = sanitize_path(&slug);
+
+    let data_storage = data_storage.clone();
+    let template = match data_storage.data.read().unwrap().templates.get(&template_id){
+        Some(template) => template.clone(),
+        None => {
+            eprintln!("Couldn't find template");
+            return ApiResult::new_error(ApiError::NotFound)
+        }
+    };
+
+    let export_steps = match template.read().unwrap().export_formats.get(&slug){
+        Some(export_format) => export_format.export_steps.clone(),
+        None => {
+            eprintln!("Couldn't find export format");
+            return ApiResult::new_error(ApiError::NotFound);
+        }
+    };
+
+    return ApiResult::new_data(export_steps);
 }

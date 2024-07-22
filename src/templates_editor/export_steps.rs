@@ -11,8 +11,13 @@ pub enum ExportStepData {
 
 #[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
 pub struct ExportStep{
-    name: String,
-    data: ExportStepData
+    /// id should only be None for not yet saved ExportSteps
+    #[bincode(with_serde)]
+    pub id: Option<uuid::Uuid>,
+    pub name: String,
+    pub data: ExportStepData,
+    /// Defines which files are kept after this export step.
+    pub files_to_keep: Vec<String>,
 }
 
 /// Generate text files (e.g. HTML, xml with metadata)
@@ -21,7 +26,7 @@ pub struct ExportStep{
 pub struct RawExportStep {
     /// Path to main handlebars template file (e.g. main.hbs)
     pub entry_point: String,
-    /// Path to output of rendered result (e.g. index.html)
+    /// Path to output file (e.g. main.html)
     pub output_file: String,
 }
 
@@ -83,58 +88,6 @@ enum PandocInputFormat {
     Twiki,
     Typst,
     Vimwiki,
-}
-
-
-impl PandocInputFormat {
-    pub fn as_str(&self) -> &str {
-        match *self {
-            PandocInputFormat::BibTex => "bibtex",
-            PandocInputFormat::BibLaTex => "biblatex",
-            PandocInputFormat::Bits => "bits",
-            PandocInputFormat::Commonmark => "commonmark",
-            PandocInputFormat::CommonmarkX => "commonmark_x",
-            PandocInputFormat::Creole => "creole",
-            PandocInputFormat::CslJson => "csljson",
-            PandocInputFormat::Csv => "csv",
-            PandocInputFormat::Tsv => "tsv",
-            PandocInputFormat::Djot => "djot",
-            PandocInputFormat::DocBook => "docbook",
-            PandocInputFormat::Docx => "docx",
-            PandocInputFormat::DokuWiki => "dokuwiki",
-            PandocInputFormat::EndNoteXml => "endnotexml",
-            PandocInputFormat::Epub => "epub",
-            PandocInputFormat::Fb2 => "fb2",
-            PandocInputFormat::Gfm => "gfm",
-            PandocInputFormat::Haddock => "haddock",
-            PandocInputFormat::Html => "html",
-            PandocInputFormat::Ipynb => "ipynb",
-            PandocInputFormat::Jats => "jats",
-            PandocInputFormat::Jira => "jira",
-            PandocInputFormat::Json => "json",
-            PandocInputFormat::Latex => "latex",
-            PandocInputFormat::Markdown => "markdown",
-            PandocInputFormat::MarkdownMmd => "markdown_mmd",
-            PandocInputFormat::MarkdownPhpExtra => "markdown_phpextra",
-            PandocInputFormat::MarkdownStrict => "markdown_strict",
-            PandocInputFormat::Mediawiki => "mediawiki",
-            PandocInputFormat::Man => "man",
-            PandocInputFormat::Muse => "muse",
-            PandocInputFormat::Native => "native",
-            PandocInputFormat::Odt => "odt",
-            PandocInputFormat::Opml => "opml",
-            PandocInputFormat::Org => "org",
-            PandocInputFormat::Ris => "ris",
-            PandocInputFormat::Rtf => "rtf",
-            PandocInputFormat::Rst => "rst",
-            PandocInputFormat::T2t => "t2t",
-            PandocInputFormat::Textile => "textile",
-            PandocInputFormat::Tikiwiki => "tikiwiki",
-            PandocInputFormat::Twiki => "twiki",
-            PandocInputFormat::Typst => "typst",
-            PandocInputFormat::Vimwiki => "vimwiki",
-        }
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
@@ -206,79 +159,6 @@ enum PandocOutputFormat {
     Zimwiki,
 }
 
-impl PandocOutputFormat {
-    pub fn as_str(&self) -> &str {
-        match *self {
-            PandocOutputFormat::Asciidoc => "asciidoc",
-            PandocOutputFormat::AsciidocLegacy => "asciidoc_legacy",
-            PandocOutputFormat::Asciidoctor => "asciidoctor",
-            PandocOutputFormat::Beamer => "beamer",
-            PandocOutputFormat::Bibtex => "bibtex",
-            PandocOutputFormat::Biblatex => "biblatex",
-            PandocOutputFormat::Chunkedhtml => "chunkedhtml",
-            PandocOutputFormat::Commonmark => "commonmark",
-            PandocOutputFormat::CommonmarkX => "commonmark_x",
-            PandocOutputFormat::Context => "context",
-            PandocOutputFormat::Csljson => "csljson",
-            PandocOutputFormat::Djot => "djot",
-            PandocOutputFormat::Docbook => "docbook",
-            PandocOutputFormat::Docbook4 => "docbook4",
-            PandocOutputFormat::Docbook5 => "docbook5",
-            PandocOutputFormat::Docx => "docx",
-            PandocOutputFormat::Dokuwiki => "dokuwiki",
-            PandocOutputFormat::Epub => "epub",
-            PandocOutputFormat::Epub3 => "epub3",
-            PandocOutputFormat::Epub2 => "epub2",
-            PandocOutputFormat::Fb2 => "fb2",
-            PandocOutputFormat::Gfm => "gfm",
-            PandocOutputFormat::Haddock => "haddock",
-            PandocOutputFormat::Html => "html",
-            PandocOutputFormat::Html5 => "html5",
-            PandocOutputFormat::Html4 => "html4",
-            PandocOutputFormat::Icml => "icml",
-            PandocOutputFormat::Ipynb => "ipynb",
-            PandocOutputFormat::JatsArchiving => "jats_archiving",
-            PandocOutputFormat::JatsArticleauthoring => "jats_articleauthoring",
-            PandocOutputFormat::JatsPublishing => "jats_publishing",
-            PandocOutputFormat::Jats => "jats",
-            PandocOutputFormat::Jira => "jira",
-            PandocOutputFormat::Json => "json",
-            PandocOutputFormat::Latex => "latex",
-            PandocOutputFormat::Man => "man",
-            PandocOutputFormat::Markdown => "markdown",
-            PandocOutputFormat::MarkdownMmd => "markdown_mmd",
-            PandocOutputFormat::MarkdownPhpextra => "markdown_phpextra",
-            PandocOutputFormat::MarkdownStrict => "markdown_strict",
-            PandocOutputFormat::Markua => "markua",
-            PandocOutputFormat::Mediawiki => "mediawiki",
-            PandocOutputFormat::Ms => "ms",
-            PandocOutputFormat::Muse => "muse",
-            PandocOutputFormat::Native => "native",
-            PandocOutputFormat::Odt => "odt",
-            PandocOutputFormat::Opml => "opml",
-            PandocOutputFormat::Opendocument => "opendocument",
-            PandocOutputFormat::Org => "org",
-            PandocOutputFormat::Pdf => "pdf",
-            PandocOutputFormat::Plain => "plain",
-            PandocOutputFormat::Pptx => "pptx",
-            PandocOutputFormat::Rst => "rst",
-            PandocOutputFormat::Rtf => "rtf",
-            PandocOutputFormat::Texinfo => "texinfo",
-            PandocOutputFormat::Textile => "textile",
-            PandocOutputFormat::Slideous => "slideous",
-            PandocOutputFormat::Slidy => "slidy",
-            PandocOutputFormat::Dzslides => "dzslides",
-            PandocOutputFormat::Revealjs => "revealjs",
-            PandocOutputFormat::S5 => "s5",
-            PandocOutputFormat::Tei => "tei",
-            PandocOutputFormat::Typst => "typst",
-            PandocOutputFormat::Xwiki => "xwiki",
-            PandocOutputFormat::Zimwiki => "zimwiki",
-        }
-    }
-}
-
-
 /// Process Input via Pandoc, e.g. to generate an epub
 /// This ExportStep variant is used to process input using Pandoc
 #[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
@@ -288,11 +168,13 @@ pub struct PandocExportStep {
     pub input_format: PandocInputFormat,
     pub output_file: String,
     pub output_format: PandocOutputFormat,
+    pub shift_heading_level_by: Option<i8>,
+    pub metadata_file: Option<String>,
     /// Sets the --epub-cover-image to the specified path
     pub epub_cover_image_path: Option<String>,
     pub epub_title_page: Option<bool>,
-    pub epub_metadata_path: Option<String>,
-    pub epub_embed_font: Option<String>,
+    pub epub_metadata_file: Option<String>,
+    pub epub_embed_fonts: Option<Vec<String>>,
 }
 
 
@@ -300,8 +182,10 @@ pub struct PandocExportStep {
 pub struct ExportFormat{
     pub slug: String,
     pub name: String,
-    /// Steps executed when export is started (e.g. HTML generation, pandoc converison etc.)
+    /// Steps executed when export is started (e.g. HTML generation, pandoc conversion etc.)
     pub export_steps: Vec<ExportStep>,
-    /// Optional path to a pdf used as preview. Make sure to use the path to a output file created by one of the export steps
+    /// List of all files which should be provided to the user after running the export. Make sure to include these files in files_to_keep, otherwise generated files are pruned after each export step
+    pub output_files: Vec<String>,
+    /// Optional path to a pdf used as preview. Make sure to use the path to an output file created by one of the export steps
     pub preview_pdf_path: Option<String>
 }
