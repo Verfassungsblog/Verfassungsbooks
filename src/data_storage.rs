@@ -126,7 +126,7 @@ impl DataStorage{
 
     /// Loads the [DataStorage] from disk
     ///
-    /// Path is defined as data_path from settings + /data.bincode
+    /// Path is defined as data_path from settings + /data.version.bincode
     pub async fn load_from_disk(settings: &Settings) -> Result<Self, ()>{
         let mut data_storage = DataStorage::new();
 
@@ -198,6 +198,8 @@ impl DataStorage{
                     },
                 };
 
+                println!("Found old data Format v1. Converting to v2. Moving templates/ to templates-old/!");
+
                 // Move told templates directory to templates-old
                 if Path::exists(Path::new(&format!("{}/templates", &path))){
                     if let Err(e) = fs::rename(format!("{}/templates", &path), format!("{}/templates-old", &path)){
@@ -206,7 +208,7 @@ impl DataStorage{
                     }
                     if let Err(e) = std::fs::create_dir_all(format!("{}/templates", &path)){
                         eprintln!("error while creating new templates directory: {}", e);
-                        return Err(())
+                        return Err(())2
                     }
                 }
 
