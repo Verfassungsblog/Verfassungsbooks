@@ -1,6 +1,5 @@
 use std::collections::{HashMap, VecDeque};
-use std::future::Future;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicU64, Ordering};
 use serde::{Deserialize, Serialize};
@@ -8,10 +7,10 @@ use tokio::net::TcpStream;
 use tokio_rustls::rustls::ClientConfig;
 use tokio_rustls::rustls::pki_types::ServerName;
 use tokio_rustls::{TlsConnector, TlsStream};
-use crate::data_storage::{DataStorage, ProjectDataV2, ProjectStorage, ProjectTemplateV2};
+use crate::data_storage::{DataStorage, ProjectDataV2, ProjectStorage};
 use crate::settings::{ExportServer, Settings};
 use crate::utils::csl::CslData;
-use vb_exchange::{RenderingStatus, RenderingRequest, RenderingError, send_message, Message, read_message, CommunicationError, TemplateDataResult, TemplateContents};
+use vb_exchange::{RenderingStatus, RenderingRequest, RenderingError, send_message, Message, read_message, CommunicationError, TemplateDataResult, TemplateContents, FilesOnMemoryOrHarddrive};
 use vb_exchange::export_formats::ExportFormat;
 use crate::export::preprocessing::prepare_project;
 use crate::export::zip::create_zip_from_bytes;
@@ -128,10 +127,20 @@ impl RenderingManager{
         };
 
         // Prepare project
-        let prepared_project = prepare_project(project_data, rendering_manager.data_storage.clone(), rendering_manager.csl_data.clone(), request.sections)?;
+        let prepared_project = prepare_project(project_data, rendering_manager.data_storage.clone(), rendering_manager.csl_data.clone(), request.sections, &request.project_id).await?;
+
+        // Pack uploaded files
+        let uploads = match vb_exchange::recursive_read_dir_async(PathBuf::from(format!("data/projects/{}/uploads", &request.project_id))).await{
+            Ok(uploads) => uploads,
+            Err(e) => {
+                return Err(RenderingError::Other(format!("IO Error packing uploaded files: {}", e)))
+            }
+        };
+
         let request = RenderingRequest{
             request_id: request.request_id,
             prepared_project,
+            project_uploaded_files: FilesOnMemoryOrHarddrive::Memory(uploads),
             template_id,
             template_version_id,
             export_formats: request.export_formats,
@@ -222,7 +231,7 @@ impl RenderingManager{
     }
     async fn send_to_server(mut tls_stream: TlsStream<TcpStream>, request: RenderingRequest, rendering_manager: Arc<RenderingManager>) -> Result<(), RenderingError>{
         let request_id = request.request_id.clone();
-        if let Err(e) = send_message(&mut tls_stream, Message::RenderingRequest(request)).await{
+        if let Err(_) = send_message(&mut tls_stream, Message::RenderingRequest(request)).await{
             return Err(RenderingError::CommunicationError)
         }
 
@@ -242,26 +251,11 @@ impl RenderingManager{
                             *status = RenderingStatus::TransmittingTemplate
                         }
 
-                        let res = tokio::task::spawn_blocking(move || {
-                            match TemplateContents::from_path(PathBuf::from(format!("data/templates/{}/", req.template_id))){
-                                Ok(res) => Ok(res),
-                                Err(e) => {
-                                    eprintln!("Couldn't load template files from path: {}", e);
-                                    Err(RenderingError::TemplateNotFound)
-                                }
-                            }
-                        }).await;
-
-                        let template_files = match res{
-                            Ok(res) => match res{
-                                Ok(res) => res,
-                                Err(e) => {
-                                    return Err(e)
-                                }
-                            },
+                        let template_files = match TemplateContents::from_path(PathBuf::from(format!("data/templates/{}/", req.template_id))).await{
+                            Ok(res) => res,
                             Err(e) => {
-                                eprintln!("JoinError: {}", e);
-                                return Err(RenderingError::Other("Join Error".to_string()))
+                                eprintln!("Couldn't package template contents: {}", e);
+                                return Err(RenderingError::TemplateNotFound)
                             }
                         };
 

@@ -2,10 +2,16 @@ use hayagriva::{BufWriteFormat, CitationItem, CitationRequest};
 use vb_exchange::projects::{Language, Person, PreparedContentBlock, PreparedEndnote, PreparedLanguage, PreparedMetadata, PreparedSection, PreparedSectionMetadata};
 use vb_exchange::projects::PreparedLicense;
 use std::collections::HashMap;
+use std::io::Cursor;
+use std::path::PathBuf;
 use std::sync::Arc;
+use async_recursion::async_recursion;
+use base64::Engine;
+use base64::engine::general_purpose;
 use hayagriva::{BibliographyDriver, BibliographyRequest};
 use hayagriva::citationberg::LocaleCode;
 use hyphenation::{Hyphenator, Load, Standard};
+use image::{DynamicImage, ImageOutputFormat};
 use regex::Regex;
 use vb_exchange::projects::PreparedProject;
 use vb_exchange::RenderingError;
@@ -13,7 +19,7 @@ use crate::data_storage::{DataStorage, ProjectDataV2};
 use crate::projects::{BlockData, NewContentBlock, Section, SectionOrToc};
 use crate::utils::csl::CslData;
 
-pub fn prepare_project(project_data: ProjectDataV2, data_storage: Arc<DataStorage>, csl_data: Arc<CslData>, sections_to_include: Option<Vec<uuid::Uuid>>) -> Result<PreparedProject, RenderingError>{
+pub async fn prepare_project(project_data: ProjectDataV2, data_storage: Arc<DataStorage>, csl_data: Arc<CslData>, sections_to_include: Option<Vec<uuid::Uuid>>, project_id: &uuid::Uuid) -> Result<PreparedProject, RenderingError>{
     let citation_bib = render_citations(&project_data, csl_data);
 
     let metadata = match project_data.metadata{
@@ -64,10 +70,10 @@ pub fn prepare_project(project_data: ProjectDataV2, data_storage: Arc<DataStorag
                 match &sections_to_include{
                     Some(sections_to_include) => { // Only prepare specified sections
                         if sections_to_include.contains(&id){
-                            data.push(render_section(section, data_storage.clone(), &citation_bib))
+                            data.push(render_section(section, data_storage.clone(), &citation_bib, project_id).await)
                         }
                     },
-                    None => data.push(render_section(section, data_storage.clone(), &citation_bib)) // Prepare all sections
+                    None => data.push(render_section(section, data_storage.clone(), &citation_bib, project_id).await) // Prepare all sections
                 }
 
             }
@@ -187,7 +193,8 @@ pub fn render_citations(project: &ProjectDataV2, csl_data: Arc<CslData>) -> Hash
     res
 }
 
-pub fn render_section(section: Section, data_storage: Arc<DataStorage>, citation_bib: &HashMap<String, String>) -> PreparedSection{
+#[async_recursion]
+pub async fn render_section(section: Section, data_storage: Arc<DataStorage>, citation_bib: &HashMap<String, String>, project_id: &uuid::Uuid) -> PreparedSection{
     let published = match section.metadata.published{
         Some(date) => Some(date.format("%d.%m.%Y").to_string()),
         None => None
@@ -260,12 +267,12 @@ pub fn render_section(section: Section, data_storage: Arc<DataStorage>, citation
     let mut endnote_storage: Vec<(uuid::Uuid, String)> = vec![];
 
     for content_block in section.children{
-        content.push(render_content_block(content_block, &mut endnote_storage, &dict, &citation_bib));
+        content.push(render_content_block(content_block, &mut endnote_storage, &dict, &citation_bib, project_id).await);
     }
 
     let mut sub_sections = vec![];
     for sub_section in section.sub_sections{
-        sub_sections.push(render_section(sub_section, data_storage.clone(), &citation_bib));
+        sub_sections.push(render_section(sub_section, data_storage.clone(), &citation_bib, project_id).await);
     }
 
     let mut endnotes = vec![];
@@ -312,7 +319,7 @@ pub fn hyphenate_text(text: String, dict: &hyphenation::Standard) -> String{
 }
 
 
-pub fn render_content_block(block: NewContentBlock, endnote_storage: &mut Vec<(uuid::Uuid, String)>, dict: &Standard, citation_bib: &HashMap<String, String>) -> PreparedContentBlock{
+pub async fn render_content_block(block: NewContentBlock, endnote_storage: &mut Vec<(uuid::Uuid, String)>, dict: &Standard, citation_bib: &HashMap<String, String>, project_id: &uuid::Uuid) -> PreparedContentBlock{
     let css_classes_raw = block.css_classes.join(" ");
     let css_classes = if block.css_classes.len() > 0{
         format!(" class='{}'", block.css_classes.join(" "))
@@ -344,8 +351,27 @@ pub fn render_content_block(block: NewContentBlock, endnote_storage: &mut Vec<(u
             format!("<blockquote id='{}' class=\"align-{} {}\"><p>{}</p><footer>{}</footer></blockquote>", block.id, alignment, css_classes_raw, render_text(text, endnote_storage, dict, citation_bib), render_text(caption, endnote_storage, dict, citation_bib))
         }
         BlockData::Image {file, caption, with_border: _, with_background: _, stretched: _} => {
-            // We use filename since all images are copied from te uploads directory to our temporary working dir and file.url represents the public url
-            format!("<img id='{}' src=\"{}\" alt=\"{}\" {}/>", block.id, file.filename, caption.unwrap_or_default(), css_classes)
+            // Load image and convert to base64
+            let file = tokio::fs::read(PathBuf::from(format!("data/projects/{}/uploads/{}", project_id, file.filename))).await;
+            match file{
+                Ok(file) => {
+                    let img = image::load_from_memory(file.as_slice());
+                    match img{
+                        Ok(img) => {
+                            let img_as_base64 = image_to_base64(&img);
+                            format!("<img id='{}' src=\"{}\" alt=\"{}\" {}/>", block.id, img_as_base64, caption.unwrap_or_default(), css_classes)
+                        },
+                        Err(e) => {
+                            eprintln!("Couldn't load image: {}", e);
+                            String::new()
+                        }
+                    }
+                },
+                Err(e) => {
+                    eprintln!("Couldn't load included file: {}", e);
+                    String::new()
+                }
+            }
         }
     };
     PreparedContentBlock{
@@ -353,6 +379,14 @@ pub fn render_content_block(block: NewContentBlock, endnote_storage: &mut Vec<(u
         block_type: block.block_type,
         html: data
     }
+}
+
+fn image_to_base64(img: &DynamicImage) -> String {
+    let mut image_data: Vec<u8> = Vec::new();
+    img.write_to(&mut Cursor::new(&mut image_data), ImageOutputFormat::Png)
+        .unwrap();
+    let res_base64 = general_purpose::STANDARD.encode(image_data);
+    format!("data:image/png;base64,{}", res_base64)
 }
 
 
