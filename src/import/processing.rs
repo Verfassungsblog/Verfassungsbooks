@@ -1,3 +1,4 @@
+use vb_exchange::projects::BlockType;
 use async_recursion::async_recursion;
 use std::collections::{HashMap, VecDeque};
 
@@ -12,8 +13,9 @@ use serde::{Deserialize, Serialize};
 use crate::data_storage::{BibEntryV2, ProjectDataV2, ProjectStorage};
 use crate::settings::Settings;
 use tokio::io::AsyncReadExt;
+use vb_exchange::projects::{Identifier, IdentifierType};
 use crate::import::wordpress::{WordpressAPI, WordpressAPIError};
-use crate::projects::{BlockData, BlockType, Identifier, IdentifierType, NewContentBlock, Section, SectionMetadata, SectionOrToc};
+use crate::projects::{BlockData, NewContentBlock, Section, SectionMetadata, SectionOrToc};
 use crate::utils::block_id_generator::generate_id;
 
 pub struct ImportProcessor{

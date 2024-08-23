@@ -4,7 +4,9 @@
     </div>
     <div class="card-body {{#unless collapse_status.metadata}}hide{{/unless}}">
         <label for="export_format_name">Export Format Name</label>
-        <h1 id="export_format_name">{{export_format_data.name}}</h1>
+        <h1 contenteditable="true" id="export_format_name">{{export_format_data.name}}</h1><br>
+        <label>PDF Preview Path (optional, path to a pdf created by one of the export steps)</label><br>
+        <input type="text" id="export_format_preview_path" class="form-control" value="{{export_format_data.preview_pdf_path}}"><br>
         <label>Danger Zone</label><br>
         <button type="button" class="btn btn-outline-danger" id="delete_export_format">Delete Export Format</button>
     </div>

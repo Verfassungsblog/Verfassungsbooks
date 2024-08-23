@@ -3,7 +3,7 @@ use rocket::serde::json::Json;
 use rocket::State;
 use crate::data_storage::DataStorage;
 use crate::projects::api::{ApiError, ApiResult};
-use crate::projects::Person;
+use vb_exchange::projects::Person;
 use crate::session::session_guard::Session;
 
 /// POST /api/persons/

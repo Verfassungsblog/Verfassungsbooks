@@ -5,7 +5,7 @@ use rocket::State;
 use rocket::form::Form;
 use rocket::fs::{NamedFile, TempFile};
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use rocket::serde::json::Json;
 use crate::projects::api::{ApiResult, ApiError};
 use crate::session::session_guard::Session;
@@ -13,7 +13,7 @@ use std::io;
 use std::fs;
 use std::future::Future;
 use std::path::PathBuf;
-use crate::templates_editor::export_steps::{ExportFormat, ExportStep};
+use vb_exchange::export_formats::{ExportFormat, ExportStep};
 
 /// Contains API endpoints for the templates editor.
 
@@ -53,6 +53,10 @@ pub async fn update_template(_session: Session, template_id: String, template: J
         }
     };
 
+    let mut template = template.into_inner();
+    // Generate a new version id since we updated the template
+    template.version = Some(uuid::Uuid::new_v4());
+
     let data_storage = data_storage.clone();
 
     // Check if template exists, otherwise return 404
@@ -66,7 +70,7 @@ pub async fn update_template(_session: Session, template_id: String, template: J
         return ApiResult::new_error(ApiError::BadRequest("Template id in url does not match template id in body, id change is not supported.".to_string()));
     }
 
-    *lock.templates.get(&template_id).unwrap().write().unwrap() = template.into_inner();
+    *lock.templates.get(&template_id).unwrap().write().unwrap() = template;
 
     ApiResult::new_data(())
 }
@@ -112,7 +116,7 @@ pub struct NewAssetFile<'r>{
     pub file: TempFile<'r>
 }
 
-fn sanitize_path(path: &str) -> String {
+pub fn sanitize_path(path: &str) -> String {
     // Entfernen von `../` und `./`
     let path = path.replace("../", "").replace("./", "");
 
@@ -129,7 +133,7 @@ fn sanitize_path(path: &str) -> String {
 }
 
 /// Safely combines a base path with a user input path.
-fn safe_path_combine(base_path: &str, user_input: &str) -> Result<PathBuf, ()> {
+pub fn safe_path_combine(base_path: &str, user_input: &str) -> Result<PathBuf, ()> {
     let sanitized_input = sanitize_path(user_input);
     if sanitized_input.is_empty() {
         return Err(());
@@ -204,7 +208,7 @@ mod tests {
 /// POST /api/templates/<template_id>/assets/file
 /// Creates a new asset in the global assets folder of the template
 #[post("/api/templates/<template_id>/assets/file", data = "<asset>")]
-pub async fn create_file_asset(_session: Session, template_id: String, asset: Form<NewAssetFile<'_>>) -> Json<ApiResult<()>> {
+pub async fn create_file_asset(_session: Session, template_id: String, asset: Form<NewAssetFile<'_>>, data_storage: &State<Arc<DataStorage>>) -> Json<ApiResult<()>> {
     //Parse template_id to uuid
     let template_id = match Uuid::parse_str(&template_id){
         Ok(template_id) => template_id,
@@ -257,7 +261,12 @@ pub async fn create_file_asset(_session: Session, template_id: String, asset: Fo
         }
     }
     match file.copy_to(path).await{
-        Ok(_) => return ApiResult::new_data(()),
+        Ok(_) => {
+            if let Err(()) = data_storage.update_template_version_id(template_id).await{
+                return ApiResult::new_error(ApiError::NotFound)
+            }
+            return ApiResult::new_data(())
+        },
         Err(e) => {
             eprintln!("Error copying file: {}", e);
             return ApiResult::new_error(ApiError::InternalServerError);
@@ -273,7 +282,7 @@ pub struct DeleteAssetRequest{
 /// DELETE /api/templates/<template_id>/assets/<path>
 /// Deletes an asset in the global assets folder of the template
 #[delete("/api/templates/<template_id>/assets", data = "<paths>")]
-pub async fn delete_assets(_session: Session, template_id: String, paths: Json<DeleteAssetRequest>) -> Json<ApiResult<()>> {
+pub async fn delete_assets(_session: Session, template_id: String, paths: Json<DeleteAssetRequest>, data_storage: &State<Arc<DataStorage>>) -> Json<ApiResult<()>> {
     //Parse template_id to uuid
     let template_id = match Uuid::parse_str(&template_id){
         Ok(template_id) => template_id,
@@ -315,13 +324,17 @@ pub async fn delete_assets(_session: Session, template_id: String, paths: Json<D
         }
     }
 
+    if let Err(()) = data_storage.update_template_version_id(template_id).await{
+        return ApiResult::new_error(ApiError::NotFound)
+    }
+
     ApiResult::new_data(())
 }
 
 /// POST /api/templates/<template_id>/assets/folder
 /// Creates a new asset in the global assets folder of the template
 #[post("/api/templates/<template_id>/assets/folder", data = "<asset>")]
-pub async fn create_folder_asset(_session: Session, template_id: String, asset: Json<NewAssetFolder>) -> Json<ApiResult<()>> {
+pub async fn create_folder_asset(_session: Session, template_id: String, asset: Json<NewAssetFolder>, data_storage: &State<Arc<DataStorage>>) -> Json<ApiResult<()>> {
     //Parse template_id to uuid
     let template_id = match Uuid::parse_str(&template_id){
         Ok(template_id) => template_id,
@@ -353,7 +366,12 @@ pub async fn create_folder_asset(_session: Session, template_id: String, asset: 
     }).await;
 
     match res {
-        Ok(res) => res,
+        Ok(res) => {
+            if let Err(()) = data_storage.update_template_version_id(template_id).await{
+                return ApiResult::new_error(ApiError::NotFound)
+            }
+            res
+        },
         Err(e) => {
             eprintln!("Error creating folder: {}", e);
             ApiResult::new_error(ApiError::InternalServerError)
@@ -468,7 +486,7 @@ pub struct UpdateAssetRequest{
 /// Updates a text-based asset in the global assets folder of the template
 /// The asset must be a text-based file, e.g. .txt, .html, .css, .js
 #[put("/api/templates/<template_id>/assets/files/<path..>", data = "<content>")]
-pub async fn update_asset_file(_session: Session, template_id: String, path: PathBuf, content: Json<UpdateAssetRequest>) -> Json<ApiResult<()>> {
+pub async fn update_asset_file(_session: Session, template_id: String, path: PathBuf, content: Json<UpdateAssetRequest>, data_storage: &State<Arc<DataStorage>>) -> Json<ApiResult<()>> {
     //Parse template_id to uuid
     let template_id = match Uuid::parse_str(&template_id){
         Ok(template_id) => template_id,
@@ -493,6 +511,10 @@ pub async fn update_asset_file(_session: Session, template_id: String, path: Pat
         return ApiResult::new_error(ApiError::NotFound);
     }
 
+    if let Err(()) = data_storage.update_template_version_id(template_id).await{
+        return ApiResult::new_error(ApiError::NotFound)
+    }
+
     // Update the file
     match tokio::fs::write(&path, content.into_inner().content).await{
         Ok(_) => ApiResult::new_data(()),
@@ -506,7 +528,7 @@ pub async fn update_asset_file(_session: Session, template_id: String, path: Pat
 /// POST /api/templates/<template_id>/assets/move
 /// Moves an asset in the global assets folder of the template
 #[post("/api/templates/<template_id>/assets/move", data = "<asset>")]
-pub async fn move_asset(_session: Session, template_id: String, asset: Json<MoveAssetRequest>) -> Json<ApiResult<()>> {
+pub async fn move_asset(_session: Session, template_id: String, asset: Json<MoveAssetRequest>, data_storage: &State<Arc<DataStorage>>) -> Json<ApiResult<()>> {
     //Parse template_id to uuid
     let template_id = match Uuid::parse_str(&template_id){
         Ok(template_id) => template_id,
@@ -544,7 +566,9 @@ pub async fn move_asset(_session: Session, template_id: String, asset: Json<Move
         }
         
         match fs::rename(&old_path, &new_path){
-            Ok(_) => ApiResult::new_data(()),
+            Ok(_) => {
+                ApiResult::new_data(())
+            },
             Err(_) => {
                 eprintln!("Error moving asset, invalid path.");
                 ApiResult::new_error(ApiError::InternalServerError)
@@ -553,7 +577,12 @@ pub async fn move_asset(_session: Session, template_id: String, asset: Json<Move
     }).await;
 
     match res {
-        Ok(res) => res,
+        Ok(res) => {
+            if let Err(()) = data_storage.update_template_version_id(template_id).await{
+                return ApiResult::new_error(ApiError::NotFound)
+            }
+            res
+        },
         Err(e) => {
             eprintln!("Error moving asset: {}", e);
             ApiResult::new_error(ApiError::InternalServerError)
@@ -613,12 +642,107 @@ pub async fn add_export_format(_session: Session, template_id: String, data_stor
     }
 
     match tokio::fs::create_dir_all(new_path).await{
-        Ok(_) => ApiResult::new_data(format),
+        Ok(_) => {
+            if let Err(()) = data_storage.update_template_version_id(template_id).await{
+                return ApiResult::new_error(ApiError::NotFound)
+            }
+            ApiResult::new_data(format)
+        },
         Err(e) => {
             eprintln!("Couldn't create folder for new export format: {}", e);
             ApiResult::new_error(ApiError::InternalServerError)
         }
     }
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct ExportFormatMetadata{
+    pub name: String,
+    pub slug: String,
+    pub preview_pdf_path: Option<String>
+}
+
+/// UPDATE /api/templates/<template_id>/export_formats/<slug>
+/// Updates the export_format metadata
+#[post("/api/templates/<template_id>/export_formats/<slug>/metadata", data="<data>")]
+pub async fn update_export_format_metadata(_session: Session, slug: String, template_id: String, data_storage: &State<Arc<DataStorage>>, data: Json<ExportFormatMetadata>) -> Json<ApiResult<()>> {
+    // Clone data storage
+    let mut data_storage = data_storage.clone();
+
+    let template_id = match Uuid::parse_str(&template_id) {
+        Ok(template_id) => template_id,
+        Err(e) => {
+            eprintln!("Couldn't parse template id: {}", e);
+            return ApiResult::new_error(ApiError::NotFound);
+        }
+    };
+
+    // Get template
+    let template_entry = match data_storage.data.read().unwrap().templates.get(&template_id){
+        None => {
+            return ApiResult::new_error(ApiError::NotFound)
+        }
+        Some(template) => {
+            Arc::clone(template)
+        }
+    };
+
+    // Move files on disk if slug changed
+    if slug != data.slug{
+        let base_path = format!("data/templates/{}/formats", template_id);
+        let base_path = Path::new(&base_path).canonicalize().unwrap();
+
+        let old_path = match safe_path_combine(&base_path.to_str().unwrap(), &slug){
+            Ok(path) => path,
+            Err(_) => {
+                eprintln!("Error moving export Format, invalid slug.");
+                return ApiResult::new_error(ApiError::BadRequest("Invalid Slug".to_string()));
+            }
+        };
+        let new_path = match safe_path_combine(&base_path.to_str().unwrap(), &data.slug){
+            Ok(path) => path,
+            Err(_) => {
+                eprintln!("Error moving export Format, invalid slug.");
+                return ApiResult::new_error(ApiError::BadRequest("Invalid Slug".to_string()));
+            }
+        };
+
+        if new_path.exists(){
+            return ApiResult::new_error(ApiError::BadRequest("An export format with this slug already exists.".to_string()))
+        }
+
+        if let Err(e) = tokio::fs::rename(old_path, new_path).await{
+            eprintln!("Couldn't rename export format: {}", e);
+            return ApiResult::new_error(ApiError::InternalServerError)
+        }
+    }
+
+    if slug != data.slug{
+        let mut entry = match template_entry.write().unwrap().export_formats.remove(&slug){
+            None => {
+                return ApiResult::new_error(ApiError::NotFound)
+            },
+            Some(entry) => entry,
+        };
+        entry.slug = data.slug.clone();
+        entry.name = data.name.clone();
+        entry.preview_pdf_path = data.preview_pdf_path.clone();
+
+        template_entry.write().unwrap().export_formats.insert(entry.slug.clone(), entry);
+    }else{
+        match template_entry.write().unwrap().export_formats.get_mut(&slug){
+            None => {
+                return ApiResult::new_error(ApiError::NotFound)
+            }
+            Some(export_format) => {
+                export_format.name = data.name.clone();
+                export_format.preview_pdf_path = data.preview_pdf_path.clone();
+            }
+        }
+    }
+
+    ApiResult::new_data(())
+
 }
 
 /// DELETE /api/templates/<template_id>/export_formats/<slug>
@@ -659,7 +783,12 @@ pub async fn delete_export_format(_session: Session, template_id: String, data_s
             match safe_path{
                 Ok(path) => {
                     match tokio::fs::remove_dir_all(path).await{
-                        Ok(_) => ApiResult::new_data(()),
+                        Ok(_) => {
+                            if let Err(()) = data_storage.update_template_version_id(template_id).await{
+                                return ApiResult::new_error(ApiError::NotFound)
+                            }
+                            ApiResult::new_data(())
+                        },
                         Err(e) => {
                             eprintln!("Couldn't delete physical folder for export format: {}", e);
                             ApiResult::new_error(ApiError::InternalServerError)
@@ -746,7 +875,7 @@ pub async fn get_asset_file_for_export_format(_session: Session, template_id: St
 /// POST /api/templates/<template_id>/export_formats/<slug>/assets/file
 /// Creates a new asset in the export format folder
 #[post("/api/templates/<template_id>/export_formats/<slug>/assets/file", data = "<asset>")]
-pub async fn create_file_asset_for_export_format(_session: Session, template_id: String, slug: String, asset: Form<NewAssetFile<'_>>) -> Json<ApiResult<()>> {
+pub async fn create_file_asset_for_export_format(_session: Session, template_id: String, slug: String, asset: Form<NewAssetFile<'_>>, data_storage: &State<Arc<DataStorage>>) -> Json<ApiResult<()>> {
     //Parse template_id to uuid
     let template_id = match Uuid::parse_str(&template_id){
         Ok(template_id) => template_id,
@@ -799,7 +928,12 @@ pub async fn create_file_asset_for_export_format(_session: Session, template_id:
         }
     }
     match file.copy_to(path).await{
-        Ok(_) => return ApiResult::new_data(()),
+        Ok(_) => {
+            if let Err(()) = data_storage.update_template_version_id(template_id).await{
+                return ApiResult::new_error(ApiError::NotFound)
+            }
+            return ApiResult::new_data(())
+        },
         Err(e) => {
             eprintln!("Error copying file: {}", e);
             return ApiResult::new_error(ApiError::InternalServerError);
@@ -810,7 +944,7 @@ pub async fn create_file_asset_for_export_format(_session: Session, template_id:
 /// DELETE /api/templates/<template_id>/export_formats/<slug>/assets
 /// Deletes an asset in the export format folder of the template
 #[delete("/api/templates/<template_id>/export_formats/<slug>/assets", data = "<paths>")]
-pub async fn delete_assets_for_export_format(_session: Session, template_id: String, paths: Json<DeleteAssetRequest>, slug: String) -> Json<ApiResult<()>> {
+pub async fn delete_assets_for_export_format(_session: Session, template_id: String, paths: Json<DeleteAssetRequest>, slug: String, data_storage: &State<Arc<DataStorage>>) -> Json<ApiResult<()>> {
     //Parse template_id to uuid
     let template_id = match Uuid::parse_str(&template_id){
         Ok(template_id) => template_id,
@@ -853,6 +987,9 @@ pub async fn delete_assets_for_export_format(_session: Session, template_id: Str
             }
         }
     }
+    if let Err(()) = data_storage.update_template_version_id(template_id).await{
+        return ApiResult::new_error(ApiError::NotFound)
+    }
 
     ApiResult::new_data(())
 }
@@ -860,7 +997,7 @@ pub async fn delete_assets_for_export_format(_session: Session, template_id: Str
 /// POST /api/templates/<template_id>/export_formats/<slug>/assets/folder
 /// Creates a new asset in the export format folder of the template
 #[post("/api/templates/<template_id>/export_formats/<slug>/assets/folder", data = "<asset>")]
-pub async fn create_folder_asset_for_export_format(_session: Session, template_id: String, asset: Json<NewAssetFolder>, slug: String) -> Json<ApiResult<()>> {
+pub async fn create_folder_asset_for_export_format(_session: Session, template_id: String, asset: Json<NewAssetFolder>, slug: String, data_storage: &State<Arc<DataStorage>>) -> Json<ApiResult<()>> {
     //Parse template_id to uuid
     let template_id = match Uuid::parse_str(&template_id){
         Ok(template_id) => template_id,
@@ -894,7 +1031,12 @@ pub async fn create_folder_asset_for_export_format(_session: Session, template_i
     }).await;
 
     match res {
-        Ok(res) => res,
+        Ok(res) => {
+            if let Err(()) = data_storage.update_template_version_id(template_id).await{
+                return ApiResult::new_error(ApiError::NotFound)
+            }
+            res
+        },
         Err(e) => {
             eprintln!("Error creating folder: {}", e);
             ApiResult::new_error(ApiError::InternalServerError)
@@ -906,7 +1048,7 @@ pub async fn create_folder_asset_for_export_format(_session: Session, template_i
 /// Updates a text-based asset in the export format folder of the template
 /// The asset must be a text-based file, e.g. .txt, .html, .css, .js
 #[put("/api/templates/<template_id>/export_formats/<slug>/assets/files/<path..>", data = "<content>")]
-pub async fn update_asset_file_for_export_format(_session: Session, template_id: String, path: PathBuf, content: Json<UpdateAssetRequest>, slug: String) -> Json<ApiResult<()>> {
+pub async fn update_asset_file_for_export_format(_session: Session, template_id: String, path: PathBuf, content: Json<UpdateAssetRequest>, slug: String, data_storage: &State<Arc<DataStorage>>) -> Json<ApiResult<()>> {
     //Parse template_id to uuid
     let template_id = match Uuid::parse_str(&template_id){
         Ok(template_id) => template_id,
@@ -934,7 +1076,12 @@ pub async fn update_asset_file_for_export_format(_session: Session, template_id:
 
     // Update the file
     match tokio::fs::write(&path, content.into_inner().content).await{
-        Ok(_) => ApiResult::new_data(()),
+        Ok(_) => {
+            if let Err(()) = data_storage.update_template_version_id(template_id).await{
+                return ApiResult::new_error(ApiError::NotFound)
+            }
+            ApiResult::new_data(())
+        },
         Err(e) => {
             eprintln!("Error updating asset: {}", e);
             ApiResult::new_error(ApiError::InternalServerError)
@@ -946,7 +1093,7 @@ pub async fn update_asset_file_for_export_format(_session: Session, template_id:
 /// POST /api/templates/<template_id>/export_formats/<slug>/assets/move
 /// Moves an asset in the export_format folder of the template
 #[post("/api/templates/<template_id>/export_formats/<slug>/assets/move", data = "<asset>")]
-pub async fn move_asset_for_export_format(_session: Session, template_id: String, asset: Json<MoveAssetRequest>, slug: String) -> Json<ApiResult<()>> {
+pub async fn move_asset_for_export_format(_session: Session, template_id: String, asset: Json<MoveAssetRequest>, slug: String, data_storage: &State<Arc<DataStorage>>) -> Json<ApiResult<()>> {
     //Parse template_id to uuid
     let template_id = match Uuid::parse_str(&template_id){
         Ok(template_id) => template_id,
@@ -996,7 +1143,12 @@ pub async fn move_asset_for_export_format(_session: Session, template_id: String
     }).await;
 
     match res {
-        Ok(res) => res,
+        Ok(res) => {
+            if let Err(()) = data_storage.update_template_version_id(template_id).await{
+                return ApiResult::new_error(ApiError::NotFound)
+            }
+            res
+        },
         Err(e) => {
             eprintln!("Error moving asset: {}", e);
             ApiResult::new_error(ApiError::InternalServerError)
@@ -1047,6 +1199,9 @@ pub async fn create_export_step(_session: Session, template_id: String, slug: St
         Some(mut export_format) => {
             export_format.export_steps.push(step.clone())
         }
+    }
+    if let Err(()) = data_storage.update_template_version_id(template_id).await{
+        return ApiResult::new_error(ApiError::NotFound)
     }
 
     return ApiResult::new_data(step)
@@ -1120,6 +1275,9 @@ pub async fn move_export_step(_session: Session, template_id: String, slug: Stri
         }
     }
 
+    if let Err(()) = data_storage.update_template_version_id(template_id).await{
+        return ApiResult::new_error(ApiError::NotFound)
+    }
     return ApiResult::new_data(())
 }
 
@@ -1182,8 +1340,10 @@ pub async fn update_export_step(_session: Session, template_id: String, slug: St
             }
         }
     }
-
-    return ApiResult::new_data(())
+    if let Err(()) = data_storage.update_template_version_id(template_id).await{
+        return ApiResult::new_error(ApiError::NotFound)
+    }
+    ApiResult::new_data(())
 }
 
 #[delete("/api/templates/<template_id>/export_formats/<slug>/export_steps/<step_id>")]
@@ -1225,7 +1385,9 @@ pub async fn delete_export_step(_session: Session, template_id: String, slug: St
             return ApiResult::new_error(ApiError::NotFound);
         }
     };
-
+    if let Err(()) = data_storage.update_template_version_id(template_id).await{
+        return ApiResult::new_error(ApiError::NotFound)
+    }
     return ApiResult::new_data(())
 }
 
@@ -1258,6 +1420,8 @@ pub async fn get_export_steps(_session: Session, template_id: String, slug: Stri
             return ApiResult::new_error(ApiError::NotFound);
         }
     };
-
+    if let Err(()) = data_storage.update_template_version_id(template_id).await{
+        return ApiResult::new_error(ApiError::NotFound)
+    }
     return ApiResult::new_data(export_steps);
 }

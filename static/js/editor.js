@@ -2361,6 +2361,8 @@ var Editor;
             let project_id = extract_project_id_from_url();
             globalThis.project_id = project_id;
             Editor.ProjectOverview.show_overview();
+            // @ts-ignore
+            window.add_export_listeners();
         });
     }
     Editor.init = init;

@@ -183,6 +183,10 @@ async function show_export_format() {
         }
     });
 
+    // Add metadata change listeners
+    document.getElementById("export_format_name").addEventListener("input", save_export_format_metadata_listener);
+    document.getElementById("export_format_preview_path").addEventListener("input", save_export_format_metadata_listener);
+
     // --- Assets ---
 
     // Add file click listeners (open/download)
@@ -242,6 +246,18 @@ function add_export_step_listeners() {
         btn.addEventListener("click", delete_export_step);
     }
 
+    // Add listeners to move buttons
+    let move_up_btns = document.getElementsByClassName("export_step_move_up_btn");
+    for (let btn of Array.from(move_up_btns)){
+        btn.addEventListener("click", move_export_step_up);
+    }
+
+    // Add listeners to move buttons
+    let move_down_btns = document.getElementsByClassName("export_step_move_down_btn");
+    for (let btn of Array.from(move_down_btns)){
+        btn.addEventListener("click", move_export_step_down);
+    }
+
     //Add change listener to all autosave properties
     let elements = Array.from(document.getElementsByClassName("autosave")) as HTMLElement[];
     for (let element of elements) {
@@ -249,6 +265,62 @@ function add_export_step_listeners() {
     }
 }
 
+async function move_export_step_up(e: Event){
+    let target = e.target as HTMLElement;
+
+    let export_step_entry = target.closest(".export_step");
+    let id = export_step_entry.getAttribute("data-export-step-id") || null;
+
+    // @ts-ignore
+    let export_steps = template_data.export_formats[current_export_format].export_steps;
+    let export_steps_ids = [];
+
+    // Get current position:
+    for(let entry of export_steps){
+        export_steps_ids.push(entry.id);
+    }
+    let pos = export_steps_ids.indexOf(id);
+    if(pos == 0){
+       return;
+    }else{
+        let new_pos = pos-2;
+
+        let move_after;
+        if(new_pos < 0){
+            move_after = null;
+        }else{
+            move_after = export_steps_ids[new_pos];
+        }
+        await template_api.move_export_step_after(template_data.id, current_export_format, id, move_after);
+        await show_export_format();
+    }
+}
+
+async function move_export_step_down(e: Event){
+    let target = e.target as HTMLElement;
+
+    let export_step_entry = target.closest(".export_step");
+    let id = export_step_entry.getAttribute("data-export-step-id") || null;
+
+    // @ts-ignore
+    let export_steps = template_data.export_formats[current_export_format].export_steps;
+    let export_steps_ids = [];
+
+    // Get current position:
+    for(let entry of export_steps){
+        export_steps_ids.push(entry.id);
+    }
+    let pos = export_steps_ids.indexOf(id);
+    if(pos == export_steps_ids.length-1){
+        return;
+    }else{
+        let new_pos = pos+1;
+
+        let move_after = export_steps_ids[new_pos];
+        await template_api.move_export_step_after(template_data.id, current_export_format, id, move_after);
+        await show_export_format();
+    }
+}
 
 async function delete_export_step(e: Event) {
     let target = e.target as HTMLElement;
@@ -300,6 +372,26 @@ function save_export_step_listener(e: Event) {
         clearTimeout(typing_timer);
     }
     typing_timer = setInterval(save_export_steps, 1000)
+}
+
+function save_export_format_metadata_listener(e: Event) {
+     // Wait for 1 second after the last keypress before saving
+    if (typing_timer != null) {
+        clearTimeout(typing_timer);
+    }
+    typing_timer = setInterval(save_export_format_metadata, 1000)
+}
+
+async function save_export_format_metadata(){
+    clearTimeout(typing_timer);
+    let name = document.getElementById("export_format_name").innerText.trim();
+    let preview_path = (document.getElementById("export_format_preview_path") as HTMLInputElement).value;
+
+    if(preview_path.trim() === ""){
+        preview_path = null;
+    }
+    await template_api.change_export_format_metadata(template_data.id, current_export_format, name, preview_path);
+    await tstart();
 }
 
 async function save_export_steps() {
@@ -397,12 +489,12 @@ async function save_export_steps() {
             let epub_title_page = (export_step.getElementsByClassName("export_step_pandoc_epub_title_page")[0] as HTMLInputElement).checked;
             let epub_embed_fonts_raw = (export_step.getElementsByClassName("export_step_pandoc_embed_fonts")[0] as HTMLTextAreaElement).value || null;
 
-            let epub_embed_fonts: string[] | null = epub_embed_fonts_raw ?
-                epub_embed_fonts_raw.split("\n")
-                : null;
+            let epub_embed_fonts: string[] | null = epub_embed_fonts_raw && epub_embed_fonts_raw !== "" ? epub_embed_fonts_raw.split("\n") : null;
 
-            // Trim each entry
-            epub_embed_fonts = epub_embed_fonts.map(entry => entry.trim());
+            if(epub_embed_fonts) {
+                // Trim each entry
+                epub_embed_fonts = epub_embed_fonts.map(entry => entry.trim());
+            }
 
             //Check if all required filled out
             if (!name || !input_file || !input_format || !output_file || !output_format) {

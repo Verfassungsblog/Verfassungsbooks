@@ -14,6 +14,8 @@ namespace Editor{
         let project_id = extract_project_id_from_url();
         globalThis.project_id = project_id;
         ProjectOverview.show_overview();
+        // @ts-ignore
+        window.add_export_listeners();
     }
 
     function extract_project_id_from_url(){

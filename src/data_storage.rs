@@ -1,3 +1,4 @@
+use hayagriva::types::{Date, Duration, DurationRange, FormatString, MaybeTyped, Numeric, NumericDelimiter, NumericValue, QualifiedUrl, SerialNumber};
 use std::collections::{BTreeMap, HashMap};
 use std::fs;
 
@@ -10,18 +11,15 @@ use argon2::{Argon2, PasswordHasher};
 use argon2::password_hash::rand_core::OsRng;
 use serde::{Deserialize, Serialize};
 use bincode::{Encode, Decode};
-
-
-
-
-use crate::projects::{Person, ProjectMetadata, ProjectSettings, Section, SectionOrToc};
-use crate::projects::api::ApiError;
+use hayagriva::types::EntryType;
+use vb_exchange::projects::*;
+use crate::projects::{ProjectMetadata, Section, SectionOrToc};
+use crate::projects::api::{ApiError, ApiResult};
 use crate::settings::Settings;
-use hayagriva::types::*;
 use reqwest::Url;
 
 use unic_langid_impl::LanguageIdentifier;
-use crate::templates_editor::export_steps::ExportFormat;
+use vb_exchange::export_formats::ExportFormat;
 
 /// Storage for small data like users, passwords and login attempts
 ///
@@ -76,6 +74,21 @@ impl DataStorage{
             file_locked: Default::default(),
         }
     }
+
+    pub async fn update_template_version_id(&self, template_id: uuid::Uuid) -> Result<(), ()>{
+        match self.data.read().unwrap().templates.get(&template_id){
+            Some(template) => {
+                let template = template.clone();
+                template.write().unwrap().version = Some(uuid::Uuid::new_v4());
+                Ok(())
+            },
+            None => {
+                Err(())
+            }
+        }
+    }
+
+
 
     pub async fn insert_template(&self, template: ProjectTemplateV2, settings: &Settings) -> Result<(), ()>{
         // Create template directory inside data if it doesn't exist
@@ -208,7 +221,7 @@ impl DataStorage{
                     }
                     if let Err(e) = std::fs::create_dir_all(format!("{}/templates", &path)){
                         eprintln!("error while creating new templates directory: {}", e);
-                        return Err(())2
+                        return Err(())
                     }
                 }
 
@@ -846,8 +859,8 @@ pub struct MyPersonsWithRoles {
     pub role: MyPersonRole,
 }
 
-impl From<PersonsWithRoles> for MyPersonsWithRoles{
-    fn from(value: PersonsWithRoles) -> Self {
+impl From<hayagriva::types::PersonsWithRoles> for MyPersonsWithRoles{
+    fn from(value: hayagriva::types::PersonsWithRoles) -> Self {
         MyPersonsWithRoles{
             names: value.names.iter().map(|p| <hayagriva::types::Person as Clone>::clone(&(*p)).into()).collect(),
             role: value.role.into(),
@@ -855,9 +868,9 @@ impl From<PersonsWithRoles> for MyPersonsWithRoles{
     }
 }
 
-impl From<MyPersonsWithRoles> for PersonsWithRoles{
+impl From<MyPersonsWithRoles> for hayagriva::types::PersonsWithRoles{
     fn from(value: MyPersonsWithRoles) -> Self {
-        PersonsWithRoles{
+        hayagriva::types::PersonsWithRoles{
             names: value.names.iter().map(|p| <MyPerson as Clone>::clone(&(*p)).into()).collect(),
             role: value.role.into(),
         }
@@ -911,58 +924,58 @@ pub enum MyPersonRole {
     Unknown(String),
 }
 
-impl From<MyPersonRole> for PersonRole{
+impl From<MyPersonRole> for hayagriva::types::PersonRole{
     fn from(value: MyPersonRole) -> Self {
         match value {
-            MyPersonRole::Translator => PersonRole::Translator,
-            MyPersonRole::Afterword => PersonRole::Afterword,
-            MyPersonRole::Foreword => PersonRole::Foreword,
-            MyPersonRole::Introduction => PersonRole::Introduction,
-            MyPersonRole::Annotator => PersonRole::Annotator,
-            MyPersonRole::Commentator => PersonRole::Commentator,
-            MyPersonRole::Holder => PersonRole::Holder,
-            MyPersonRole::Compiler => PersonRole::Compiler,
-            MyPersonRole::Founder => PersonRole::Founder,
-            MyPersonRole::Collaborator => PersonRole::Collaborator,
-            MyPersonRole::Organizer => PersonRole::Organizer,
-            MyPersonRole::CastMember => PersonRole::CastMember,
-            MyPersonRole::Composer => PersonRole::Composer,
-            MyPersonRole::Producer => PersonRole::Producer,
-            MyPersonRole::ExecutiveProducer => PersonRole::ExecutiveProducer,
-            MyPersonRole::Writer => PersonRole::Writer,
-            MyPersonRole::Cinematography => PersonRole::Cinematography,
-            MyPersonRole::Director => PersonRole::Director,
-            MyPersonRole::Illustrator => PersonRole::Illustrator,
-            MyPersonRole::Narrator => PersonRole::Narrator,
-            MyPersonRole::Unknown(s) => PersonRole::Unknown(s),
+            MyPersonRole::Translator => hayagriva::types::PersonRole::Translator,
+            MyPersonRole::Afterword => hayagriva::types::PersonRole::Afterword,
+            MyPersonRole::Foreword => hayagriva::types::PersonRole::Foreword,
+            MyPersonRole::Introduction => hayagriva::types::PersonRole::Introduction,
+            MyPersonRole::Annotator => hayagriva::types::PersonRole::Annotator,
+            MyPersonRole::Commentator => hayagriva::types::PersonRole::Commentator,
+            MyPersonRole::Holder =>hayagriva::types::PersonRole::Holder,
+            MyPersonRole::Compiler =>hayagriva::types::PersonRole::Compiler,
+            MyPersonRole::Founder =>hayagriva::types::PersonRole::Founder,
+            MyPersonRole::Collaborator =>hayagriva::types::PersonRole::Collaborator,
+            MyPersonRole::Organizer =>hayagriva::types::PersonRole::Organizer,
+            MyPersonRole::CastMember =>hayagriva::types::PersonRole::CastMember,
+            MyPersonRole::Composer =>hayagriva::types::PersonRole::Composer,
+            MyPersonRole::Producer =>hayagriva::types::PersonRole::Producer,
+            MyPersonRole::ExecutiveProducer =>hayagriva::types::PersonRole::ExecutiveProducer,
+            MyPersonRole::Writer =>hayagriva::types::PersonRole::Writer,
+            MyPersonRole::Cinematography =>hayagriva::types::PersonRole::Cinematography,
+            MyPersonRole::Director =>hayagriva::types::PersonRole::Director,
+            MyPersonRole::Illustrator =>hayagriva::types::PersonRole::Illustrator,
+            MyPersonRole::Narrator =>hayagriva::types::PersonRole::Narrator,
+            MyPersonRole::Unknown(s) =>hayagriva::types::PersonRole::Unknown(s),
         }
     }
 }
 
-impl From<PersonRole> for MyPersonRole{
-    fn from(value: PersonRole) -> Self {
+impl From<hayagriva::types::PersonRole> for MyPersonRole{
+    fn from(value: hayagriva::types::PersonRole) -> Self {
         match value {
-            PersonRole::Translator => MyPersonRole::Translator,
-            PersonRole::Afterword => MyPersonRole::Afterword,
-            PersonRole::Foreword => MyPersonRole::Foreword,
-            PersonRole::Introduction => MyPersonRole::Introduction,
-            PersonRole::Annotator => MyPersonRole::Annotator,
-            PersonRole::Commentator => MyPersonRole::Commentator,
-            PersonRole::Holder => MyPersonRole::Holder,
-            PersonRole::Compiler => MyPersonRole::Compiler,
-            PersonRole::Founder => MyPersonRole::Founder,
-            PersonRole::Collaborator => MyPersonRole::Collaborator,
-            PersonRole::Organizer => MyPersonRole::Organizer,
-            PersonRole::CastMember => MyPersonRole::CastMember,
-            PersonRole::Composer => MyPersonRole::Composer,
-            PersonRole::Producer => MyPersonRole::Producer,
-            PersonRole::ExecutiveProducer => MyPersonRole::ExecutiveProducer,
-            PersonRole::Writer => MyPersonRole::Writer,
-            PersonRole::Cinematography => MyPersonRole::Cinematography,
-            PersonRole::Director => MyPersonRole::Director,
-            PersonRole::Illustrator => MyPersonRole::Illustrator,
-            PersonRole::Narrator => MyPersonRole::Narrator,
-            PersonRole::Unknown(s) => MyPersonRole::Unknown(s),
+           hayagriva::types::PersonRole::Translator => MyPersonRole::Translator,
+           hayagriva::types::PersonRole::Afterword => MyPersonRole::Afterword,
+           hayagriva::types::PersonRole::Foreword => MyPersonRole::Foreword,
+           hayagriva::types::PersonRole::Introduction => MyPersonRole::Introduction,
+           hayagriva::types::PersonRole::Annotator => MyPersonRole::Annotator,
+           hayagriva::types::PersonRole::Commentator => MyPersonRole::Commentator,
+           hayagriva::types::PersonRole::Holder => MyPersonRole::Holder,
+           hayagriva::types::PersonRole::Compiler => MyPersonRole::Compiler,
+           hayagriva::types::PersonRole::Founder => MyPersonRole::Founder,
+           hayagriva::types::PersonRole::Collaborator => MyPersonRole::Collaborator,
+           hayagriva::types::PersonRole::Organizer => MyPersonRole::Organizer,
+           hayagriva::types::PersonRole::CastMember => MyPersonRole::CastMember,
+           hayagriva::types::PersonRole::Composer => MyPersonRole::Composer,
+           hayagriva::types::PersonRole::Producer => MyPersonRole::Producer,
+           hayagriva::types::PersonRole::ExecutiveProducer => MyPersonRole::ExecutiveProducer,
+           hayagriva::types::PersonRole::Writer => MyPersonRole::Writer,
+           hayagriva::types::PersonRole::Cinematography => MyPersonRole::Cinematography,
+           hayagriva::types::PersonRole::Director => MyPersonRole::Director,
+           hayagriva::types::PersonRole::Illustrator => MyPersonRole::Illustrator,
+           hayagriva::types::PersonRole::Narrator => MyPersonRole::Narrator,
+           hayagriva::types::PersonRole::Unknown(s) => MyPersonRole::Unknown(s),
             _ => MyPersonRole::Unknown("".to_string()),
         }
     }
@@ -978,20 +991,20 @@ pub enum MyMaybeTyped<T> {
     String(String),
 }
 
-impl<T> From<MyMaybeTyped<T>> for MaybeTyped<T> {
+impl<T> From<MyMaybeTyped<T>> for hayagriva::types::MaybeTyped<T> {
     fn from(value: MyMaybeTyped<T>) -> Self {
         match value {
-            MyMaybeTyped::Typed(t) => MaybeTyped::Typed(t),
-            MyMaybeTyped::String(s) => MaybeTyped::String(s),
+            MyMaybeTyped::Typed(t) => hayagriva::types::MaybeTyped::Typed(t),
+            MyMaybeTyped::String(s) => hayagriva::types::MaybeTyped::String(s),
         }
     }
 }
 
-impl<T> From<MaybeTyped<T>> for MyMaybeTyped<T> {
-    fn from(value: MaybeTyped<T>) -> Self {
+impl<T> From<hayagriva::types::MaybeTyped<T>> for MyMaybeTyped<T> {
+    fn from(value: hayagriva::types::MaybeTyped<T>) -> Self {
         match value {
-            MaybeTyped::Typed(t) => MyMaybeTyped::Typed(t),
-            MaybeTyped::String(s) => MyMaybeTyped::String(s),
+            hayagriva::types::MaybeTyped::Typed(t) => MyMaybeTyped::Typed(t),
+            hayagriva::types::MaybeTyped::String(s) => MyMaybeTyped::String(s),
         }
     }
 }
@@ -1740,6 +1753,10 @@ pub struct ProjectTemplateV1 {
 pub struct ProjectTemplateV2 {
     #[bincode(with_serde)]
     pub id: uuid::Uuid,
+    /// Unique version id, changed if a Template is changed.
+    /// Used to detect if a template on a rendering server needs to be updated
+    #[bincode(with_serde)]
+    pub version: Option<uuid::Uuid>,
     pub name: String,
     pub description: String,
     pub export_formats: HashMap<String, ExportFormat>,
@@ -2005,7 +2022,7 @@ mod tests {
             data_path: "test_data".to_string(),
             file_lock_timeout: 10,
             backup_to_file_interval: 120,
-            max_rendering_threads: 10,
+            max_connections_to_rendering_server: 10,
             max_import_threads: 2,
             chromium_path: None,
             zotero_translation_server: "https://translation-server.anghenfil.de".to_string(),

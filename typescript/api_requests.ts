@@ -1,83 +1,64 @@
-export async function send_update_content_blocks(project_id: string, section_path: string, data: any){
-    const response = await fetch(`/api/projects/`+project_id+`/sections/`+section_path+"/content_blocks/", {
+export async function send_get_template_id_for_project(project_id: string) {
+    const response = await fetch(`/api/projects/${project_id}/template`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    });
+    if (!response.ok) {
+        throw new Error(`Failed to get project template: ${response.status}`);
+    } else {
+        let response_data = await response.json();
+        if (response_data.hasOwnProperty("error")) {
+            console.error(response_data["error"]);
+            throw new Error(`Failed to save content blocks: ${response_data["error"]}`);
+        } else {
+            return response_data.data;
+        }
+    }
+}
+
+export async function send_update_content_blocks(project_id: string, section_path: string, data: any) {
+    const response = await fetch(`/api/projects/` + project_id + `/sections/` + section_path + "/content_blocks/", {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify(data)
     });
-    if(!response.ok){
+    if (!response.ok) {
         throw new Error(`Failed to update content block: ${response.status}`);
-    }else{
+    } else {
         let response_data = await response.json();
-        if(response_data.hasOwnProperty("error")) {
+        if (response_data.hasOwnProperty("error")) {
             console.error(response_data["error"]);
             throw new Error(`Failed to save content blocks: ${response_data["error"]}`);
-        }else{
+        } else {
             return response_data;
         }
     }
 }
 
-export async function send_get_content_blocks(project_id: string, section_path: string){
-    const response = await fetch(`/api/projects/`+project_id+`/sections/`+section_path+"/content_blocks/", {
+export async function send_get_content_blocks(project_id: string, section_path: string) {
+    const response = await fetch(`/api/projects/` + project_id + `/sections/` + section_path + "/content_blocks/", {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json'
         }
     });
-    if(!response.ok){
+    if (!response.ok) {
         throw new Error(`Failed to get content blocks: ${response.status}`);
-    }else{
+    } else {
         let response_data = await response.json();
-        if(response_data.hasOwnProperty("error")) {
+        if (response_data.hasOwnProperty("error")) {
             throw new Error(`Failed to get content blocks: ${response_data["error"]}`);
-        }else{
+        } else {
             return response_data;
         }
     }
 }
 
-
-export async function send_render_project(project_id: string){
-    const response = await fetch(`/api/projects/`+project_id+`/render`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    });
-    if(!response.ok){
-        throw new Error(`Failed to render project: ${response.status}`);
-    }else{
-        let response_data = await response.json();
-        if(response_data.hasOwnProperty("error")) {
-            throw new Error(`Failed to render project: ${response_data["error"]}`);
-        }else{
-            return response_data;
-        }
-    }
-}
-
-export async function send_get_rendering_status(render_id: string){
-    const response = await fetch(`/api/renderings/`+render_id+`/status`, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    });
-    if(!response.ok){
-        throw new Error(`Failed to render project: ${response.status}`);
-    }else{
-        let response_data = await response.json();
-        if(response_data.hasOwnProperty("error")) {
-            throw new Error(`Failed to render project: ${response_data["error"]}`);
-        }else{
-            return response_data;
-        }
-    }
-}
-
-export async function send_add_user(user_data: object){
+export async function send_add_user(user_data: object) {
     const response = await fetch(`/api/users/`, {
         method: 'POST',
         headers: {
@@ -85,76 +66,76 @@ export async function send_add_user(user_data: object){
         },
         body: JSON.stringify(user_data)
     });
-    if(!response.ok){
+    if (!response.ok) {
         throw new Error(`Failed to add user: ${response.status}`);
-    }else{
+    } else {
         let response_data = await response.json();
-        if(response_data.hasOwnProperty("error")) {
+        if (response_data.hasOwnProperty("error")) {
             throw new Error(`Failed to add user: ${response_data["error"]}`);
-        }else{
+        } else {
             return response_data;
         }
     }
 }
 
-export async function send_update_user(user_id: string, patch_data: object){
-    const response = await fetch(`/api/users/`+user_id, {
+export async function send_update_user(user_id: string, patch_data: object) {
+    const response = await fetch(`/api/users/` + user_id, {
         method: 'PATCH',
         headers: {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify(patch_data)
     });
-    if(!response.ok){
+    if (!response.ok) {
         throw new Error(`Failed to update user: ${response.status}`);
-    }else{
+    } else {
         let response_data = await response.json();
-        if(response_data.hasOwnProperty("error")) {
+        if (response_data.hasOwnProperty("error")) {
             throw new Error(`Failed to update user: ${response_data["error"]}`);
-        }else{
+        } else {
             return response_data;
         }
     }
 }
 
-export async function send_delete_user(user_id: string){
-    const response = await fetch(`/api/users/`+user_id, {
+export async function send_delete_user(user_id: string) {
+    const response = await fetch(`/api/users/` + user_id, {
         method: 'DELETE',
         headers: {
             'Content-Type': 'application/json'
         }
     });
-    if(!response.ok){
+    if (!response.ok) {
         throw new Error(`Failed to delete user: ${response.status}`);
-    }else{
+    } else {
         let response_data = await response.json();
-        if(response_data.hasOwnProperty("error")) {
+        if (response_data.hasOwnProperty("error")) {
             throw new Error(`Failed to delete user: ${response_data["error"]}`);
-        }else{
+        } else {
             return response_data;
         }
     }
 }
 
-export async function send_import_from_upload(data: any){
+export async function send_import_from_upload(data: any) {
     const response = await fetch(`/api/import/upload`, {
         method: 'POST',
         body: data,
     });
-    if(!response.ok){
+    if (!response.ok) {
         throw new Error(`Failed to upload: ${response.status}`);
-    }else{
+    } else {
         let response_data = await response.json();
-        if(response_data.hasOwnProperty("error")) {
+        if (response_data.hasOwnProperty("error")) {
             throw new Error(`Failed to upload: ${response_data["error"]}`);
-        }else{
+        } else {
             return response_data;
         }
     }
 }
 
-export async function send_add_new_bib_entry(data: any, project_id: string){
-    const response = await fetch(`/api/projects/`+project_id+`/bibliography`, {
+export async function send_add_new_bib_entry(data: any, project_id: string) {
+    const response = await fetch(`/api/projects/` + project_id + `/bibliography`, {
         method: 'POST',
         body: JSON.stringify(data),
         headers: {
@@ -162,60 +143,60 @@ export async function send_add_new_bib_entry(data: any, project_id: string){
         }
 
     });
-    if(!response.ok){
+    if (!response.ok) {
         throw new Error(`Failed to add new bib entry: ${response.status}`);
-    }else{
+    } else {
         let response_data = await response.json();
-        if(response_data.hasOwnProperty("error")) {
-            throw new Error(`Failed to add new bib entry: `+ Object.keys(response_data["error"])[0]+" "+Object.values(response_data["error"])[0]);
-        }else{
+        if (response_data.hasOwnProperty("error")) {
+            throw new Error(`Failed to add new bib entry: ` + Object.keys(response_data["error"])[0] + " " + Object.values(response_data["error"])[0]);
+        } else {
             return response_data;
         }
     }
 }
 
-export async function send_get_bib_list(project_id: string){
-    const response = await fetch(`/api/projects/`+project_id+`/bibliography`, {
+export async function send_get_bib_list(project_id: string) {
+    const response = await fetch(`/api/projects/` + project_id + `/bibliography`, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json'
         }
 
     });
-    if(!response.ok){
+    if (!response.ok) {
         throw new Error(`Failed to get bib entries: ${response.status}`);
-    }else{
+    } else {
         let response_data = await response.json();
-        if(response_data.hasOwnProperty("error")) {
-            throw new Error(`Failed to get bib entries: `+ Object.keys(response_data["error"])[0]+" "+Object.values(response_data["error"])[0]);
-        }else{
+        if (response_data.hasOwnProperty("error")) {
+            throw new Error(`Failed to get bib entries: ` + Object.keys(response_data["error"])[0] + " " + Object.values(response_data["error"])[0]);
+        } else {
             return response_data;
         }
     }
 }
 
-export async function send_get_bib_entry(key: string, project_id: string){
-    const response = await fetch(`/api/projects/`+project_id+`/bibliography/`+key, {
+export async function send_get_bib_entry(key: string, project_id: string) {
+    const response = await fetch(`/api/projects/` + project_id + `/bibliography/` + key, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json'
         }
 
     });
-    if(!response.ok){
+    if (!response.ok) {
         throw new Error(`Failed to get bib entry: ${response.status}`);
-    }else{
+    } else {
         let response_data = await response.json();
-        if(response_data.hasOwnProperty("error")) {
-            throw new Error(`Failed to get bib entry: `+ Object.keys(response_data["error"])[0]+" "+Object.values(response_data["error"])[0]);
-        }else{
+        if (response_data.hasOwnProperty("error")) {
+            throw new Error(`Failed to get bib entry: ` + Object.keys(response_data["error"])[0] + " " + Object.values(response_data["error"])[0]);
+        } else {
             return response_data;
         }
     }
 }
 
-export async function update_bib_entry(data: any, key: string, project_id: string){
-    const response = await fetch(`/api/projects/`+project_id+`/bibliography/`+key, {
+export async function update_bib_entry(data: any, key: string, project_id: string) {
+    const response = await fetch(`/api/projects/` + project_id + `/bibliography/` + key, {
         method: 'PUT',
         body: JSON.stringify(data),
         headers: {
@@ -223,52 +204,52 @@ export async function update_bib_entry(data: any, key: string, project_id: strin
         }
 
     });
-    if(!response.ok){
+    if (!response.ok) {
         throw new Error(`Failed to update bib entry: ${response.status}`);
-    }else{
+    } else {
         let response_data = await response.json();
-        if(response_data.hasOwnProperty("error")) {
-            throw new Error(`Failed to update bib entry: `+ Object.keys(response_data["error"])[0]+" "+Object.values(response_data["error"])[0]);
-        }else{
+        if (response_data.hasOwnProperty("error")) {
+            throw new Error(`Failed to update bib entry: ` + Object.keys(response_data["error"])[0] + " " + Object.values(response_data["error"])[0]);
+        } else {
             return response_data;
         }
     }
 }
 
-export async function send_poll_import_status(id: string){
-    const response = await fetch(`/api/import/status/`+id, {
+export async function send_poll_import_status(id: string) {
+    const response = await fetch(`/api/import/status/` + id, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json'
         }
 
     });
-    if(!response.ok){
+    if (!response.ok) {
         throw new Error(`Failed to get import status: ${response.status}`);
-    }else{
+    } else {
         let response_data = await response.json();
-        if(response_data.hasOwnProperty("error")) {
+        if (response_data.hasOwnProperty("error")) {
             console.error(response_data["error"]);
-            throw new Error(`Failed to get import status: `+ Object.keys(response_data["error"])[0]+" "+Object.values(response_data["error"])[0]);
-        }else{
+            throw new Error(`Failed to get import status: ` + Object.keys(response_data["error"])[0] + " " + Object.values(response_data["error"])[0]);
+        } else {
             return response_data;
         }
     }
 }
 
 
-export async function send_import_from_wordpress(data: any){
+export async function send_import_from_wordpress(data: any) {
     const response = await fetch(`/api/import/wordpress`, {
         method: 'POST',
         body: JSON.stringify(data),
     });
-    if(!response.ok){
+    if (!response.ok) {
         throw new Error(`Failed to upload: ${response.status}`);
-    }else{
+    } else {
         let response_data = await response.json();
-        if(response_data.hasOwnProperty("error")) {
+        if (response_data.hasOwnProperty("error")) {
             throw new Error(`Failed to upload: ${response_data["error"]}`);
-        }else{
+        } else {
             return response_data;
         }
     }
@@ -278,6 +259,7 @@ export type ExportStepData =
     | { Raw: RawExportStep }
     | { Vivliostyle: VivliostyleExportStep }
     | { Pandoc: PandocExportStep };
+
 export interface ExportStep {
     id: string;
     name: string;
@@ -312,70 +294,230 @@ export interface PandocExportStep {
 export type ApiResult<T> = {
     error?: ApiError;
     data?: T;
-  }
-  
-  export type ApiError = 
-  | { NotFound?: never }
-  | { BadRequest?: string }
-  | { Unauthorized?: never }
-  | { InternalServerError?: never }
-  | { Conflict?: string }
-  | { Other?: string };
+}
 
-  export function apiErrorToString(error: ApiError): string {
+export type ApiError =
+    | { NotFound?: never }
+    | { BadRequest?: string }
+    | { Unauthorized?: never }
+    | { InternalServerError?: never }
+    | { Conflict?: string }
+    | { Other?: string };
+
+export function apiErrorToString(error: ApiError): string {
     let errorType = Object.keys(error)[0] as keyof ApiError;
     let errorMessage = error[errorType];
     return errorMessage ? `${errorMessage}` : errorType;
 }
 
-    interface ExportFormat {
-        slug: string;
-        name: string;
-        export_type: ExportType;
-        used_as_preview: boolean;
-        add_cover: boolean;
-        add_backcover: boolean;
+interface ExportFormat {
+    slug: string;
+    name: string;
+    export_steps: ExportStep[];
+    output_files: string[];
+    preview_pdf_path: string | null;
+}
+
+export interface ProjectTemplateV2 {
+    id: string;
+    name: string;
+    description: string;
+    export_formats: Record<string, ExportFormat>;
+}
+
+export interface AssetList {
+    assets: Asset[];
+}
+
+export interface AssetFolder {
+    name: string;
+    assets: Asset[];
+}
+
+export interface AssetFile {
+    name: string;
+    mime_type?: string;
+}
+
+export type Asset = AssetFolder | AssetFile;
+
+export type SectionOrToc =
+    | { Section: Section }
+    | { Toc: never };
+
+export interface Section {
+    id?: string; // UUID represented as a string in JavaScript/TypeScript
+    css_classes: string[];
+    sub_sections: Section[];
+    children: NewContentBlock[];
+    visible_in_toc: boolean;
+    metadata: SectionMetadata;
+}
+
+export type NewContentBlock = {
+    id: string;
+    block_type: BlockType;
+    data: BlockData;
+    css_classes: string[];
+    revision_id?: string;
+};
+
+enum BlockType {
+    Paragraph,
+    Heading,
+    Raw,
+    List,
+    Quote,
+    Image,
+}
+
+type SectionMetadata = {
+    title: string,
+    subtitle: string | null,
+    authors: string[],
+    editors: string[],
+    web_url: string | null,
+    identifiers: Identifier[],
+    published: Date | null,
+    last_changed: Date | null,
+    lang: string | null,
+};
+
+type Identifier = {
+    id: string | null,
+    name: string,
+    value: string,
+    identifier_type: IdentifierType,
+};
+
+type IdentifierType =
+    | { DOI: null }
+    | { ISBN: null }
+    | { ISSN: null }
+    | { URL: null }
+    | { URN: null }
+    | { ORCID: null }
+    | { ROR: null }
+    | { GND: null }
+    | { Other: string };
+
+interface UploadedImage {
+    url: string;
+    filename: string;
+}
+
+type BlockData =
+    | { Paragraph: {text: string} }
+    | { Heading: {text: string, level: number} }
+    | { Raw: {html: string} }
+    | { List: {style: string, items: string[]} }
+    | { Quote: {text: string, caption: string, alignment: string} }
+    | { Image: {file: UploadedImage, caption?: string, with_border: boolean, with_background: boolean, stretched: boolean}};
+
+export function ProjectAPI() {
+    async function read_project_contents(project_id: string) {
+        const response = await fetch(`/api/projects/${project_id}/contents`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to get template: ${response.status}`);
+        }
+
+        const response_data: ApiResult<SectionOrToc[]> = await response.json();
+
+        if (response_data.error) {
+            throw new Error(`Failed to get project contents: ${apiErrorToString(response_data.error)}`);
+        }
+        if (!response_data.data) {
+            throw new Error('No data received');
+        }
+
+        return response_data.data;
     }
 
-    enum ExportType {
-        PDF = "PDF",
-        DOCX = "DOCX",
-        DOC = "DOC",
-        HTML = "HTML",
-        LATEX = "LATEX",
-        EPUB = "EPUB",
-        ODT = "ODT",
-        MOBI = "MOBI",
-        XML = "XML",
-        JSON = "JSON",
-        PLAIN = "PLAIN"
+    return {
+        read_project_contents
     }
+}
 
-    export interface ProjectTemplateV2 {
-        id: string;
-        name: string;
-        description: string;
-        export_formats: Record<string, ExportFormat>;
+export type NewLocalRenderingRequest = {
+    // id of the project to render
+    project_id: string,
+    // list of export formats slugs that should be rendered
+    export_formats: string[],
+    // list of section ids to be rendered or null if all should be rendered
+    sections: string[] | null
+}
+
+export type APIRenderingStatus =
+    | { QueuedOnLocal: null }
+    | { PreparingOnLocal: null }
+    | { PreparedOnLocal: null }
+    | { SendToRenderingServer: null }
+    | { RequestingTemplate: null }
+    | { TransmittingTemplate: null }
+    | { QueuedOnRendering: null }
+    | { Running: null }
+    | { SavedOnLocal: null }
+    | { Failed: string };
+
+export function ExportAPI(){
+    async function send_new_rendering_request(rendering_request: NewLocalRenderingRequest){
+        const response = await fetch(`/api/export/request`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(rendering_request)
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to send rendering request: ${response.status}`);
+        }
+
+        const response_data: ApiResult<string> = await response.json();
+
+        if (response_data.error) {
+            throw new Error(`Failed to send rendering request: ${apiErrorToString(response_data.error)}`);
+        }
+        if (!response_data.data) {
+            throw new Error('No data received');
+        }
+
+        return response_data.data;
     }
+    async function get_request_status(rendering_request_id: string){
+        const response = await fetch(`/api/export/request/${rendering_request_id}/status`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
 
-    export interface AssetList {
-        assets: Asset[];
+        if (!response.ok) {
+            throw new Error(`Failed to fetch rendering request status: ${response.status}`);
+        }
+
+        const response_data: ApiResult<any> = await response.json();
+
+        if (response_data.error) {
+            throw new Error(`Failed to fetch rendering request status: ${apiErrorToString(response_data.error)}`);
+        }
+        if (!response_data.data) {
+            throw new Error('No data received');
+        }
+
+        return response_data.data;
     }
+    return{send_new_rendering_request, get_request_status}
+}
 
-    export interface AssetFolder {
-        name: string;
-        assets: Asset[];
-    }
+export function TemplateAPI() {
 
-    export interface AssetFile {
-        name: string;
-        mime_type?: string;
-    }
-
-    export type Asset = AssetFolder | AssetFile;
-
-export function TemplateAPI(){
-    
     async function read_template(template_id: string) {
         const response = await fetch(`/api/templates/${template_id}`, {
             method: 'GET',
@@ -383,23 +525,23 @@ export function TemplateAPI(){
                 'Content-Type': 'application/json'
             }
         });
-    
+
         if (!response.ok) {
             throw new Error(`Failed to get template: ${response.status}`);
         }
-    
+
         const response_data: ApiResult<ProjectTemplateV2> = await response.json();
-    
+
         if (response_data.error) {
             throw new Error(`Failed to get template: ${apiErrorToString(response_data.error)}`);
         }
         if (!response_data.data) {
             throw new Error('No data received');
         }
-    
+
         return response_data.data;
     };
-    
+
     async function update_template(template: ProjectTemplateV2) {
         const response = await fetch(`/api/templates/${template.id}`, {
             method: 'POST',
@@ -408,21 +550,21 @@ export function TemplateAPI(){
             },
             body: JSON.stringify(template)
         });
-    
+
         if (!response.ok) {
             throw new Error(`Failed to update template: ${response.status}`);
         }
-    
+
         const response_data: ApiResult<ProjectTemplateV2> = await response.json();
-    
+
         if (response_data.error) {
             throw new Error(`Failed to update template: ${apiErrorToString(response_data.error)}`);
         }
-    
+
         return response_data.data;
     }
 
-    async function list_global_assets(template_id: string){
+    async function list_global_assets(template_id: string) {
         const response = await fetch(`/api/templates/${template_id}/assets`, {
             method: 'GET',
             headers: {
@@ -443,7 +585,7 @@ export function TemplateAPI(){
         return response_data.data;
     }
 
-    async function create_folder(template_id: string, name: string){
+    async function create_folder(template_id: string, name: string) {
         const response = await fetch(`/api/templates/${template_id}/assets/folder`, {
             method: 'POST',
             headers: {
@@ -467,7 +609,8 @@ export function TemplateAPI(){
 
         return response_data.data;
     }
-    async function upload_file(template_id: string, file: File){
+
+    async function upload_file(template_id: string, file: File) {
         const formData = new FormData();
         formData.append('file', file);
 
@@ -488,7 +631,8 @@ export function TemplateAPI(){
 
         return response_data.data;
     }
-    async function move_global_asset(template_id: string, old_path: string, new_path: string, overwrite_option: boolean){
+
+    async function move_global_asset(template_id: string, old_path: string, new_path: string, overwrite_option: boolean) {
         const response = await fetch(`/api/templates/${template_id}/assets/move`, {
             method: 'POST',
             headers: {
@@ -514,7 +658,7 @@ export function TemplateAPI(){
         return response_data.data;
     }
 
-    async function delete_assets(template_id: string, paths: string[]){
+    async function delete_assets(template_id: string, paths: string[]) {
         const response = await fetch(`/api/templates/${template_id}/assets/`, {
             method: 'DELETE',
             headers: {
@@ -538,7 +682,7 @@ export function TemplateAPI(){
         return response_data.data;
     }
 
-    async function delete_assets_for_export_formats(template_id: string, slug: string, paths: string[]){
+    async function delete_assets_for_export_formats(template_id: string, slug: string, paths: string[]) {
         const response = await fetch(`/api/templates/${template_id}/export_formats/${slug}/assets/`, {
             method: 'DELETE',
             headers: {
@@ -563,7 +707,7 @@ export function TemplateAPI(){
         return response_data.data;
     }
 
-    async function get_asset_file(template_id: string, path: string){
+    async function get_asset_file(template_id: string, path: string) {
         const response = await fetch(`/api/templates/${template_id}/assets/files/${path}`, {
             method: 'GET',
             headers: {
@@ -575,7 +719,7 @@ export function TemplateAPI(){
             throw new Error(`Failed to get asset file: ${response.status}`);
         }
         const contentType = response.headers.get('Content-Type');
-        console.log("Content type: "+contentType)
+        console.log("Content type: " + contentType)
 
         let result;
         if (contentType && contentType.startsWith('text/')) {
@@ -594,7 +738,7 @@ export function TemplateAPI(){
         return result;
     }
 
-    async function get_asset_file_for_export_format(template_id: string, slug: string, path: string){
+    async function get_asset_file_for_export_format(template_id: string, slug: string, path: string) {
         const response = await fetch(`/api/templates/${template_id}/export_formats/${slug}/assets/files/${path}`, {
             method: 'GET',
             headers: {
@@ -606,7 +750,7 @@ export function TemplateAPI(){
             throw new Error(`Failed to get asset file: ${response.status}`);
         }
         const contentType = response.headers.get('Content-Type');
-        console.log("Content type: "+contentType)
+        console.log("Content type: " + contentType)
 
         let result;
         if (contentType && contentType.startsWith('text/')) {
@@ -625,7 +769,7 @@ export function TemplateAPI(){
         return result;
     }
 
-    async function update_asset_text_file(template_id: string, path: string, content: string){
+    async function update_asset_text_file(template_id: string, path: string, content: string) {
         const response = await fetch(`/api/templates/${template_id}/assets/files/${path}`, {
             method: 'PUT',
             headers: {
@@ -649,7 +793,7 @@ export function TemplateAPI(){
         return response_data.data;
     }
 
-    async function update_asset_text_file_for_export_format(template_id: string, path: string, slug: string, content: string){
+    async function update_asset_text_file_for_export_format(template_id: string, path: string, slug: string, content: string) {
         const response = await fetch(`/api/templates/${template_id}/export_formats/${slug}/assets/files/${path}`, {
             method: 'PUT',
             headers: {
@@ -673,7 +817,7 @@ export function TemplateAPI(){
         return response_data.data;
     }
 
-    async function create_export_format(template_id: string, name: string): Promise<any>{
+    async function create_export_format(template_id: string, name: string): Promise<any> {
         let data = {
             name: name,
             export_steps: [] as any[],
@@ -702,7 +846,35 @@ export function TemplateAPI(){
         return response_data.data;
     }
 
-    async function delete_export_format(template_id: string, slug: string): Promise<any>{
+    async function change_export_format_metadata(template_id: string, slug: string, new_name: string, new_preview_pdf_path: string | null): Promise<any> {
+        let data = {
+            name: new_name,
+            slug: slugify(new_name),
+            preview_pdf_path: new_preview_pdf_path
+        }
+
+        const response = await fetch(`/api/templates/${template_id}/export_formats/${slug}/metadata`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to create export format: ${response.status}`);
+        }
+
+        const response_data: ApiResult<null> = await response.json();
+
+        if (response_data.error) {
+            throw new Error(`${apiErrorToString(response_data.error)}`);
+        }
+
+        return response_data.data;
+    }
+
+    async function delete_export_format(template_id: string, slug: string): Promise<any> {
 
         const response = await fetch(`/api/templates/${template_id}/export_formats/${slug}`, {
             method: 'DELETE',
@@ -724,7 +896,7 @@ export function TemplateAPI(){
         return response_data.data;
     }
 
-    async function list_export_format_assets(template_id: string, slug: string){
+    async function list_export_format_assets(template_id: string, slug: string) {
         const response = await fetch(`/api/templates/${template_id}/export_formats/${slug}/assets`, {
             method: 'GET',
             headers: {
@@ -745,7 +917,7 @@ export function TemplateAPI(){
         return response_data.data;
     }
 
-    async function upload_file_for_export_format(template_id: string, slug: string, file: File){
+    async function upload_file_for_export_format(template_id: string, slug: string, file: File) {
         const formData = new FormData();
         formData.append('file', file);
 
@@ -767,7 +939,7 @@ export function TemplateAPI(){
         return response_data.data;
     }
 
-    async function create_folder_for_export_format(template_id: string, name: string, slug: string){
+    async function create_folder_for_export_format(template_id: string, name: string, slug: string) {
         const response = await fetch(`/api/templates/${template_id}/export_formats/${slug}/assets/folder`, {
             method: 'POST',
             headers: {
@@ -791,7 +963,8 @@ export function TemplateAPI(){
 
         return response_data.data;
     }
-    async function move_asset_for_export_format(template_id: string, old_path: string, new_path: string, slug: string, overwrite_option: boolean){
+
+    async function move_asset_for_export_format(template_id: string, old_path: string, new_path: string, slug: string, overwrite_option: boolean) {
         const response = await fetch(`/api/templates/${template_id}/export_formats/${slug}/assets/move`, {
             method: 'POST',
             headers: {
@@ -817,7 +990,7 @@ export function TemplateAPI(){
         return response_data.data;
     }
 
-    async function create_export_step(template_id: string, export_format_slug: string, export_step: ExportStep): Promise<any>{
+    async function create_export_step(template_id: string, export_format_slug: string, export_step: ExportStep): Promise<any> {
         const response = await fetch(`/api/templates/${template_id}/export_formats/${export_format_slug}/export_steps`, {
             method: 'POST',
             headers: {
@@ -839,9 +1012,9 @@ export function TemplateAPI(){
         return response_data.data;
     }
 
-    async function delete_export_step(template_id: string, slug: string, step_id: string): Promise<any>{
+    async function delete_export_step(template_id: string, slug: string, step_id: string): Promise<any> {
 
-        const response =  await fetch(`/api/templates/${template_id}/export_formats/${slug}/export_steps/${step_id}`, {
+        const response = await fetch(`/api/templates/${template_id}/export_formats/${slug}/export_steps/${step_id}`, {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json'
@@ -861,7 +1034,7 @@ export function TemplateAPI(){
         return response_data.data;
     }
 
-    async function update_export_step(template_id: string, export_format_slug: string, export_step: ExportStep): Promise<any>{
+    async function update_export_step(template_id: string, export_format_slug: string, export_step: ExportStep): Promise<any> {
         const response = await fetch(`/api/templates/${template_id}/export_formats/${export_format_slug}/export_steps/${export_step.id}`, {
             method: 'POST',
             headers: {
@@ -883,11 +1056,11 @@ export function TemplateAPI(){
         return response_data.data;
     }
 
-    async function move_export_step_after(template_id: string, export_format_slug: string, export_step_id: string, move_after: string|null): Promise<any>{
+    async function move_export_step_after(template_id: string, export_format_slug: string, export_step_id: string, move_after: string | null): Promise<any> {
         let data = {
             move_after: move_after
         };
-        const response = await fetch(`/api/templates/${template_id}/export_formats/${export_format_slug}/export_steps/${export_step_id}`, {
+        const response = await fetch(`/api/templates/${template_id}/export_formats/${export_format_slug}/export_steps/${export_step_id}/move`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -908,7 +1081,7 @@ export function TemplateAPI(){
         return response_data.data;
     }
 
-    async function list_export_steps(template_id: string, slug: string){
+    async function list_export_steps(template_id: string, slug: string) {
         const response = await fetch(`/api/templates/${template_id}/export_formats/${slug}/export_steps`, {
             method: 'GET',
             headers: {
@@ -928,7 +1101,8 @@ export function TemplateAPI(){
 
         return response_data.data;
     }
-    return{
+
+    return {
         read_template,
         update_template,
         create_folder,
@@ -951,7 +1125,8 @@ export function TemplateAPI(){
         delete_export_step,
         update_export_step,
         move_export_step_after,
-        list_export_steps
+        list_export_steps,
+        change_export_format_metadata
     }
 }
 

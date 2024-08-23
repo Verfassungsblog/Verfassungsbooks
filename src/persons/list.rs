@@ -4,7 +4,7 @@ use rocket::State;
 use rocket_dyn_templates::Template;
 use serde::Serialize;
 use crate::data_storage::DataStorage;
-use crate::projects::Person;
+use vb_exchange::projects::Person;
 use crate::session::session_guard::Session;
 
 #[derive(Debug, PartialEq, FromFormField)]

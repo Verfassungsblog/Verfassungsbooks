@@ -15,6 +15,10 @@ use crate::data_storage::User;
 use crate::session::session_storage::SessionStorage;
 use crate::settings::Settings;
 use rand::Rng;
+use tokio_rustls::rustls::ClientConfig;
+use tokio_rustls::rustls::server::WebPkiClientVerifier;
+use vb_exchange::certs::{load_client_cert, load_crl, load_private_key, load_root_ca};
+use crate::export::rendering_manager::LocalRenderingRequest;
 use crate::utils::csl::CslData;
 
 mod settings;
@@ -27,6 +31,7 @@ pub mod utils;
 pub mod settings_page;
 pub mod import;
 pub mod export;
+pub mod cleaner;
 
 
 #[macro_use] extern crate rocket;
@@ -106,8 +111,20 @@ async fn rocket() -> _ {
     // Start seperate thread for auto-saving
     data_storage::save_data_worker(data_storage.clone(), project_storage.clone(), settings.clone()).await;
 
+    println!("Starting cleanup worker...");
+    cleaner::worker();
+
+    let root_ca = Arc::new(load_root_ca(settings.ca_cert_path.clone()));
+    let client_cert = load_client_cert(settings.client_cert_path.clone());
+    let client_key = load_private_key(settings.client_key_path.clone());
+    let client_key2 = load_private_key(settings.client_key_path.clone());
+    let crls = load_crl(settings.revocation_list_path.clone());
+    let client_verifier = WebPkiClientVerifier::builder(root_ca.clone()).with_crls(crls).build().expect("Couldn't build Client Verifier. Check Certs & Key!");
+    let client_config = ClientConfig::builder_with_protocol_versions(&[&tokio_rustls::rustls::version::TLS13])
+        .with_root_certificates(root_ca).with_client_auth_cert(client_cert, client_key2).expect("Couldn't build Client Config. Check Certs & Key!");
+
     println!("Starting rendering worker...");
-    let rendering_manager = export::rendering_manager::RenderingManager::start(settings.clone(), data_storage.clone(), csl_data.clone());
+    let rendering_manager = export::rendering_manager::RenderingManager::start(settings.clone(), data_storage.clone(), project_storage.clone(), csl_data.clone(), Arc::new(client_config));
 
     println!("Starting import processing worker...");
     let import_manager = import::processing::ImportProcessor::start(settings.clone(), project_storage.clone());
@@ -145,14 +162,20 @@ async fn rocket() -> _ {
             templates_editor::api::delete_export_step,
             templates_editor::api::update_export_step,
             templates_editor::api::create_export_step,
-            utils::lobid_proxy::search_gnd, session::logout::logout_page, session::login::login_page, session::login::process_login_form, projects::create::show_create_project, projects::api::get_csl_styles, projects::create::process_create_project, projects::list::list_projects, projects::editor::show_editor, projects::bibliography_editor::show_bib_editor, projects::bibliography_editor::api::get_library, projects::bibliography_editor::api::update_bib_entry, projects::api::get_project_template, projects::api::set_project_template, projects::api::list_templates, projects::bibliography_editor::api::get_bib_entry, projects::bibliography_editor::api::search_bib_entry, projects::bibliography_editor::api::add_bib_entry, projects::api::get_project_metadata, projects::api::get_project_settings, projects::api::set_project_metadata, projects::api::set_project_settings, projects::api::add_author_to_project, projects::api::add_editor_to_project, projects::api::remove_editor_from_project, projects::api::remove_author_from_project, projects::api::add_keyword_to_project, projects::api::remove_keyword_from_project, projects::api::add_identifier_to_project, projects::api::remove_identifier_from_project, projects::api::update_identifier_in_project, projects::api::delete_project, persons::api::delete_person, persons::list::list_persons, persons::create::show_create_person, persons::api::create_person, persons::api::get_person, persons::api::update_person, persons::api::search_persons, projects::api::patch_project_metadata, projects::api::get_project_contents, projects::api::add_content, projects::api::move_content_after, projects::api::move_content_child_of, projects::api::get_section, projects::api::update_section, projects::api::delete_section, projects::api::get_content_blocks_in_section, projects::api::set_content_blocks_in_section, projects::api::render_project, projects::api::get_rendering_status, projects::api::upload_to_project, import::upload::poll_import_status, projects::api::get_project_upload, import::upload::import_from_wordpress, export::download::download_rendering, settings_page::settings_page, settings_page::api::add_user, settings_page::api::update_user, settings_page::api::delete_user, import::upload::import_from_upload])
+            templates_editor::api::update_export_format_metadata,
+            templates_editor::api::move_export_step,
+            export::api::add_local_rendering_request,
+            export::api::get_request_result,
+            export::api::get_request_status,
+            export::api::get_request_result_specific_file,
+            utils::lobid_proxy::search_gnd, session::logout::logout_page, session::login::login_page, session::login::process_login_form, projects::create::show_create_project, projects::api::get_csl_styles, projects::create::process_create_project, projects::list::list_projects, projects::editor::show_editor, projects::bibliography_editor::show_bib_editor, projects::bibliography_editor::api::get_library, projects::bibliography_editor::api::update_bib_entry, projects::api::get_project_template, projects::api::set_project_template, projects::api::list_templates, projects::bibliography_editor::api::get_bib_entry, projects::bibliography_editor::api::search_bib_entry, projects::bibliography_editor::api::add_bib_entry, projects::api::get_project_metadata, projects::api::get_project_settings, projects::api::set_project_metadata, projects::api::set_project_settings, projects::api::add_author_to_project, projects::api::add_editor_to_project, projects::api::remove_editor_from_project, projects::api::remove_author_from_project, projects::api::add_keyword_to_project, projects::api::remove_keyword_from_project, projects::api::add_identifier_to_project, projects::api::remove_identifier_from_project, projects::api::update_identifier_in_project, projects::api::delete_project, persons::api::delete_person, persons::list::list_persons, persons::create::show_create_person, persons::api::create_person, persons::api::get_person, persons::api::update_person, persons::api::search_persons, projects::api::patch_project_metadata, projects::api::get_project_contents, projects::api::add_content, projects::api::move_content_after, projects::api::move_content_child_of, projects::api::get_section, projects::api::update_section, projects::api::delete_section, projects::api::get_content_blocks_in_section, projects::api::set_content_blocks_in_section, projects::api::upload_to_project, import::upload::poll_import_status, projects::api::get_project_upload, import::upload::import_from_wordpress, export::download::download_rendering, settings_page::settings_page, settings_page::api::add_user, settings_page::api::update_user, settings_page::api::delete_user, import::upload::import_from_upload])
         .manage(SessionStorage::new())
         .manage(settings)
         .manage(data_storage)
         .manage(project_storage)
-        .manage(rendering_manager)
         .manage(import_manager)
         .manage(csl_data)
+        .manage(rendering_manager)
 }
 
 //TODO: clean shutdown

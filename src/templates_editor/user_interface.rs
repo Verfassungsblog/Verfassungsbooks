@@ -22,7 +22,7 @@ pub async fn get_template(_session: Session, id: String, data_storage: &State<Ar
         Ok(id) => id,
         Err(_) => return Err(Status::BadRequest)
     };
-    let data_storage = data_storage.clone();
+    let data_storage = Arc::clone(data_storage);
     let template = match data_storage.data.read().unwrap().templates.get(&id){
         Some(template) => template.clone().read().unwrap().clone(),
         None => return Err(Status::NotFound)
@@ -49,6 +49,7 @@ pub struct CreateTemplate {
 pub async fn form_create_template(_session: Session, settings: &State<Settings>, template: rocket::form::Form<CreateTemplate>, data_storage: &State<Arc<DataStorage>>) -> Result<rocket::response::Redirect, Status>{
     let template = ProjectTemplateV2 {
         id: uuid::Uuid::new_v4(),
+        version: Some(uuid::Uuid::new_v4()),
         name: template.name.clone(),
         description: template.description.clone(),
         export_formats: HashMap::new(),
