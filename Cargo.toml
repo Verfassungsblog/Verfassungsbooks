@@ -10,8 +10,8 @@ build = "build.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-#vb-exchange = {git = "https://git.sr.ht/~verfassungsblog/Verfassungsbooks-Exchange-Lib"}
-vb-exchange = { path = "../Verfassungsbooks-Exchange-Lib" }
+vb-exchange = {git = "https://git.sr.ht/~verfassungsblog/Verfassungsbooks-Exchange-Lib"}
+#vb-exchange = { path = "../Verfassungsbooks-Exchange-Lib" }
 rocket = { version = "=0.5.0", features = ["secrets", "json"] }
 dotenvy = "0.15"
 config = "0.14"
