@@ -7,3 +7,7 @@ secret_key = "J28tNwSvc9xS2TK5zMFSmmAXVZpCQVbdzxL0PeNl3wGnkWzf2tBtxwBUW/MSg7kQ65
 [debug]
 address = "127.0.0.1"
 port = 8000
+
+[default.tls]
+key = "path/to/key.pem"     # Path or bytes to DER-encoded ASN.1 PKCS#1/#8 or SEC1 key.
+certs = "path/to/certs.pem" # Path or bytes to DER-encoded X.509 TLS cert chain.
