@@ -130,11 +130,17 @@ impl RenderingManager{
         let prepared_project = prepare_project(project_data, rendering_manager.data_storage.clone(), rendering_manager.csl_data.clone(), request.sections, &request.project_id).await?;
 
         // Pack uploaded files
-        let uploads = match vb_exchange::recursive_read_dir_async(PathBuf::from(format!("data/projects/{}/uploads", &request.project_id))).await{
-            Ok(uploads) => uploads,
-            Err(e) => {
-                return Err(RenderingError::Other(format!("IO Error packing uploaded files: {}", e)))
+        // Check if upload directory exists:
+        let upload_dir = PathBuf::from(format!("data/projects/{}/uploads", &request.project_id));
+        let uploads = if upload_dir.exists() {
+            match vb_exchange::recursive_read_dir_async(PathBuf::from(upload_dir)).await{
+                Ok(uploads) => uploads,
+                Err(e) => {
+                    return Err(RenderingError::Other(format!("IO Error packing uploaded files: {}", e)))
+                }
             }
+        }else{
+            Vec::new()
         };
 
         let request = RenderingRequest{
