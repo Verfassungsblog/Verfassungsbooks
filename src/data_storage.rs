@@ -773,7 +773,7 @@ impl ProjectStorage {
             }
         }
 
-        let version = "2"; //TODO: auto detect latest version
+        let version = "3"; //TODO: auto detect latest version
 
         // Encode project data with bincode and save to disk
         let path = format!("{}/projects/{}/project.{}.bincode", settings.data_path, uuid, version);
