@@ -244,7 +244,7 @@ impl DataStorage{
                 let project = match bincode::decode_from_std_read(&mut file, bincode::config::standard()) {
                     Ok(data) => data,
                     Err(e) => {
-                        eprintln!("bincode decode error while loading project file with version {} into memory: {}.", version, e);
+                        eprintln!("bincode decode error while loading data storage file with version {} into memory: {}.", version, e);
                         return Err(())
                     },
                 };
@@ -404,7 +404,7 @@ pub struct ProjectStorage {
 #[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
 pub struct ProjectStorageEntry{
     pub name: String,
-    pub data: Option<Arc<RwLock<ProjectDataV2>>>,
+    pub data: Option<Arc<RwLock<ProjectDataV3>>>,
 }
 
 impl MultipleFileLocks for ProjectStorage{
@@ -541,7 +541,7 @@ impl ProjectStorage {
     ///
     /// # Returns
     /// * `Ok(uuid::Uuid)` - Project inserted successfully - returns the generated [uuid::Uuid] of the project
-    pub async fn insert_project(&self, mut project: ProjectDataV2, settings: &Settings) -> Result<uuid::Uuid, ()> {
+    pub async fn insert_project(&self, mut project: ProjectDataV3, settings: &Settings) -> Result<uuid::Uuid, ()> {
         let uuid = uuid::Uuid::new_v4();
 
         // Update last edited to current time, so the project doesn't get unloaded immediately
@@ -626,13 +626,29 @@ impl ProjectStorage {
                             },
                         };
                         match bincode::decode_from_std_read::<OldProjectData, _, _>(&mut file, bincode::config::standard()) {
-                            Ok(project) => return Ok(ProjectDataV2::from(project)),
+                            Ok(project) => return Ok(ProjectDataV3::from(ProjectDataV2::from(project))),
                             Err(e) => {
                                 eprintln!("bincode decode error while loading project file with version {} into memory: {}.", version, e);
                                 return Err(())
                             },
                         };
                     }else if *version == 2 {
+                        // Load old project format
+                        let mut file = match std::fs::File::open(format!("{}/{}", &npath, project_path)) {
+                            Ok(file) => file,
+                            Err(e) => {
+                                eprintln!("io error while loading project file into memory: {}", e);
+                                return Err(())
+                            },
+                        };
+                        match bincode::decode_from_std_read::<ProjectDataV2, _, _>(&mut file, bincode::config::standard()) {
+                            Ok(project) => return Ok(ProjectDataV3::from(project)),
+                            Err(e) => {
+                                eprintln!("bincode decode error while loading project file with version {} into memory: {}.", version, e);
+                                return Err(())
+                            },
+                        };
+                    }else if *version == 3 {
                         // Load new project format
                         let mut file = match std::fs::File::open(format!("{}/{}", &npath, project_path)) {
                             Ok(file) => file,
@@ -641,7 +657,7 @@ impl ProjectStorage {
                                 return Err(())
                             },
                         };
-                        let project = match bincode::decode_from_std_read(&mut file, bincode::config::standard()) {
+                        let project: ProjectDataV3 = match bincode::decode_from_std_read(&mut file, bincode::config::standard()) {
                             Ok(project) => project,
                             Err(e) => {
                                 eprintln!("bincode decode error while loading project file with version {} into memory: {}.", version, e);
@@ -674,7 +690,7 @@ impl ProjectStorage {
                         println!("Loaded project, inserting into memory storage.");
                         if let Some(tproject) = self.projects.write().unwrap().get_mut(uuid){
                                 // Update last edited to current time, so the project doesn't get unloaded immediately
-                                let mut project: ProjectDataV2 = project;
+                                let mut project: ProjectDataV3 = project;
                                 project.last_interaction = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
                                 tproject.name = project.name.clone();
                                 println!("Replacing project");
@@ -702,7 +718,7 @@ impl ProjectStorage {
         }
     }
 
-    pub async fn get_project(&self, uuid: &uuid::Uuid, settings: &Settings) -> Result<Arc<RwLock<ProjectDataV2>>, ()> {
+    pub async fn get_project(&self, uuid: &uuid::Uuid, settings: &Settings) -> Result<Arc<RwLock<ProjectDataV3>>, ()> {
         // Check if project exists
         match self.projects.read().unwrap().get(uuid) {
             Some(project) => {
@@ -805,6 +821,7 @@ impl ProjectStorage {
 pub enum ProjectData{
     V1(OldProjectData),
     V2(ProjectDataV2),
+    V3(ProjectDataV3)
 }
 
 #[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
@@ -815,7 +832,7 @@ pub struct OldProjectData {
     pub template_id: uuid::Uuid,
     pub last_interaction: u64,
     pub metadata: Option<ProjectMetadata>,
-    pub settings: Option<ProjectSettings>,
+    pub settings: Option<ProjectSettingsV2>,
     pub sections: Vec<SectionOrToc>,
     #[bincode(with_serde)]
     pub bibliography: HashMap<String, OldBibEntry>
@@ -830,7 +847,21 @@ pub struct ProjectDataV2 {
     pub template_id: uuid::Uuid,
     pub last_interaction: u64,
     pub metadata: Option<ProjectMetadata>,
-    pub settings: Option<ProjectSettings>,
+    pub settings: Option<ProjectSettingsV2>,
+    pub sections: Vec<SectionOrToc>,
+    #[bincode(with_serde)]
+    pub bibliography: HashMap<String, BibEntryV2>
+}
+
+#[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
+pub struct ProjectDataV3 {
+    pub name: String,
+    pub description: Option<String>,
+    #[bincode(with_serde)]
+    pub template_id: uuid::Uuid,
+    pub last_interaction: u64,
+    pub metadata: Option<ProjectMetadata>,
+    pub settings: Option<ProjectSettingsV3>,
     pub sections: Vec<SectionOrToc>,
     #[bincode(with_serde)]
     pub bibliography: HashMap<String, BibEntryV2> //TODO: add prefix & suffix support
@@ -845,6 +876,31 @@ impl From<OldProjectData> for ProjectDataV2{
             last_interaction: value.last_interaction,
             metadata: value.metadata,
             settings: value.settings,
+            sections: value.sections,
+            bibliography: value.bibliography.iter().map(|(k, v)| (k.clone(), v.clone().into())).collect(),
+        }
+    }
+}
+
+impl From<ProjectDataV2> for ProjectDataV3{
+    fn from(value: ProjectDataV2) -> Self {
+        let settings: Option<ProjectSettingsV3> = match value.settings{
+            Some(set) => {
+                Some(ProjectSettingsV3{
+                    toc_enabled: set.toc_enabled,
+                    csl_style: set.csl_style,
+                    csl_language_code: None,
+                })
+            },
+            None => None,
+        };
+        ProjectDataV3{
+            name: value.name,
+            description: value.description,
+            template_id: value.template_id,
+            last_interaction: value.last_interaction,
+            metadata: value.metadata,
+            settings,
             sections: value.sections,
             bibliography: value.bibliography.iter().map(|(k, v)| (k.clone(), v.clone().into())).collect(),
         }
@@ -1536,7 +1592,7 @@ impl BibEntryV2 {
     }
 }
 
-impl ProjectDataV2 {
+impl ProjectDataV3 {
     // TODO migrate to using path instead of the id and searching for it
     pub fn remove_section(&mut self, section_to_remove_id: &uuid::Uuid) -> Option<Section> {
         let pos = self.sections.iter().position(|section| match section {
@@ -1601,7 +1657,7 @@ impl ProjectDataV2 {
 }
 
 pub fn get_section_by_path_mut<'a>(
-    project: &'a mut RwLockWriteGuard<ProjectDataV2>,
+    project: &'a mut RwLockWriteGuard<ProjectDataV3>,
     path: &Vec<uuid::Uuid>
 ) -> Result<&'a mut Section, ApiError> {
 
@@ -1651,7 +1707,7 @@ pub fn get_section_by_path_mut<'a>(
     Ok(current_section)
 }
 
-pub fn get_section_by_path<'a>(project: &'a RwLockReadGuard<ProjectDataV2>, path: &Vec<uuid::Uuid>) -> Result<&'a Section, ApiError>{
+pub fn get_section_by_path<'a>(project: &'a RwLockReadGuard<ProjectDataV3>, path: &Vec<uuid::Uuid>) -> Result<&'a Section, ApiError>{
     let mut first_section : Option<&Section> = None;
 
     // Find first section

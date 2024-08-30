@@ -10,10 +10,11 @@ use rocket::fs::{NamedFile, TempFile};
 use rocket::http::Status;
 use rocket::State;
 use serde::{Deserialize, Serialize};
+use vb_exchange::projects::ProjectSettingsV3;
 use crate::data_storage::ProjectStorage;
 use crate::export::rendering_manager::RenderingManager;
 use vb_exchange::RenderingStatus;
-use crate::projects::{Identifier, Keyword, Language, License, ProjectMetadata, ProjectSettings, Section};
+use crate::projects::{Identifier, Keyword, Language, License, ProjectMetadata, Section};
 use crate::session::session_guard::Session;
 use crate::settings::Settings;
 
@@ -489,7 +490,7 @@ pub async fn get_csl_styles(_session: Session, settings: &State<Settings>) -> Js
 }
 
 #[get("/api/projects/<project_id>/settings")]
-pub async fn get_project_settings(project_id: String, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<Option<ProjectSettings>>> {
+pub async fn get_project_settings(project_id: String, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>) -> Json<ApiResult<Option<ProjectSettingsV3>>> {
     let project_id = match uuid::Uuid::parse_str(&project_id) {
         Ok(project_id) => project_id,
         Err(e) => {
@@ -514,7 +515,7 @@ pub async fn get_project_settings(project_id: String, _session: Session, setting
 }
 
 #[post("/api/projects/<project_id>/settings", data = "<project_settings>")]
-pub async fn set_project_settings(project_id: String, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>, project_settings: Json<ProjectSettings>) -> Json<ApiResult<()>> {
+pub async fn set_project_settings(project_id: String, _session: Session, settings: &State<Settings>, project_storage: &State<Arc<ProjectStorage>>, project_settings: Json<ProjectSettingsV3>) -> Json<ApiResult<()>> {
     let project_id = match uuid::Uuid::parse_str(&project_id) {
         Ok(project_id) => project_id,
         Err(e) => {
