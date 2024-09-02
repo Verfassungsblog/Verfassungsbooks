@@ -12,8 +12,6 @@ use rocket::State;
 use serde::{Deserialize, Serialize};
 use vb_exchange::projects::ProjectSettingsV3;
 use crate::data_storage::ProjectStorage;
-use crate::export::rendering_manager::RenderingManager;
-use vb_exchange::RenderingStatus;
 use crate::projects::{Identifier, Keyword, Language, License, ProjectMetadata, Section};
 use crate::session::session_guard::Session;
 use crate::settings::Settings;
@@ -111,7 +109,7 @@ pub async fn get_project_metadata(project_id: String, _session: Session, setting
 
         if metadata != old_metadata{
             {
-                let mut project = project_storage.get_project(&project_id, settings).await.unwrap();
+                let project = project_storage.get_project(&project_id, settings).await.unwrap();
                 project.write().unwrap().metadata = Some(metadata.clone());
             }
         }
@@ -1224,7 +1222,7 @@ pub async fn get_section(
     let section = crate::data_storage::get_section_by_path(&project_read_guard, &path);
 
     match section {
-        Ok(mut section) => {
+        Ok(section) => {
             let mut section_without_subsection = section.clone_without_subsections();
 
             // Check if all persons in section metadata are still valid

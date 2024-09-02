@@ -1,16 +1,16 @@
 
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use rocket::http::Status;
 use rocket::State;
-use crate::data_storage::{self, DataStorage, ProjectTemplateV2};
+use crate::data_storage::{DataStorage, ProjectTemplateV2};
 use crate::session::session_guard::Session;
 use crate::settings::Settings;
 
 /// Get a list of all templates
 #[get("/templates")]
 pub async fn list_templates(_session: Session, data_storage: &State<Arc<DataStorage>>) -> Result<rocket_dyn_templates::Template, Status>{
-    let data_storage = data_storage.clone();
+    let data_storage = data_storage;
     let templates : Vec<ProjectTemplateV2> = data_storage.data.read().unwrap().templates.iter().map(|(_, template)| template.clone().read().unwrap().clone()).collect();
     Ok(rocket_dyn_templates::Template::render("templates", templates))
 }

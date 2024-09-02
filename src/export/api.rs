@@ -1,4 +1,3 @@
-use std::path::PathBuf;
 use std::sync::Arc;
 use rocket::fs::NamedFile;
 use rocket::http::Status;

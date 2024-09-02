@@ -7,7 +7,7 @@ use tokio::net::TcpStream;
 use tokio_rustls::rustls::ClientConfig;
 use tokio_rustls::rustls::pki_types::ServerName;
 use tokio_rustls::{TlsConnector, TlsStream};
-use crate::data_storage::{DataStorage, ProjectDataV2, ProjectDataV3, ProjectStorage};
+use crate::data_storage::{DataStorage, ProjectDataV3, ProjectStorage};
 use crate::settings::{ExportServer, Settings};
 use crate::utils::csl::CslData;
 use vb_exchange::{RenderingStatus, RenderingRequest, RenderingError, send_message, Message, read_message, CommunicationError, TemplateDataResult, TemplateContents, FilesOnMemoryOrHarddrive};

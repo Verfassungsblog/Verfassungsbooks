@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::collections::BTreeMap;
-use crate::data_storage::{ProjectDataV2, ProjectDataV3, ProjectTemplateV2};
+use crate::data_storage::{ProjectDataV3, ProjectTemplateV2};
 use std::sync::Arc;
 use rocket::http::Status;
 use rocket::response::Redirect;

@@ -10,7 +10,7 @@ use pandoc::{InputFormat, InputKind, OutputFormat, OutputKind, PandocOutput};
 
 use rocket::http::ContentType;
 use serde::{Deserialize, Serialize};
-use crate::data_storage::{BibEntryV2, ProjectDataV2, ProjectDataV3, ProjectStorage};
+use crate::data_storage::{BibEntryV2, ProjectDataV3, ProjectStorage};
 use crate::settings::Settings;
 use tokio::io::AsyncReadExt;
 use vb_exchange::projects::{Identifier, IdentifierType};

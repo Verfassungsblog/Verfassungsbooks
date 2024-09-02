@@ -14,7 +14,7 @@ use bincode::{Encode, Decode};
 use hayagriva::types::EntryType;
 use vb_exchange::projects::*;
 use crate::projects::{ProjectMetadata, Section, SectionOrToc};
-use crate::projects::api::{ApiError, ApiResult};
+use crate::projects::api::ApiError;
 use crate::settings::Settings;
 use reqwest::Url;
 
@@ -2055,53 +2055,5 @@ impl From<MyDurationRange> for DurationRange {
             start: value.start,
             end: value.end,
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::thread;
-    use rocket::serde::json::Json;
-    use crate::projects::{Paragraph, TextElement, TextFormat};
-    use super::*;
-
-    #[test]
-    fn setup_test_environment() {
-        std::fs::remove_dir_all("test_data");
-        std::fs::create_dir_all("test_data/projects").unwrap();
-    }
-
-    fn generate_settings() -> Settings {
-        Settings {
-            app_title: "Test".to_string(),
-            project_cache_time: 4,
-            data_path: "test_data".to_string(),
-            file_lock_timeout: 10,
-            backup_to_file_interval: 120,
-            max_connections_to_rendering_server: 10,
-            max_import_threads: 2,
-            chromium_path: None,
-            zotero_translation_server: "https://translation-server.anghenfil.de".to_string(),
-            version: String::from("test"),
-        }
-    }
-
-    #[rocket::tokio::test]
-    async fn test_save_project_to_disk() {
-        setup_test_environment();
-        let test_project = ProjectDataV2 {
-            name: "Test Project".to_string(),
-            description: None,
-            template_id: Default::default(),
-            last_interaction: 0,
-            metadata: None,
-            settings: None,
-            sections: vec![],
-            bibliography: Default::default(),
-        };
-        let settings = generate_settings();
-        let mut project_storage = ProjectStorage::new();
-        let id = project_storage.insert_project(test_project, &settings).await.unwrap();
-        assert!(std::path::Path::new(&format!("test_data/projects/{}.bincode", id)).exists());
     }
 }

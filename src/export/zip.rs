@@ -7,7 +7,7 @@ use zip::{CompressionMethod, ZipWriter};
 
 pub fn create_zip_from_bytes(files: Vec<NamedFile>, output_zip_path: PathBuf) -> std::io::Result<()> {
     // Create a file to write the ZIP archive asynchronously
-    let mut zip_file = File::create(output_zip_path)?;
+    let zip_file = File::create(output_zip_path)?;
 
     // Initialize the ZIP writer with an async writer
     let mut zip_writer = ZipWriter::new(zip_file);
