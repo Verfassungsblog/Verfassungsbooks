@@ -7,6 +7,8 @@ module.exports = {
         import: './Import.ts',
         bibliography_editor: './BibliographyEditor.ts',
         user_tools: './UserTools.ts',
+        template_editor: './TemplateEditor.ts',
+        export: './Export.ts'
     },
     devtool: 'inline-source-map',
     module: {

@@ -1,5 +1,6 @@
+use hayagriva::types::{Date, Duration, DurationRange, FormatString, MaybeTyped, Numeric, NumericDelimiter, NumericValue, QualifiedUrl, SerialNumber};
 use std::collections::{BTreeMap, HashMap};
-use std::{fs};
+use std::fs;
 
 use std::path::Path;
 use std::str::FromStr;
@@ -10,17 +11,15 @@ use argon2::{Argon2, PasswordHasher};
 use argon2::password_hash::rand_core::OsRng;
 use serde::{Deserialize, Serialize};
 use bincode::{Encode, Decode};
-
-
-
-
-use crate::projects::{Person, ProjectMetadata, ProjectSettings, Section, SectionOrToc};
+use hayagriva::types::EntryType;
+use vb_exchange::projects::*;
+use crate::projects::{ProjectMetadata, Section, SectionOrToc};
 use crate::projects::api::ApiError;
 use crate::settings::Settings;
-use hayagriva::types::*;
 use reqwest::Url;
 
 use unic_langid_impl::LanguageIdentifier;
+use vb_exchange::export_formats::ExportFormat;
 
 /// Storage for small data like users, passwords and login attempts
 ///
@@ -76,10 +75,29 @@ impl DataStorage{
         }
     }
 
+    pub async fn update_template_version_id(&self, template_id: uuid::Uuid) -> Result<(), ()>{
+        match self.data.read().unwrap().templates.get(&template_id){
+            Some(template) => {
+                let template = template.clone();
+                template.write().unwrap().version = Some(uuid::Uuid::new_v4());
+                Ok(())
+            },
+            None => {
+                Err(())
+            }
+        }
+    }
+
+
+
     pub async fn insert_template(&self, template: ProjectTemplateV2, settings: &Settings) -> Result<(), ()>{
         // Create template directory inside data if it doesn't exist
         if !Path::new(&format!("{}/templates/{}", settings.data_path, template.id)).exists(){
-            if let Err(e) =  tokio::fs::create_dir_all(&format!("{}/templates/{}", settings.data_path, template.id)).await{
+            if let Err(e) =  tokio::fs::create_dir_all(&format!("{}/templates/{}/assets", settings.data_path, template.id)).await{
+                eprintln!("error while creating template directory: {}", e);
+                return Err(())
+            }
+            if let Err(e) =  tokio::fs::create_dir_all(&format!("{}/templates/{}/formats", settings.data_path, template.id)).await{
                 eprintln!("error while creating template directory: {}", e);
                 return Err(())
             }
@@ -121,7 +139,7 @@ impl DataStorage{
 
     /// Loads the [DataStorage] from disk
     ///
-    /// Path is defined as data_path from settings + /data.bincode
+    /// Path is defined as data_path from settings + /data.version.bincode
     pub async fn load_from_disk(settings: &Settings) -> Result<Self, ()>{
         let mut data_storage = DataStorage::new();
 
@@ -193,6 +211,8 @@ impl DataStorage{
                     },
                 };
 
+                println!("Found old data Format v1. Converting to v2. Moving templates/ to templates-old/!");
+
                 // Move told templates directory to templates-old
                 if Path::exists(Path::new(&format!("{}/templates", &path))){
                     if let Err(e) = fs::rename(format!("{}/templates", &path), format!("{}/templates-old", &path)){
@@ -224,7 +244,7 @@ impl DataStorage{
                 let project = match bincode::decode_from_std_read(&mut file, bincode::config::standard()) {
                     Ok(data) => data,
                     Err(e) => {
-                        eprintln!("bincode decode error while loading project file with version {} into memory: {}.", version, e);
+                        eprintln!("bincode decode error while loading data storage file with version {} into memory: {}.", version, e);
                         return Err(())
                     },
                 };
@@ -384,7 +404,7 @@ pub struct ProjectStorage {
 #[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
 pub struct ProjectStorageEntry{
     pub name: String,
-    pub data: Option<Arc<RwLock<ProjectDataV2>>>,
+    pub data: Option<Arc<RwLock<ProjectDataV3>>>,
 }
 
 impl MultipleFileLocks for ProjectStorage{
@@ -521,7 +541,7 @@ impl ProjectStorage {
     ///
     /// # Returns
     /// * `Ok(uuid::Uuid)` - Project inserted successfully - returns the generated [uuid::Uuid] of the project
-    pub async fn insert_project(&self, mut project: ProjectDataV2, settings: &Settings) -> Result<uuid::Uuid, ()> {
+    pub async fn insert_project(&self, mut project: ProjectDataV3, settings: &Settings) -> Result<uuid::Uuid, ()> {
         let uuid = uuid::Uuid::new_v4();
 
         // Update last edited to current time, so the project doesn't get unloaded immediately
@@ -606,13 +626,29 @@ impl ProjectStorage {
                             },
                         };
                         match bincode::decode_from_std_read::<OldProjectData, _, _>(&mut file, bincode::config::standard()) {
-                            Ok(project) => return Ok(ProjectDataV2::from(project)),
+                            Ok(project) => return Ok(ProjectDataV3::from(ProjectDataV2::from(project))),
                             Err(e) => {
                                 eprintln!("bincode decode error while loading project file with version {} into memory: {}.", version, e);
                                 return Err(())
                             },
                         };
                     }else if *version == 2 {
+                        // Load old project format
+                        let mut file = match std::fs::File::open(format!("{}/{}", &npath, project_path)) {
+                            Ok(file) => file,
+                            Err(e) => {
+                                eprintln!("io error while loading project file into memory: {}", e);
+                                return Err(())
+                            },
+                        };
+                        match bincode::decode_from_std_read::<ProjectDataV2, _, _>(&mut file, bincode::config::standard()) {
+                            Ok(project) => return Ok(ProjectDataV3::from(project)),
+                            Err(e) => {
+                                eprintln!("bincode decode error while loading project file with version {} into memory: {}.", version, e);
+                                return Err(())
+                            },
+                        };
+                    }else if *version == 3 {
                         // Load new project format
                         let mut file = match std::fs::File::open(format!("{}/{}", &npath, project_path)) {
                             Ok(file) => file,
@@ -621,7 +657,7 @@ impl ProjectStorage {
                                 return Err(())
                             },
                         };
-                        let project = match bincode::decode_from_std_read(&mut file, bincode::config::standard()) {
+                        let project: ProjectDataV3 = match bincode::decode_from_std_read(&mut file, bincode::config::standard()) {
                             Ok(project) => project,
                             Err(e) => {
                                 eprintln!("bincode decode error while loading project file with version {} into memory: {}.", version, e);
@@ -654,7 +690,7 @@ impl ProjectStorage {
                         println!("Loaded project, inserting into memory storage.");
                         if let Some(tproject) = self.projects.write().unwrap().get_mut(uuid){
                                 // Update last edited to current time, so the project doesn't get unloaded immediately
-                                let mut project: ProjectDataV2 = project;
+                                let mut project: ProjectDataV3 = project;
                                 project.last_interaction = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
                                 tproject.name = project.name.clone();
                                 println!("Replacing project");
@@ -682,7 +718,7 @@ impl ProjectStorage {
         }
     }
 
-    pub async fn get_project(&self, uuid: &uuid::Uuid, settings: &Settings) -> Result<Arc<RwLock<ProjectDataV2>>, ()> {
+    pub async fn get_project(&self, uuid: &uuid::Uuid, settings: &Settings) -> Result<Arc<RwLock<ProjectDataV3>>, ()> {
         // Check if project exists
         match self.projects.read().unwrap().get(uuid) {
             Some(project) => {
@@ -737,7 +773,7 @@ impl ProjectStorage {
             }
         }
 
-        let version = "2"; //TODO: auto detect latest version
+        let version = "3"; //TODO: auto detect latest version
 
         // Encode project data with bincode and save to disk
         let path = format!("{}/projects/{}/project.{}.bincode", settings.data_path, uuid, version);
@@ -785,6 +821,7 @@ impl ProjectStorage {
 pub enum ProjectData{
     V1(OldProjectData),
     V2(ProjectDataV2),
+    V3(ProjectDataV3)
 }
 
 #[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
@@ -795,7 +832,7 @@ pub struct OldProjectData {
     pub template_id: uuid::Uuid,
     pub last_interaction: u64,
     pub metadata: Option<ProjectMetadata>,
-    pub settings: Option<ProjectSettings>,
+    pub settings: Option<ProjectSettingsV2>,
     pub sections: Vec<SectionOrToc>,
     #[bincode(with_serde)]
     pub bibliography: HashMap<String, OldBibEntry>
@@ -810,7 +847,21 @@ pub struct ProjectDataV2 {
     pub template_id: uuid::Uuid,
     pub last_interaction: u64,
     pub metadata: Option<ProjectMetadata>,
-    pub settings: Option<ProjectSettings>,
+    pub settings: Option<ProjectSettingsV2>,
+    pub sections: Vec<SectionOrToc>,
+    #[bincode(with_serde)]
+    pub bibliography: HashMap<String, BibEntryV2>
+}
+
+#[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
+pub struct ProjectDataV3 {
+    pub name: String,
+    pub description: Option<String>,
+    #[bincode(with_serde)]
+    pub template_id: uuid::Uuid,
+    pub last_interaction: u64,
+    pub metadata: Option<ProjectMetadata>,
+    pub settings: Option<ProjectSettingsV3>,
     pub sections: Vec<SectionOrToc>,
     #[bincode(with_serde)]
     pub bibliography: HashMap<String, BibEntryV2> //TODO: add prefix & suffix support
@@ -831,6 +882,31 @@ impl From<OldProjectData> for ProjectDataV2{
     }
 }
 
+impl From<ProjectDataV2> for ProjectDataV3{
+    fn from(value: ProjectDataV2) -> Self {
+        let settings: Option<ProjectSettingsV3> = match value.settings{
+            Some(set) => {
+                Some(ProjectSettingsV3{
+                    toc_enabled: set.toc_enabled,
+                    csl_style: set.csl_style,
+                    csl_language_code: None,
+                })
+            },
+            None => None,
+        };
+        ProjectDataV3{
+            name: value.name,
+            description: value.description,
+            template_id: value.template_id,
+            last_interaction: value.last_interaction,
+            metadata: value.metadata,
+            settings,
+            sections: value.sections,
+            bibliography: value.bibliography.iter().map(|(k, v)| (k.clone(), v.clone().into())).collect(),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct MyPersonsWithRoles {
     /// The persons.
@@ -839,8 +915,8 @@ pub struct MyPersonsWithRoles {
     pub role: MyPersonRole,
 }
 
-impl From<PersonsWithRoles> for MyPersonsWithRoles{
-    fn from(value: PersonsWithRoles) -> Self {
+impl From<hayagriva::types::PersonsWithRoles> for MyPersonsWithRoles{
+    fn from(value: hayagriva::types::PersonsWithRoles) -> Self {
         MyPersonsWithRoles{
             names: value.names.iter().map(|p| <hayagriva::types::Person as Clone>::clone(&(*p)).into()).collect(),
             role: value.role.into(),
@@ -848,9 +924,9 @@ impl From<PersonsWithRoles> for MyPersonsWithRoles{
     }
 }
 
-impl From<MyPersonsWithRoles> for PersonsWithRoles{
+impl From<MyPersonsWithRoles> for hayagriva::types::PersonsWithRoles{
     fn from(value: MyPersonsWithRoles) -> Self {
-        PersonsWithRoles{
+        hayagriva::types::PersonsWithRoles{
             names: value.names.iter().map(|p| <MyPerson as Clone>::clone(&(*p)).into()).collect(),
             role: value.role.into(),
         }
@@ -904,58 +980,58 @@ pub enum MyPersonRole {
     Unknown(String),
 }
 
-impl From<MyPersonRole> for PersonRole{
+impl From<MyPersonRole> for hayagriva::types::PersonRole{
     fn from(value: MyPersonRole) -> Self {
         match value {
-            MyPersonRole::Translator => PersonRole::Translator,
-            MyPersonRole::Afterword => PersonRole::Afterword,
-            MyPersonRole::Foreword => PersonRole::Foreword,
-            MyPersonRole::Introduction => PersonRole::Introduction,
-            MyPersonRole::Annotator => PersonRole::Annotator,
-            MyPersonRole::Commentator => PersonRole::Commentator,
-            MyPersonRole::Holder => PersonRole::Holder,
-            MyPersonRole::Compiler => PersonRole::Compiler,
-            MyPersonRole::Founder => PersonRole::Founder,
-            MyPersonRole::Collaborator => PersonRole::Collaborator,
-            MyPersonRole::Organizer => PersonRole::Organizer,
-            MyPersonRole::CastMember => PersonRole::CastMember,
-            MyPersonRole::Composer => PersonRole::Composer,
-            MyPersonRole::Producer => PersonRole::Producer,
-            MyPersonRole::ExecutiveProducer => PersonRole::ExecutiveProducer,
-            MyPersonRole::Writer => PersonRole::Writer,
-            MyPersonRole::Cinematography => PersonRole::Cinematography,
-            MyPersonRole::Director => PersonRole::Director,
-            MyPersonRole::Illustrator => PersonRole::Illustrator,
-            MyPersonRole::Narrator => PersonRole::Narrator,
-            MyPersonRole::Unknown(s) => PersonRole::Unknown(s),
+            MyPersonRole::Translator => hayagriva::types::PersonRole::Translator,
+            MyPersonRole::Afterword => hayagriva::types::PersonRole::Afterword,
+            MyPersonRole::Foreword => hayagriva::types::PersonRole::Foreword,
+            MyPersonRole::Introduction => hayagriva::types::PersonRole::Introduction,
+            MyPersonRole::Annotator => hayagriva::types::PersonRole::Annotator,
+            MyPersonRole::Commentator => hayagriva::types::PersonRole::Commentator,
+            MyPersonRole::Holder =>hayagriva::types::PersonRole::Holder,
+            MyPersonRole::Compiler =>hayagriva::types::PersonRole::Compiler,
+            MyPersonRole::Founder =>hayagriva::types::PersonRole::Founder,
+            MyPersonRole::Collaborator =>hayagriva::types::PersonRole::Collaborator,
+            MyPersonRole::Organizer =>hayagriva::types::PersonRole::Organizer,
+            MyPersonRole::CastMember =>hayagriva::types::PersonRole::CastMember,
+            MyPersonRole::Composer =>hayagriva::types::PersonRole::Composer,
+            MyPersonRole::Producer =>hayagriva::types::PersonRole::Producer,
+            MyPersonRole::ExecutiveProducer =>hayagriva::types::PersonRole::ExecutiveProducer,
+            MyPersonRole::Writer =>hayagriva::types::PersonRole::Writer,
+            MyPersonRole::Cinematography =>hayagriva::types::PersonRole::Cinematography,
+            MyPersonRole::Director =>hayagriva::types::PersonRole::Director,
+            MyPersonRole::Illustrator =>hayagriva::types::PersonRole::Illustrator,
+            MyPersonRole::Narrator =>hayagriva::types::PersonRole::Narrator,
+            MyPersonRole::Unknown(s) =>hayagriva::types::PersonRole::Unknown(s),
         }
     }
 }
 
-impl From<PersonRole> for MyPersonRole{
-    fn from(value: PersonRole) -> Self {
+impl From<hayagriva::types::PersonRole> for MyPersonRole{
+    fn from(value: hayagriva::types::PersonRole) -> Self {
         match value {
-            PersonRole::Translator => MyPersonRole::Translator,
-            PersonRole::Afterword => MyPersonRole::Afterword,
-            PersonRole::Foreword => MyPersonRole::Foreword,
-            PersonRole::Introduction => MyPersonRole::Introduction,
-            PersonRole::Annotator => MyPersonRole::Annotator,
-            PersonRole::Commentator => MyPersonRole::Commentator,
-            PersonRole::Holder => MyPersonRole::Holder,
-            PersonRole::Compiler => MyPersonRole::Compiler,
-            PersonRole::Founder => MyPersonRole::Founder,
-            PersonRole::Collaborator => MyPersonRole::Collaborator,
-            PersonRole::Organizer => MyPersonRole::Organizer,
-            PersonRole::CastMember => MyPersonRole::CastMember,
-            PersonRole::Composer => MyPersonRole::Composer,
-            PersonRole::Producer => MyPersonRole::Producer,
-            PersonRole::ExecutiveProducer => MyPersonRole::ExecutiveProducer,
-            PersonRole::Writer => MyPersonRole::Writer,
-            PersonRole::Cinematography => MyPersonRole::Cinematography,
-            PersonRole::Director => MyPersonRole::Director,
-            PersonRole::Illustrator => MyPersonRole::Illustrator,
-            PersonRole::Narrator => MyPersonRole::Narrator,
-            PersonRole::Unknown(s) => MyPersonRole::Unknown(s),
+           hayagriva::types::PersonRole::Translator => MyPersonRole::Translator,
+           hayagriva::types::PersonRole::Afterword => MyPersonRole::Afterword,
+           hayagriva::types::PersonRole::Foreword => MyPersonRole::Foreword,
+           hayagriva::types::PersonRole::Introduction => MyPersonRole::Introduction,
+           hayagriva::types::PersonRole::Annotator => MyPersonRole::Annotator,
+           hayagriva::types::PersonRole::Commentator => MyPersonRole::Commentator,
+           hayagriva::types::PersonRole::Holder => MyPersonRole::Holder,
+           hayagriva::types::PersonRole::Compiler => MyPersonRole::Compiler,
+           hayagriva::types::PersonRole::Founder => MyPersonRole::Founder,
+           hayagriva::types::PersonRole::Collaborator => MyPersonRole::Collaborator,
+           hayagriva::types::PersonRole::Organizer => MyPersonRole::Organizer,
+           hayagriva::types::PersonRole::CastMember => MyPersonRole::CastMember,
+           hayagriva::types::PersonRole::Composer => MyPersonRole::Composer,
+           hayagriva::types::PersonRole::Producer => MyPersonRole::Producer,
+           hayagriva::types::PersonRole::ExecutiveProducer => MyPersonRole::ExecutiveProducer,
+           hayagriva::types::PersonRole::Writer => MyPersonRole::Writer,
+           hayagriva::types::PersonRole::Cinematography => MyPersonRole::Cinematography,
+           hayagriva::types::PersonRole::Director => MyPersonRole::Director,
+           hayagriva::types::PersonRole::Illustrator => MyPersonRole::Illustrator,
+           hayagriva::types::PersonRole::Narrator => MyPersonRole::Narrator,
+           hayagriva::types::PersonRole::Unknown(s) => MyPersonRole::Unknown(s),
             _ => MyPersonRole::Unknown("".to_string()),
         }
     }
@@ -971,20 +1047,20 @@ pub enum MyMaybeTyped<T> {
     String(String),
 }
 
-impl<T> From<MyMaybeTyped<T>> for MaybeTyped<T> {
+impl<T> From<MyMaybeTyped<T>> for hayagriva::types::MaybeTyped<T> {
     fn from(value: MyMaybeTyped<T>) -> Self {
         match value {
-            MyMaybeTyped::Typed(t) => MaybeTyped::Typed(t),
-            MyMaybeTyped::String(s) => MaybeTyped::String(s),
+            MyMaybeTyped::Typed(t) => hayagriva::types::MaybeTyped::Typed(t),
+            MyMaybeTyped::String(s) => hayagriva::types::MaybeTyped::String(s),
         }
     }
 }
 
-impl<T> From<MaybeTyped<T>> for MyMaybeTyped<T> {
-    fn from(value: MaybeTyped<T>) -> Self {
+impl<T> From<hayagriva::types::MaybeTyped<T>> for MyMaybeTyped<T> {
+    fn from(value: hayagriva::types::MaybeTyped<T>) -> Self {
         match value {
-            MaybeTyped::Typed(t) => MyMaybeTyped::Typed(t),
-            MaybeTyped::String(s) => MyMaybeTyped::String(s),
+            hayagriva::types::MaybeTyped::Typed(t) => MyMaybeTyped::Typed(t),
+            hayagriva::types::MaybeTyped::String(s) => MyMaybeTyped::String(s),
         }
     }
 }
@@ -1516,7 +1592,7 @@ impl BibEntryV2 {
     }
 }
 
-impl ProjectDataV2 {
+impl ProjectDataV3 {
     // TODO migrate to using path instead of the id and searching for it
     pub fn remove_section(&mut self, section_to_remove_id: &uuid::Uuid) -> Option<Section> {
         let pos = self.sections.iter().position(|section| match section {
@@ -1581,7 +1657,7 @@ impl ProjectDataV2 {
 }
 
 pub fn get_section_by_path_mut<'a>(
-    project: &'a mut RwLockWriteGuard<ProjectDataV2>,
+    project: &'a mut RwLockWriteGuard<ProjectDataV3>,
     path: &Vec<uuid::Uuid>
 ) -> Result<&'a mut Section, ApiError> {
 
@@ -1631,7 +1707,7 @@ pub fn get_section_by_path_mut<'a>(
     Ok(current_section)
 }
 
-pub fn get_section_by_path<'a>(project: &'a RwLockReadGuard<ProjectDataV2>, path: &Vec<uuid::Uuid>) -> Result<&'a Section, ApiError>{
+pub fn get_section_by_path<'a>(project: &'a RwLockReadGuard<ProjectDataV3>, path: &Vec<uuid::Uuid>) -> Result<&'a Section, ApiError>{
     let mut first_section : Option<&Section> = None;
 
     // Find first section
@@ -1677,22 +1753,40 @@ pub fn get_section_by_path<'a>(project: &'a RwLockReadGuard<ProjectDataV2>, path
 
 
 #[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
-pub struct User{
+/// Represents a user in the data storage.
+pub struct User {
     #[bincode(with_serde)]
+    /// The unique identifier for the user.
     pub id: uuid::Uuid,
+    /// The email address of the user.
     pub email: String,
+    /// The name of the user.
     pub name: String,
+    /// The hashed password of the user.
     pub password_hash: String,
+    /// The timestamp until which the user is locked out (if applicable).
     pub locked_until: Option<u64>,
-    pub login_attempts: Vec<u64>
+    /// The list of login attempts made by the user.
+    pub login_attempts: Vec<u64>,
 }
 
-impl User{
-    pub fn new(email: String, name: String, password: String) -> Self{
+impl User {
+    /// Creates a new user with the specified email, name, and password.
+    ///
+    /// # Arguments
+    ///
+    /// * `email` - The email of the user.
+    /// * `name` - The name of the user.
+    /// * `password` - The password of the user.
+    ///
+    /// # Returns
+    ///
+    /// A new `User` instance with the specified email, name, and password.
+    pub fn new(email: String, name: String, password: String) -> Self {
         let salt = argon2::password_hash::SaltString::generate(&mut OsRng);
-        let password_hash = Argon2::default().hash_password(&password.as_bytes(),&salt).unwrap().to_string();
+        let password_hash = Argon2::default().hash_password(&password.as_bytes(), &salt).unwrap().to_string();
 
-        User{
+        User {
             id: uuid::Uuid::new_v4(),
             email,
             name,
@@ -1715,32 +1809,15 @@ pub struct ProjectTemplateV1 {
 pub struct ProjectTemplateV2 {
     #[bincode(with_serde)]
     pub id: uuid::Uuid,
+    /// Unique version id, changed if a Template is changed.
+    /// Used to detect if a template on a rendering server needs to be updated
+    #[bincode(with_serde)]
+    pub version: Option<uuid::Uuid>,
     pub name: String,
     pub description: String,
-    pub export_formats: Vec<ExportFormat>,
+    pub export_formats: HashMap<String, ExportFormat>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
-pub enum ExportType{
-    PDF,
-    DOCX,
-    DOC,
-    HTML,
-    LATEX,
-    EPUB,
-    ODT,
-    MOBI
-}
-
-#[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone)]
-pub struct ExportFormat{
-    pub slug: String,
-    pub name: String,
-    pub export_type: ExportType,
-    pub used_as_preview: bool,
-    pub add_cover: bool,
-    pub add_backcover: bool,
-}
 
 pub async fn save_data_worker(data_storage: Arc<DataStorage>, project_storage: Arc<ProjectStorage>, settings: Settings){
     tokio::spawn(async move {
@@ -1978,50 +2055,5 @@ impl From<MyDurationRange> for DurationRange {
             start: value.start,
             end: value.end,
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn setup_test_environment() {
-        std::fs::remove_dir_all("test_data");
-        std::fs::create_dir_all("test_data/projects").unwrap();
-    }
-
-    fn generate_settings() -> Settings {
-        Settings {
-            app_title: "Test".to_string(),
-            project_cache_time: 4,
-            data_path: "test_data".to_string(),
-            file_lock_timeout: 10,
-            backup_to_file_interval: 120,
-            max_rendering_threads: 10,
-            max_import_threads: 2,
-            chromium_path: None,
-            zotero_translation_server: "https://translation-server.anghenfil.de".to_string(),
-            version: "".to_string(),
-        }
-    }
-
-    #[rocket::tokio::test]
-    async fn test_save_project_to_disk() {
-        setup_test_environment();
-        let test_project = ProjectDataV2 {
-            name: "Test Project".to_string(),
-            description: None,
-            template_id: Default::default(),
-            last_interaction: 0,
-            metadata: None,
-            settings: None,
-            sections: vec![],
-            bibliography: Default::default(),
-        };
-        let settings = generate_settings();
-        let project_storage = ProjectStorage::new();
-        let id = project_storage.insert_project(test_project, &settings).await.unwrap();
-        assert!(std::path::Path::new(&format!("test_data/projects/{}.bincode", id)).exists());
     }
 }

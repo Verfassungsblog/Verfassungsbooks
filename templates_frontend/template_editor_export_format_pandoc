@@ -1,0 +1,155 @@
+<div class="export_step_pandoc export_step card mt-1" data-export-step-id="{{id}}" data-export-step-type="pandoc">
+    <div class="card-header d-flex justify-content-between">[Pandoc Export Step] {{name}}
+
+    <div class="d-flex">    <button class="btn btn-xsm-square justify-content-center align-items-center d-flex export_step_delete_btn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="red" class="bi bi-trash3" viewBox="0 0 16 16">
+        <path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5M11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47M8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5"></path>
+    </svg></button>
+        {{#if id}}
+    <button class="btn btn-xsm-square justify-content-center align-items-center d-flex export_step_move_up_btn">
+        <svg xmlns="http://www.w3.org/2000/svg" height="36" viewBox="0 -960 960 960" width="36"><path d="M480-528 296-344l-56-56 240-240 240 240-56 56-184-184Z"></path></svg>
+    </button>
+        <button class="btn btn-xsm-square justify-content-center align-items-center d-flex export_step_move_down_btn">
+            <svg xmlns="http://www.w3.org/2000/svg" height="36" viewBox="0 -960 960 960" width="36"><path d="M480-344 240-584l56-56 184 184 184-184 56 56-240 240Z"></path></svg>
+        </button>
+        {{/if}}
+    </div>
+
+    </div>
+    <div class="card-body">
+        <label>Name*</label>
+        <input class="form-control export_step_pandoc_name autosave" id="{{id}}_name" type="text" placeholder="e.g. Ebook Conversion" value="{{name}}">
+        <label>Input File*</label>
+        <input class="form-control export_step_pandoc_input_file autosave" id="{{id}}_input_file" type="text" placeholder="e.g. main.html" value="{{data.Pandoc.input_file}}">
+        <label>Input Format*</label>
+        <select id="{{id}}_input_format" class="form-select export_step_pandoc_input_format autosave">
+            <option>Select Input Format</option>
+            <option value="BibTex" {{#if data.Pandoc.input_format_extra.BibTex}}selected{{/if}}>BibTex</option>
+            <option value="BibLaTex" {{#if data.Pandoc.input_format_extra.BibLaTex}}selected{{/if}}>BibLaTex</option>
+            <option value="Bits" {{#if data.Pandoc.input_format_extra.Bits}}selected{{/if}}>Bits</option>
+            <option value="Commonmark" {{#if data.Pandoc.input_format_extra.Commonmark}}selected{{/if}}>Commonmark</option>
+            <option value="CommonmarkX" {{#if data.Pandoc.input_format_extra.CommonmarkX}}selected{{/if}}>CommonmarkX</option>
+            <option value="Creole" {{#if data.Pandoc.input_format_extra.Creole}}selected{{/if}}>Creole</option>
+            <option value="CslJson" {{#if data.Pandoc.input_format_extra.CslJson}}selected{{/if}}>CslJson</option>
+            <option value="Csv" {{#if data.Pandoc.input_format_extra.Csv}}selected{{/if}}>Csv</option>
+            <option value="Tsv" {{#if data.Pandoc.input_format_extra.Tsv}}selected{{/if}}>Tsv</option>
+            <option value="Djot" {{#if data.Pandoc.input_format_extra.Djot}}selected{{/if}}>Djot</option>
+            <option value="DocBook" {{#if data.Pandoc.input_format_extra.DocBook}}selected{{/if}}>DocBook</option>
+            <option value="Docx" {{#if data.Pandoc.input_format_extra.Docx}}selected{{/if}}>Docx</option>
+            <option value="DokuWiki" {{#if data.Pandoc.input_format_extra.DokuWiki}}selected{{/if}}>DokuWiki</option>
+            <option value="EndNoteXml" {{#if data.Pandoc.input_format_extra.EndNoteXml}}selected{{/if}}>EndNoteXml</option>
+            <option value="Epub" {{#if data.Pandoc.input_format_extra.Epub}}selected{{/if}}>Epub</option>
+            <option value="Fb2" {{#if data.Pandoc.input_format_extra.Fb2}}selected{{/if}}>Fb2</option>
+            <option value="Gfm" {{#if data.Pandoc.input_format_extra.Gfm}}selected{{/if}}>Gfm</option>
+            <option value="Haddock" {{#if data.Pandoc.input_format_extra.Haddock}}selected{{/if}}>Haddock</option>
+            <option value="Html" {{#if data.Pandoc.input_format_extra.Html}}selected{{/if}}>Html</option>
+            <option value="Ipynb" {{#if data.Pandoc.input_format_extra.Ipynb}}selected{{/if}}>Ipynb</option>
+            <option value="Jats" {{#if data.Pandoc.input_format_extra.Jats}}selected{{/if}}>Jats</option>
+            <option value="Jira" {{#if data.Pandoc.input_format_extra.Jira}}selected{{/if}}>Jira</option>
+            <option value="Json" {{#if data.Pandoc.input_format_extra.Json}}selected{{/if}}>Json</option>
+            <option value="Latex" {{#if data.Pandoc.input_format_extra.Latex}}selected{{/if}}>Latex</option>
+            <option value="Markdown" {{#if data.Pandoc.input_format_extra.Markdown}}selected{{/if}}>Markdown</option>
+            <option value="MarkdownMmd" {{#if data.Pandoc.input_format_extra.MarkdownMmd}}selected{{/if}}>MarkdownMmd</option>
+            <option value="MarkdownPhpExtra" {{#if data.Pandoc.input_format_extra.MarkdownPhpExtra}}selected{{/if}}>MarkdownPhpExtra</option>
+            <option value="MarkdownStrict" {{#if data.Pandoc.input_format_extra.MarkdownStrict}}selected{{/if}}>MarkdownStrict</option>
+            <option value="Mediawiki" {{#if data.Pandoc.input_format_extra.Mediawiki}}selected{{/if}}>Mediawiki</option>
+            <option value="Man" {{#if data.Pandoc.input_format_extra.Man}}selected{{/if}}>Man</option>
+            <option value="Muse" {{#if data.Pandoc.input_format_extra.Muse}}selected{{/if}}>Muse</option>
+            <option value="Native" {{#if data.Pandoc.input_format_extra.Native}}selected{{/if}}>Native</option>
+            <option value="Odt" {{#if data.Pandoc.input_format_extra.Odt}}selected{{/if}}>Odt</option>
+            <option value="Opml" {{#if data.Pandoc.input_format_extra.Opml}}selected{{/if}}>Opml</option>
+            <option value="Org" {{#if data.Pandoc.input_format_extra.Org}}selected{{/if}}>Org</option>
+            <option value="Ris" {{#if data.Pandoc.input_format_extra.Ris}}selected{{/if}}>Ris</option>
+            <option value="Rtf" {{#if data.Pandoc.input_format_extra.Rtf}}selected{{/if}}>Rtf</option>
+            <option value="Rst" {{#if data.Pandoc.input_format_extra.Rst}}selected{{/if}}>Rst</option>
+            <option value="T2t" {{#if data.Pandoc.input_format_extra.T2t}}selected{{/if}}>T2t</option>
+            <option value="Textile" {{#if data.Pandoc.input_format_extra.Textile}}selected{{/if}}>Textile</option>
+            <option value="Tikiwiki" {{#if data.Pandoc.input_format_extra.Tikiwiki}}selected{{/if}}>Tikiwiki</option>
+            <option value="Twiki" {{#if data.Pandoc.input_format_extra.Twiki}}selected{{/if}}>Twiki</option>
+            <option value="Typst" {{#if data.Pandoc.input_format_extra.Typst}}selected{{/if}}>Typst</option>
+            <option value="Vimwiki" {{#if data.Pandoc.input_format_extra.Vimwiki}}selected{{/if}}>Vimwiki</option>
+        </select>
+        <label>Output File*</label>
+        <input id="{{id}}_output_file" class="form-control export_step_pandoc_output_file autosave" type="text" placeholder="e.g. ebook.epub" value="{{data.Pandoc.output_file}}">
+        <label>Output Format*</label>
+        <select id="{{id}}_output_format" class="form-select export_step_pandoc_output_format autosave">
+            <option value="">Select Output Format</option>
+            <option value="Asciidoc" {{#if data.Pandoc.output_format_extra.Asciidoc}}selected{{/if}}>Asciidoc</option>
+            <option value="AsciidocLegacy" {{#if data.Pandoc.output_format_extra.AsciidocLegacy}}selected{{/if}}>AsciidocLegacy</option>
+            <option value="Asciidoctor" {{#if data.Pandoc.output_format_extra.Asciidoctor}}selected{{/if}}>Asciidoctor</option>
+            <option value="Beamer" {{#if data.Pandoc.output_format_extra.Beamer}}selected{{/if}}>Beamer</option>
+            <option value="Bibtex" {{#if data.Pandoc.output_format_extra.Bibtex}}selected{{/if}}>Bibtex</option>
+            <option value="Biblatex" {{#if data.Pandoc.output_format_extra.Biblatex}}selected{{/if}}>Biblatex</option>
+            <option value="Chunkedhtml" {{#if data.Pandoc.output_format_extra.Chunkedhtml}}selected{{/if}}>Chunkedhtml</option>
+            <option value="Commonmark" {{#if data.Pandoc.output_format_extra.Commonmark}}selected{{/if}}>Commonmark</option>
+            <option value="CommonmarkX" {{#if data.Pandoc.output_format_extra.CommonmarkX}}selected{{/if}}>CommonmarkX</option>
+            <option value="Context" {{#if data.Pandoc.output_format_extra.Context}}selected{{/if}}>Context</option>
+            <option value="Csljson" {{#if data.Pandoc.output_format_extra.Csljson}}selected{{/if}}>Csljson</option>
+            <option value="Djot" {{#if data.Pandoc.output_format_extra.Djot}}selected{{/if}}>Djot</option>
+            <option value="Docbook" {{#if data.Pandoc.output_format_extra.Docbook}}selected{{/if}}>Docbook</option>
+            <option value="Docbook4" {{#if data.Pandoc.output_format_extra.Docbook4}}selected{{/if}}>Docbook4</option>
+            <option value="Docbook5" {{#if data.Pandoc.output_format_extra.Docbook5}}selected{{/if}}>Docbook5</option>
+            <option value="Docx" {{#if data.Pandoc.output_format_extra.Docx}}selected{{/if}}>Docx</option>
+            <option value="Dokuwiki" {{#if data.Pandoc.output_format_extra.Dokuwiki}}selected{{/if}}>Dokuwiki</option>
+            <option value="Epub" {{#if data.Pandoc.output_format_extra.Epub}}selected{{/if}}>Epub</option>
+            <option value="Epub3" {{#if data.Pandoc.output_format_extra.Epub3}}selected{{/if}}>Epub3</option>
+            <option value="Epub2" {{#if data.Pandoc.output_format_extra.Epub2}}selected{{/if}}>Epub2</option>
+            <option value="Fb2" {{#if data.Pandoc.output_format_extra.Fb2}}selected{{/if}}>Fb2</option>
+            <option value="Gfm" {{#if data.Pandoc.output_format_extra.Gfm}}selected{{/if}}>Gfm</option>
+            <option value="Haddock" {{#if data.Pandoc.output_format_extra.Haddock}}selected{{/if}}>Haddock</option>
+            <option value="Html" {{#if data.Pandoc.output_format_extra.Html}}selected{{/if}}>Html</option>
+            <option value="Html5" {{#if data.Pandoc.output_format_extra.Html5}}selected{{/if}}>Html5</option>
+            <option value="Html4" {{#if data.Pandoc.output_format_extra.Html4}}selected{{/if}}>Html4</option>
+            <option value="Icml" {{#if data.Pandoc.output_format_extra.Icml}}selected{{/if}}>Icml</option>
+            <option value="Ipynb" {{#if data.Pandoc.output_format_extra.Ipynb}}selected{{/if}}>Ipynb</option>
+            <option value="JatsArchiving" {{#if data.Pandoc.output_format_extra.JatsArchiving}}selected{{/if}}>JatsArchiving</option>
+            <option value="JatsArticleauthoring" {{#if data.Pandoc.output_format_extra.JatsArticleauthoring}}selected{{/if}}>JatsArticleauthoring</option>
+            <option value="JatsPublishing" {{#if data.Pandoc.output_format_extra.JatsPublishing}}selected{{/if}}>JatsPublishing</option>
+            <option value="Jats" {{#if data.Pandoc.output_format_extra.Jats}}selected{{/if}}>Jats</option>
+            <option value="Jira" {{#if data.Pandoc.output_format_extra.Jira}}selected{{/if}}>Jira</option>
+            <option value="Json" {{#if data.Pandoc.output_format_extra.Json}}selected{{/if}}>Json</option>
+            <option value="Latex" {{#if data.Pandoc.output_format_extra.Latex}}selected{{/if}}>Latex</option>
+            <option value="Man" {{#if data.Pandoc.output_format_extra.Man}}selected{{/if}}>Man</option>
+            <option value="Markdown" {{#if data.Pandoc.output_format_extra.Markdown}}selected{{/if}}>Markdown</option>
+            <option value="MarkdownMmd" {{#if data.Pandoc.output_format_extra.MarkdownMmd}}selected{{/if}}>MarkdownMmd</option>
+            <option value="MarkdownPhpextra" {{#if data.Pandoc.output_format_extra.MarkdownPhpextra}}selected{{/if}}>MarkdownPhpextra</option>
+            <option value="MarkdownStrict" {{#if data.Pandoc.output_format_extra.MarkdownStrict}}selected{{/if}}>MarkdownStrict</option>
+            <option value="Markua" {{#if data.Pandoc.output_format_extra.Markua}}selected{{/if}}>Markua</option>
+            <option value="Mediawiki" {{#if data.Pandoc.output_format_extra.Mediawiki}}selected{{/if}}>Mediawiki</option>
+            <option value="Ms" {{#if data.Pandoc.output_format_extra.Ms}}selected{{/if}}>Ms</option>
+            <option value="Muse" {{#if data.Pandoc.output_format_extra.Muse}}selected{{/if}}>Muse</option>
+            <option value="Native" {{#if data.Pandoc.output_format_extra.Native}}selected{{/if}}>Native</option>
+            <option value="Odt" {{#if data.Pandoc.output_format_extra.Odt}}selected{{/if}}>Odt</option>
+            <option value="Opml" {{#if data.Pandoc.output_format_extra.Opml}}selected{{/if}}>Opml</option>
+            <option value="Opendocument" {{#if data.Pandoc.output_format_extra.Opendocument}}selected{{/if}}>Opendocument</option>
+            <option value="Org" {{#if data.Pandoc.output_format_extra.Org}}selected{{/if}}>Org</option>
+            <option value="Pdf" {{#if data.Pandoc.output_format_extra.Pdf}}selected{{/if}}>Pdf</option>
+            <option value="Plain" {{#if data.Pandoc.output_format_extra.Plain}}selected{{/if}}>Plain</option>
+            <option value="Pptx" {{#if data.Pandoc.output_format_extra.Pptx}}selected{{/if}}>Pptx</option>
+            <option value="Rst" {{#if data.Pandoc.output_format_extra.Rst}}selected{{/if}}>Rst</option>
+            <option value="Rtf" {{#if data.Pandoc.output_format_extra.Rtf}}selected{{/if}}>Rtf</option>
+            <option value="Texinfo" {{#if data.Pandoc.output_format_extra.Texinfo}}selected{{/if}}>Texinfo</option>
+            <option value="Textile" {{#if data.Pandoc.output_format_extra.Textile}}selected{{/if}}>Textile</option>
+            <option value="Slideous" {{#if data.Pandoc.output_format_extra.Slideous}}selected{{/if}}>Slideous</option>
+            <option value="Slidy" {{#if data.Pandoc.output_format_extra.Slidy}}selected{{/if}}>Slidy</option>
+            <option value="Dzslides" {{#if data.Pandoc.output_format_extra.Dzslides}}selected{{/if}}>Dzslides</option>
+            <option value="Revealjs" {{#if data.Pandoc.output_format_extra.Revealjs}}selected{{/if}}>Revealjs</option>
+            <option value="S5" {{#if data.Pandoc.output_format_extra.S5}}selected{{/if}}>S5</option>
+            <option value="Tei" {{#if data.Pandoc.output_format_extra.Tei}}selected{{/if}}>Tei</option>
+            <option value="Typst" {{#if data.Pandoc.output_format_extra.Typst}}selected{{/if}}>Typst</option>
+            <option value="Xwiki" {{#if data.Pandoc.output_format_extra.Xwiki}}selected{{/if}}>Xwiki</option>
+            <option value="Zimwiki" {{#if data.Pandoc.output_format_extra.Zimwiki}}selected{{/if}}>Zimwiki</option>
+        </select>
+        <label>Shift heading level by</label>
+        <input id="{{id}}_shift_heading_level_by" type="number" class="form-control export_step_pandoc_shift_heading_level_by autosave" value="{{data.Pandoc.shift_heading_level_by}}">
+        <label>Metadata File</label>
+        <input id="{{id}}_metadata_file" type="text" class="form-control export_step_pandoc_metadata_file autosave" placeholder="metadata.yaml" value="{{data.Pandoc.metadata_file}}">
+        <label>Epub Cover Image Path</label>
+        <input id="{{id}}_cover_image_path" type="text" class="form-control export_step_pandoc_epub_cover_image_path autosave" placeholder="cover.jpg" value="{{data.Pandoc.epub_cover_image_path}}">
+        <label>Epub Metadata File</label>
+        <input id="{{id}}_epub_metadata_file" type="text" class="form-control export_step_pandoc_epub_metadata_file autosave" placeholder="meta.xml" value="{{data.Pandoc.epub_metadata_file}}">
+        <label>Epub title page</label>
+        <input id="{{id}}_epub_title_page"  type="checkbox" class="form-check export_step_pandoc_epub_title_page autosave" {{#if data.Pandoc.epub_title_page}}checked{{/if}}>
+        <label>Epub Embed Fonts (one path per line)</label>
+        <textarea id="{{id}}_embed_fonts" class="form-control export_step_pandoc_embed_fonts autosave">{{#each data.Pandoc.epub_embed_fonts}}{{this}}&#10;{{/each}}</textarea>
+    </div>
+</div>

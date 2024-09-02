@@ -15,11 +15,25 @@ pub struct Settings{
     /// How long should the app wait for a file lock in ms
     pub file_lock_timeout: u64,
     pub backup_to_file_interval: u64,
-    pub max_rendering_threads : u64,
+    pub max_connections_to_rendering_server: u64,
     pub max_import_threads: u64,
     pub chromium_path: Option<String>,
     pub zotero_translation_server: String,
+    pub mtls_port: u64,
+    pub mtls_host: String,
+    pub export_servers: Vec<ExportServer>,
+    pub ca_cert_path: String,
+    pub client_cert_path: String,
+    pub client_key_path: String,
+    pub revocation_list_path: String,
     pub version: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct ExportServer{
+    pub hostname: String,
+    pub port: u32,
+    pub domain_name: String,
 }
 
 impl Settings{

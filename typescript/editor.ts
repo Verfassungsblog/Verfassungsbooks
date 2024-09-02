@@ -9,8 +9,6 @@ const ImageTool: any = require('@editorjs/image');
 const List: any = require("@editorjs/list");
 import * as API from "./api_requests";
 import * as Tools from "./tools";
-import * as RenderPDF from "./RenderPDF";
-import * as Export from "./Export";
 import {CustomStyleTool} from "./CustomStyleTool";
 import {CitationTool} from "./CitationTool";
 import {BlockStyleTune} from "./BlockStyleTune";
@@ -20,8 +18,6 @@ let editor: EditorJS | null = null;
 
 export async function show_editor(){
     let first_change = true;
-    document.getElementById("editor_render_project_btn").addEventListener("click", RenderPDF.render_project_listener);
-    document.getElementById("editor_export_project_btn").addEventListener("click", Export.export_project_listener);
     try {
         // @ts-ignore
         let data = (await API.send_get_content_blocks(globalThis.project_id, globalThis.section_path)).data;

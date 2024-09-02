@@ -2,6 +2,7 @@ use crate::projects::api::{UploadedImage, Patch};
 use chrono::NaiveDateTime;
 use bincode::{Encode, Decode};
 use serde::{Serialize, Deserialize};
+use vb_exchange::projects::*;
 
 /// Enum to differentiate between real sections and the position of the table of contents
 #[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
@@ -17,13 +18,6 @@ impl SectionOrToc{
             SectionOrToc::Toc => None,
         }
     }
-}
-
-/// Struct holds all project-level settings
-#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
-pub struct ProjectSettings{
-    pub toc_enabled: bool,
-    pub csl_style: Option<String>,
 }
 
 
@@ -70,27 +64,6 @@ pub struct ProjectMetadata{
     pub edition: Option<String>,
     /// Publisher of the book
     pub publisher: Option<String>,
-}
-
-/// Represents a Keyword, optionally with a GND ID
-#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
-pub struct Keyword{
-    pub title: String,
-    pub gnd: Option<Identifier>,
-}
-
-/// Holds all different (CC) licenses or a custom license
-#[allow(non_camel_case_types)]
-#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
-pub enum License{
-    CC0,
-    CC_BY_4,
-    CC_BY_SA_4,
-    CC_BY_ND_4,
-    CC_BY_NC_4,
-    CC_BY_NC_SA_4,
-    CC_BY_NC_ND_4,
-    Other(String),
 }
 
 
@@ -363,92 +336,6 @@ pub struct SectionMetadata{
     #[bincode(with_serde)]
     pub last_changed: Option<NaiveDateTime>,
     pub lang: Option<Language>,
-}
-
-/// Enum to differentiate between all supported languages
-#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq, FromFormField)]
-pub enum Language{
-    DE,
-    EN
-}
-
-/// Struct holds all data for a person (e.g. author or editor)
-#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
-pub struct Person {
-    #[bincode(with_serde)]
-    pub id: Option<uuid::Uuid>,
-    pub first_names: Option<String>,
-    pub last_names: String,
-    pub orcid: Option<Identifier>,
-    pub gnd: Option<Identifier>,
-    pub bios: Option<Vec<Biography>>,
-    pub ror: Option<Identifier>,
-}
-
-/// Struct holds a biography in a specified language for a person
-#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
-pub struct Biography {
-    pub content: String,
-    pub lang: Option<Language>,
-}
-
-/// Represents an identifier (e.g. DOI, ISBN, ISSN, URL, URN, ORCID, ROR, ...)
-#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
-pub struct Identifier{
-    #[bincode(with_serde)]
-    pub id: Option<uuid::Uuid>,
-    pub name: String,
-    pub value: String,
-    pub identifier_type: IdentifierType,
-}
-
-impl Identifier{
-    /// Create new identifier
-    ///
-    /// Arguments
-    /// * `identifier_type` - Type of identifier as [`IdentifierType`]
-    /// * `value` - Value of identifier as [`String`]
-    /// * `name` - Name of identifier as [`Option<String>`] - optional
-    ///     if not given, the name of the identifier type is used
-    ///
-    /// Returns
-    /// * `Identifier` - New identifier
-    pub fn new(identifier_type: IdentifierType, value: String, name: Option<String>) -> Self{
-        // If no name is given, use the name of the identifier type
-        let name = match name{
-            Some(name) => name,
-            None => match &identifier_type{
-                IdentifierType::DOI => "DOI".to_string(),
-                IdentifierType::ISBN => "ISBN".to_string(),
-                IdentifierType::ISSN => "ISSN".to_string(),
-                IdentifierType::URL => "URL".to_string(),
-                IdentifierType::URN => "URN".to_string(),
-                IdentifierType::ORCID => "ORCID".to_string(),
-                IdentifierType::ROR => "ROR".to_string(),
-                IdentifierType::GND => "GND".to_string(),
-                IdentifierType::Other(other) => other.clone(),
-            },
-        };
-        Self{
-            id: Some(uuid::Uuid::new_v4()),
-            name,
-            value,
-            identifier_type,
-        }
-    }
-}
-
-#[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
-pub enum IdentifierType{
-    DOI,
-    ISBN,
-    ISSN,
-    URL,
-    URN,
-    ORCID,
-    ROR,
-    GND,
-    Other(String),
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
@@ -735,16 +622,6 @@ impl From<NewContentBlock> for NewContentBlockEditorJSFormat{
 }
 
 #[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone, PartialEq)]
-pub enum BlockType{
-    Paragraph,
-    Heading,
-    Raw,
-    List,
-    Quote,
-    Image
-}
-
-#[derive(Debug, Serialize, Deserialize, Encode, Decode, Clone, PartialEq)]
 pub enum BlockData{
     Paragraph{text: String},
     Heading{text: String, level: u8},
@@ -776,4 +653,3 @@ pub mod editor;
 pub mod list;
 pub mod api;
 pub mod bibliography_editor;
-pub mod templates_editor;

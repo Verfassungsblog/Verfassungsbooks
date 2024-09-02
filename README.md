@@ -8,4 +8,15 @@ Developer: [kd@verfassungsblog.de](mailto:kd@verfassungsblog.de)
 
 General inquires and feedback: [oa@verfassungsblog.de](mailto:oa@verfassungsblog.de)
 
-Test
+## Build Status
+Master Branch: 
+[![Master Branch](https://builds.sr.ht/~verfassungsblog/Verfassungsbooks/commits/master.svg)](https://builds.sr.ht/~verfassungsblog/Verfassungsbooks/commits/master?)
+
+Staging Branch: [![Staging Branch](https://builds.sr.ht/~verfassungsblog/Verfassungsbooks/commits/staging.svg)](https://builds.sr.ht/~verfassungsblog/Verfassungsbooks/commits/staging?)
+
+## Build Instructions
+0. Make sure that you have rustc, cargo and npm installed & in your path
+1. Clone this repository
+2. Install handlebars && tsc : ``npm install -g handlebars typescript``
+3. cd into typescript & run ``npm install``
+4. Build with cargo: ``cargo build``

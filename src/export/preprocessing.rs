@@ -1,131 +1,32 @@
+use hayagriva::{BufWriteFormat, CitationItem, CitationRequest};
+use vb_exchange::projects::{Language, Person, PreparedContentBlock, PreparedEndnote, PreparedLanguage, PreparedMetadata, PreparedSection, PreparedSectionMetadata};
+use vb_exchange::projects::PreparedLicense;
 use std::collections::HashMap;
-use std::fs;
 use std::io::Cursor;
-use std::path::Path;
-use std::process::Command;
+use std::path::PathBuf;
 use std::sync::Arc;
-use handlebars::{Context, DirectorySourceOptions, Handlebars, Helper, HelperResult, JsonRender, Output, RenderContext, RenderError, RenderErrorReason};
+use async_recursion::async_recursion;
+use base64::Engine;
+use base64::engine::general_purpose;
+use hayagriva::{BibliographyDriver, BibliographyRequest};
+use hayagriva::citationberg::LocaleCode;
 use hyphenation::{Hyphenator, Load, Standard};
-use image::{ImageOutputFormat, Luma};
+use image::{DynamicImage, ImageOutputFormat};
 use regex::Regex;
-use rocket::form::validate::Contains;
-use qrcode::QrCode;
-use base64::prelude::*;
-use hayagriva::{BibliographyDriver, BibliographyRequest, BufWriteFormat, CitationItem, CitationRequest};
-use hayagriva::citationberg::{LocaleCode};
-use crate::data_storage::{DataStorage, ProjectDataV2};
-use crate::export::{PreparedContentBlock, PreparedEndnote, PreparedLanguage, PreparedLicense, PreparedMetadata, PreparedProject, PreparedSection, PreparedSectionMetadata};
-use crate::export::rendering_manager::RenderingError;
-use crate::projects::{BlockData, Language, NewContentBlock, Section, SectionOrToc};
-use crate::settings::Settings;
+use vb_exchange::projects::PreparedProject;
+use vb_exchange::RenderingError;
+use crate::data_storage::{DataStorage, ProjectDataV3};
+use crate::projects::{BlockData, NewContentBlock, Section, SectionOrToc};
 use crate::utils::csl::CslData;
 
-pub fn render_project(prepared_project: PreparedProject, project_id: uuid::Uuid, template_id: uuid::Uuid, temp_dir: &Path, settings: &Settings) -> Result<(), RenderingError>{
-    // Load templates
-    let mut handlebars = Handlebars::new();
-    match handlebars.register_templates_directory(Path::new(&format!("{}/templates/{}/templates", settings.data_path, template_id)), DirectorySourceOptions::default()){
-        Ok(_) => {}
-        Err(e) => {
-            eprintln!("Couldn't load templates for export: {}", e);
-            return Err(RenderingError::ErrorLoadingTemplate(e.to_string()));
-        }
-    }
-
-    // Add custom handler for qr codes
-    handlebars.register_helper("qrcode", Box::new(handlebars_qrcode_helper));
-
-    // Copy output folder contents to working folder
-    if let Err(e) =  crate::utils::fs_copy_recursive::copy_dir_all(format!("{}/templates/{}/output", settings.data_path, template_id), temp_dir){
-        eprintln!("Couldn't copy template to output directory: {}", e);
-        return Err(RenderingError::ErrorCopyingTemplate(e.to_string()));
-    }
-
-    // Copy uploads to working folder
-    if let Err(e) =  crate::utils::fs_copy_recursive::copy_dir_all(format!("{}/projects/{}/uploads", settings.data_path, project_id), temp_dir){
-        if e.kind() != std::io::ErrorKind::NotFound { // No uploads folder found, that's okay
-            eprintln!("Couldn't copy uploads to output directory: {}", e);
-            return Err(RenderingError::ErrorCopyingUploads(e.to_string()));
-        }
-    }
-
-    let res = match handlebars.render("main", &prepared_project){
-        Ok(res) => res,
-        Err(e) => {
-            eprintln!("Couldn't render template: {}", e);
-            return Err(RenderingError::IoError(e.to_string()));
-        }
-    };
-    if let Err(e) =  fs::write(temp_dir.join("index.html"), res){
-        eprintln!("Couldn't write rendered template to file: {}", e);
-        return Err(RenderingError::IoError(e.to_string()));
-    }
-
-    let mut args = vec!["build", "index.html", "-o", "output.pdf"];
-
-    let path = settings.chromium_path.clone();
-    let path_str = path.as_deref();
-    if let Some(path_str) = path_str {
-        args.push("--executable-browser");
-        args.push(path_str);
-        args.push("--timeout");
-        args.push("480000");
-    }
-
-    let output =  Command::new("vivliostyle").current_dir(temp_dir).args(args).output();
-    match output{
-        Ok(out) => {
-            if out.status.success(){
-                Ok(())
-            }else{
-                let out = String::from_utf8_lossy(&out.stderr);
-                eprintln!("Export failed: {}", out);
-                Err(RenderingError::VivliostyleError(out.to_string()))
-            }
-        }
-        Err(e) => {
-            println!("Couldn't run vivliostyle: {}", e);
-            Err(RenderingError::VivliostyleError(e.to_string()))
-        }
-    }
-}
-
-fn handlebars_qrcode_helper(h: &Helper, _: &Handlebars, _: &Context, _rc: &mut RenderContext, out: &mut dyn Output) -> HelperResult{
-    let param = h.param(0).ok_or(RenderErrorReason::ParamNotFoundForIndex("qrcode", 0))?;
-
-    let val : String = param.value().render();
-
-    let qr_code = match QrCode::new(val.to_string()){
-        Ok(qr_code) => qr_code,
-        Err(e) => {
-            eprintln!("Couldn't create qr code: {}", e);
-            return Err(RenderError::from(RenderErrorReason::Other(format!("Couldn't create qr code: {}", e))));
-        }
-    };
-
-    let image = qr_code.render::<Luma<u8>>().build();
-    let image = image::DynamicImage::from(image);
-    let mut buf = Cursor::new(Vec::new());
-    match image.write_to(&mut buf, ImageOutputFormat::Jpeg(100)){
-        Ok(_) => {}
-        Err(e) => {
-            eprintln!("Couldn't write qr code to buffer: {}", e);
-            return Err(RenderError::from(RenderErrorReason::Other(format!("Couldn't write qr code to buffer: {}", e))));
-        }
-    }
-    let encoded_image = BASE64_STANDARD.encode(buf.get_ref());
-
-    out.write(&format!("<img class=\"qrcode\" src=\"data:image/jpeg;base64,{}\" alt=\"QR Code\" />", encoded_image))?;
-    Ok(())
-}
-
-pub fn prepare_project(project_data: ProjectDataV2, data_storage: Arc<DataStorage>, csl_data: Arc<CslData>) -> Result<PreparedProject, RenderingError>{
+pub async fn prepare_project(project_data: ProjectDataV3, data_storage: Arc<DataStorage>, csl_data: Arc<CslData>, sections_to_include: Option<Vec<uuid::Uuid>>, project_id: &uuid::Uuid) -> Result<PreparedProject, RenderingError>{
     let citation_bib = render_citations(&project_data, csl_data);
 
     let metadata = match project_data.metadata{
         Some(metadata) => metadata,
         None => return Err(RenderingError::ProjectMetadataMissing)
     };
-    
+
     let mut authors = vec![];
     for author in metadata.authors.unwrap_or_default(){
         let person = match data_storage.get_person(&author){
@@ -164,7 +65,18 @@ pub fn prepare_project(project_data: ProjectDataV2, data_storage: Arc<DataStorag
     let mut data = vec![];
     for section in project_data.sections{
         if let SectionOrToc::Section(section) = section{
-            data.push(render_section(section, data_storage.clone(), &citation_bib))
+            if let Some(id) = section.id{
+                // Check if only specified sections should be included
+                match &sections_to_include{
+                    Some(sections_to_include) => { // Only prepare specified sections
+                        if sections_to_include.contains(&id){
+                            data.push(render_section(section, data_storage.clone(), &citation_bib, project_id).await)
+                        }
+                    },
+                    None => data.push(render_section(section, data_storage.clone(), &citation_bib, project_id).await) // Prepare all sections
+                }
+
+            }
         }
     }
 
@@ -200,27 +112,89 @@ pub fn prepare_project(project_data: ProjectDataV2, data_storage: Arc<DataStorag
     Ok(PreparedProject{
         metadata,
         settings: project_data.settings,
-        data,
+        sections: data,
     })
 }
 
-fn add_remaining_authors_editors_from_section(section: &PreparedSection, authors: &mut Vec<crate::projects::Person>, editors: &mut Vec<crate::projects::Person>){
-    for author in section.metadata.authors.iter(){
-        if !authors.contains(author){
-            authors.push(author.clone());
+pub fn render_citations(project: &ProjectDataV3, csl_data: Arc<CslData>) -> HashMap<String, String>{
+    //TODO: remove unused citation entrys to avoid bibliography entries with no citations
+    let mut driver: BibliographyDriver<hayagriva::Entry> = BibliographyDriver::new();
+    let mut res = HashMap::new();
+
+    let mut bib = hayagriva::Library::new();
+    for (_, entry) in project.bibliography.iter() {
+        let entry: hayagriva::Entry = entry.clone().into();
+        bib.push(&entry);
+    }
+
+    let mut items = Vec::new();
+    for entry in bib.iter(){
+        let cit_entry = CitationItem::with_entry(entry);
+        items.push(cit_entry);
+    }
+
+    let style = match &project.settings{
+        None => {
+            csl_data.styles.iter().next().expect("No CSL styles found").1
+        }
+        Some(settings) => {
+            match &settings.csl_style{
+                None => {
+                    csl_data.styles.iter().next().expect("No CSL styles found").1
+                }
+                Some(style) => {
+                    match csl_data.styles.get(style){
+                        None => {
+                            eprintln!("Couldn't find CSL style with id {}, using first csl style", style);
+                            csl_data.styles.iter().next().expect("No CSL styles found").1
+                        }
+                        Some(style) => {
+                            style
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+    for entry in items{
+        driver.citation(CitationRequest::from_items(vec![entry], style, csl_data.locales.as_slice()));
+    }
+
+    let csl_locale = match &project.settings.clone(){
+        Some(settings) => {
+            match &settings.csl_language_code {
+                Some(str) => LocaleCode(str.clone()),
+                None => LocaleCode("en-us".to_string()),
+            }
+        },
+        None => {
+            LocaleCode("en-us".to_string())
+        }
+    };
+
+    let result = driver.finish(BibliographyRequest{
+        style,
+        locale: Some(csl_locale),
+        locale_files: &csl_data.locales.as_slice(),
+    });
+    for (i, citation) in result.citations.iter().enumerate(){
+        match project.bibliography.iter().nth(i){
+            Some((key, _)) => {
+                let mut content = String::new();
+                citation.citation.write_buf(&mut content, BufWriteFormat::Html).unwrap();
+                res.insert(key.to_string(),content);
+            }
+            None => {
+                eprintln!("Citation with index {} has no corresponding bibliography entry", i);
+            }
         }
     }
-    for editor in section.metadata.editors.iter(){
-        if !editors.contains(editor){
-            editors.push(editor.clone());
-        }
-    }
-    for sub_section in section.sub_sections.iter(){
-        add_remaining_authors_editors_from_section(sub_section, authors, editors);
-    }
+    res
 }
 
-pub fn render_section(section: Section, data_storage: Arc<DataStorage>, citation_bib: &HashMap<String, String>) -> PreparedSection{
+#[async_recursion]
+pub async fn render_section(section: Section, data_storage: Arc<DataStorage>, citation_bib: &HashMap<String, String>, project_id: &uuid::Uuid) -> PreparedSection{
     let published = match section.metadata.published{
         Some(date) => Some(date.format("%d.%m.%Y").to_string()),
         None => None
@@ -293,12 +267,12 @@ pub fn render_section(section: Section, data_storage: Arc<DataStorage>, citation
     let mut endnote_storage: Vec<(uuid::Uuid, String)> = vec![];
 
     for content_block in section.children{
-        content.push(render_content_block(content_block, &mut endnote_storage, &dict, &citation_bib));
+        content.push(render_content_block(content_block, &mut endnote_storage, &dict, &citation_bib, project_id).await);
     }
 
     let mut sub_sections = vec![];
     for sub_section in section.sub_sections{
-        sub_sections.push(render_section(sub_section, data_storage.clone(), &citation_bib));
+        sub_sections.push(render_section(sub_section, data_storage.clone(), &citation_bib, project_id).await);
     }
 
     let mut endnotes = vec![];
@@ -317,7 +291,35 @@ pub fn render_section(section: Section, data_storage: Arc<DataStorage>, citation
     }
 }
 
-pub fn render_content_block(block: NewContentBlock, endnote_storage: &mut Vec<(uuid::Uuid, String)>, dict: &Standard, citation_bib: &HashMap<String, String>) -> PreparedContentBlock{
+pub fn hyphenate_text(text: String, dict: &hyphenation::Standard) -> String{
+    let mut res = String::new();
+    let mut word_iter = text.split_whitespace().peekable();
+    while let Some(word) = word_iter.next(){
+        if word.starts_with("class=\"") || word.contains("<") || word.contains(">") || word.contains("=") || word.contains("&"){
+            res.push_str(&format!("{} ", word));
+            continue
+        }
+        let hyphenated = dict.hyphenate(word);
+
+        let mut word_res = String::new();
+        let mut iter = hyphenated.into_iter().segments().peekable();
+        while let Some(segment) = iter.next(){
+            word_res.push_str(&segment);
+            if iter.peek().is_some(){
+                word_res.push('\u{00ad}');
+            }
+        }
+
+        res.push_str(&word_res);
+        if word_iter.peek().is_some(){
+            res.push(' ');
+        }
+    }
+    res
+}
+
+
+pub async fn render_content_block(block: NewContentBlock, endnote_storage: &mut Vec<(uuid::Uuid, String)>, dict: &Standard, citation_bib: &HashMap<String, String>, project_id: &uuid::Uuid) -> PreparedContentBlock{
     let css_classes_raw = block.css_classes.join(" ");
     let css_classes = if block.css_classes.len() > 0{
         format!(" class='{}'", block.css_classes.join(" "))
@@ -326,10 +328,10 @@ pub fn render_content_block(block: NewContentBlock, endnote_storage: &mut Vec<(u
     };
     let data: String = match block.data{
         BlockData::Paragraph {text} => {
-            format!("<p{}>{}</p>", css_classes, render_text(text, endnote_storage, dict, citation_bib))
+            format!("<p id='{}' {}>{}</p>", block.id, css_classes, render_text(text, endnote_storage, dict, citation_bib))
         }
         BlockData::Heading { text , level} => {
-            format!("<h{}{}>{}</h{}>", level, css_classes, render_text(text, endnote_storage, dict, citation_bib), level)
+            format!("<h{} id='{}' {}>{}</h{}>", level, block.id, css_classes, render_text(text, endnote_storage, dict, citation_bib), level)
         }
         BlockData::Raw { html } => {
             html
@@ -337,20 +339,39 @@ pub fn render_content_block(block: NewContentBlock, endnote_storage: &mut Vec<(u
         BlockData::List { style, items} => {
             let mut res = String::new();
             for item in items{
-                res.push_str(&format!("<li>{}</li>", render_text(item, endnote_storage, dict, citation_bib)));
+                res.push_str(&format!("<li id='{}'>{}</li>", block.id, render_text(item, endnote_storage, dict, citation_bib)));
             }
             if style == "ordered"{
-                format!("<ol{}>{}</ol>", css_classes, res)
+                format!("<ol id='{}' {}>{}</ol>", block.id, css_classes, res)
             }else{
-                format!("<ul{}>{}</ul>", css_classes, res)
+                format!("<ul id='{}' {}>{}</ul>", block.id, css_classes, res)
             }
         },
         BlockData::Quote{text, caption, alignment} => {
-            format!("<blockquote class=\"align-{} {}\"><p>{}</p><footer>{}</footer></blockquote>", alignment, css_classes_raw, render_text(text, endnote_storage, dict, citation_bib), render_text(caption, endnote_storage, dict, citation_bib))
+            format!("<blockquote id='{}' class=\"align-{} {}\"><p>{}</p><footer>{}</footer></blockquote>", block.id, alignment, css_classes_raw, render_text(text, endnote_storage, dict, citation_bib), render_text(caption, endnote_storage, dict, citation_bib))
         }
         BlockData::Image {file, caption, with_border: _, with_background: _, stretched: _} => {
-            // We use filename since all images are copied from te uploads directory to our temporary working dir and file.url represents the public url
-            format!("<img src=\"{}\" alt=\"{}\" {}/>", file.filename, caption.unwrap_or_default(), css_classes)
+            // Load image and convert to base64
+            let file = tokio::fs::read(PathBuf::from(format!("data/projects/{}/uploads/{}", project_id, file.filename))).await;
+            match file{
+                Ok(file) => {
+                    let img = image::load_from_memory(file.as_slice());
+                    match img{
+                        Ok(img) => {
+                            let img_as_base64 = image_to_base64(&img);
+                            format!("<img id='{}' src=\"{}\" alt=\"{}\" {}/>", block.id, img_as_base64, caption.unwrap_or_default(), css_classes)
+                        },
+                        Err(e) => {
+                            eprintln!("Couldn't load image: {}", e);
+                            String::new()
+                        }
+                    }
+                },
+                Err(e) => {
+                    eprintln!("Couldn't load included file: {}", e);
+                    String::new()
+                }
+            }
         }
     };
     PreparedContentBlock{
@@ -360,12 +381,14 @@ pub fn render_content_block(block: NewContentBlock, endnote_storage: &mut Vec<(u
     }
 }
 
-fn escape_html(text: &str) -> String{
-    text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")
+fn image_to_base64(img: &DynamicImage) -> String {
+    let mut image_data: Vec<u8> = Vec::new();
+    img.write_to(&mut Cursor::new(&mut image_data), ImageOutputFormat::Png)
+        .unwrap();
+    let res_base64 = general_purpose::STANDARD.encode(image_data);
+    format!("data:image/png;base64,{}", res_base64)
 }
-fn unescape_html(text: &str) -> String{
-    text.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"")
-}
+
 
 pub fn render_text(text: String, endnote_storage: &mut Vec<(uuid::Uuid, String)>, dict: &Standard, citation_bib: &HashMap<String, String>) -> String{
     let re: Regex = Regex::new(r#"<span(?:[^>]*?\bnote-type="([^"]+)")?(?:[^>]*?\bnote-content="([^"]+)")?[^>]*>.*?</span>"#).unwrap(); //TODO: DO NOT RECOMPILE REGEX, it's bad for performance
@@ -448,111 +471,25 @@ pub fn render_text(text: String, endnote_storage: &mut Vec<(uuid::Uuid, String)>
     hyphenate_text(res3.to_string(), dict)
 }
 
-pub fn render_citations(project: &ProjectDataV2, csl_data: Arc<CslData>) -> HashMap<String, String>{
-    //TODO: remove unused citation entrys to avoid bibliography entries with no citations
-    let mut driver: BibliographyDriver<hayagriva::Entry> = BibliographyDriver::new();
-    let mut res = HashMap::new();
-
-    let mut bib = hayagriva::Library::new();
-    for (_, entry) in project.bibliography.iter() {
-        let entry: hayagriva::Entry = entry.clone().into();
-        bib.push(&entry);
-    }
-
-    let mut items = Vec::new();
-    for entry in bib.iter(){
-        let cit_entry = CitationItem::with_entry(entry);
-        items.push(cit_entry);
-    }
-
-    let style = match &project.settings{
-        None => {
-            csl_data.styles.iter().next().expect("No CSL styles found").1
-        }
-        Some(settings) => {
-            match &settings.csl_style{
-                None => {
-                    csl_data.styles.iter().next().expect("No CSL styles found").1
-                }
-                Some(style) => {
-                    match csl_data.styles.get(style){
-                        None => {
-                            eprintln!("Couldn't find CSL style with id {}, using first csl style", style);
-                            csl_data.styles.iter().next().expect("No CSL styles found").1
-                        }
-                        Some(style) => {
-                            style
-                        }
-                    }
-                }
-            }
-        }
-    };
-
-    for entry in items{
-        driver.citation(CitationRequest::from_items(vec![entry], style, csl_data.locales.as_slice()));
-    }
-
-    let result = driver.finish(BibliographyRequest{
-        style,
-        locale: Some(LocaleCode("en-GB".to_string())), //TODO. set based on local
-        locale_files: &csl_data.locales.as_slice(),
-    });
-    for (i, citation) in result.citations.iter().enumerate(){
-        match project.bibliography.iter().nth(i){
-            Some((key, _)) => {
-                println!("Citation with index {} has corresponding bibliography entry {}", i, key);
-                let mut content = String::new();
-                citation.citation.write_buf(&mut content, BufWriteFormat::Html).unwrap();
-                res.insert(key.to_string(),content);
-            }
-            None => {
-                eprintln!("Citation with index {} has no corresponding bibliography entry", i);
-            }
-        }
-    }
-    res
+fn escape_html(text: &str) -> String{
+    text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")
+}
+fn unescape_html(text: &str) -> String{
+    text.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"")
 }
 
-pub fn hyphenate_text(text: String, dict: &hyphenation::Standard) -> String{
-    let mut res = String::new();
-    let mut word_iter = text.split_whitespace().peekable();
-    while let Some(word) = word_iter.next(){
-        if word.starts_with("class=\"") || word.contains("<") || word.contains(">") || word.contains("=") || word.contains("&"){
-            res.push_str(&format!("{} ", word));
-            continue
-        }
-        let hyphenated = dict.hyphenate(word);
-
-        let mut word_res = String::new();
-        let mut iter = hyphenated.into_iter().segments().peekable();
-        while let Some(segment) = iter.next(){
-            word_res.push_str(&segment);
-            if iter.peek().is_some(){
-                word_res.push('\u{00ad}');
-            }
-        }
-
-        res.push_str(&word_res);
-        if word_iter.peek().is_some(){
-            res.push(' ');
+fn add_remaining_authors_editors_from_section(section: &PreparedSection, authors: &mut Vec<Person>, editors: &mut Vec<Person>){
+    for author in section.metadata.authors.iter(){
+        if !authors.contains(author){
+            authors.push(author.clone());
         }
     }
-    res
-}
-
-// Test hyphenation
-#[cfg(test)]
-mod tests {
-    use hyphenation::extended::Extended;
-    use hyphenation::{Load, Standard};
-    use super::*;
-
-    #[test]
-    fn test_hyphenation(){
-        let dict = Standard::from_embedded(hyphenation::Language::German1996).unwrap();
-        let text = "Grundstücksverkehrsgenehmigungszuständigkeitsübertragungsverordnung";
-        let hyphenated = hyphenate_text(text.to_string(), &dict);
-        assert_eq!(hyphenated, "Grund\u{ad}stücks\u{ad}ver\u{ad}kehrs\u{ad}ge\u{ad}neh\u{ad}mi\u{ad}gungs\u{ad}zu\u{ad}stän\u{ad}dig\u{ad}keits\u{ad}über\u{ad}tra\u{ad}gungs\u{ad}ver\u{ad}ord\u{ad}nung");
+    for editor in section.metadata.editors.iter(){
+        if !editors.contains(editor){
+            editors.push(editor.clone());
+        }
+    }
+    for sub_section in section.sub_sections.iter(){
+        add_remaining_authors_editors_from_section(sub_section, authors, editors);
     }
 }

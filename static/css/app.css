@@ -37,12 +37,12 @@ h3 {
 }
 
 
-.project_list_row {
+.list_row {
     height: 40px;
     border-bottom: 1px solid lightgrey;
 }
 
-.project_list_row a {
+.list_row a {
     text-decoration: none;
 }
 
@@ -53,16 +53,26 @@ h3 {
 }
 
 .navbar {
-    background-color: var(--dark-blue);
-    color: white;
+    background-color: white;
+    color: black;
+    border-bottom: 1px solid #f3f3f3;
+    font-size: 10pt; 
+    padding: 2px;
 }
 
 .navbar-brand {
-    color: white !important;
+    color: black !important;
+    margin-right: 50px;
+    font-size: initial;
 }
-
+.nav-item{
+    margin-right: 10px;
+}
 .nav-link {
-    color: white !important;
+    padding: 1px;
+}
+.nav-link.active{
+    padding: 0 !important;
 }
 
 #editor-sidebar {
@@ -170,8 +180,70 @@ label{
     padding-left: 3px;
     padding-right: 3px;
 }
+.btn-sm-square{
+    width: 35px;
+    height: 35px;
+    padding: 2px;
+}
+.btn-xsm-square{
+    width: 25px;
+    height: 25px;
+    padding: 0px;
+}
 .hide{
-    display: none;
+    display: none !important;
+}
+.loader {
+    position: relative;
+    width: 75px;
+    height: 100px;
+    background-repeat: no-repeat;
+    background-image: linear-gradient(#DDD 50px, transparent 0),
+    linear-gradient(#DDD 50px, transparent 0),
+    linear-gradient(#DDD 50px, transparent 0),
+    linear-gradient(#DDD 50px, transparent 0),
+    linear-gradient(#DDD 50px, transparent 0);
+    background-size: 8px 100%;
+    background-position: 0px 90px, 15px 78px, 30px 66px, 45px 58px, 60px 50px;
+    animation: pillerPushUp 4s linear infinite;
+}
+.loader:after {
+    content: '';
+    position: absolute;
+    bottom: 10px;
+    left: 0;
+    width: 10px;
+    height: 10px;
+    background: #de3500;
+    border-radius: 50%;
+    animation: ballStepUp 4s linear infinite;
+}
+
+@keyframes pillerPushUp {
+    0% , 40% , 100%{background-position: 0px 90px, 15px 78px, 30px 66px, 45px 58px, 60px 50px}
+    50% ,  90% {background-position: 0px 50px, 15px 58px, 30px 66px, 45px 78px, 60px 90px}
+}
+
+@keyframes ballStepUp {
+    0% {transform: translate(0, 0)}
+    5% {transform: translate(8px, -14px)}
+    10% {transform: translate(15px, -10px)}
+    17% {transform: translate(23px, -24px)}
+    20% {transform: translate(30px, -20px)}
+    27% {transform: translate(38px, -34px)}
+    30% {transform: translate(45px, -30px)}
+    37% {transform: translate(53px, -44px)}
+    40% {transform: translate(60px, -40px)}
+    50% {transform: translate(60px, 0)}
+    57% {transform: translate(53px, -14px)}
+    60% {transform: translate(45px, -10px)}
+    67% {transform: translate(37px, -24px)}
+    70% {transform: translate(30px, -20px)}
+    77% {transform: translate(22px, -34px)}
+    80% {transform: translate(15px, -30px)}
+    87% {transform: translate(7px, -44px)}
+    90% {transform: translate(0, -40px)}
+    100% {transform: translate(0, 0);}
 }
 #loading_spinner {
     width: 3rem;
@@ -204,7 +276,7 @@ label{
     left: 50%;
     transform: translate(-50%);
     padding-right: 32px;
-    z-index: 1000;
+    z-index: 10000;
 }
 .alert-close{
     position: absolute;
@@ -449,6 +521,9 @@ customstyle{
 }
 #inner_overlay{
     padding: 20px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 #overlay_close_btn{
     position: absolute;
@@ -490,6 +565,17 @@ customstyle{
     display: flex;
     flex-direction: row;
 }
+.stacked-nav{
+    border-top: 1px solid #f3f3f3
+}
+.stacked-nav ul{
+    list-style-type: none;
+    padding: 10px 10px 0px 10px
+}
+.stacked-nav ul li{
+    margin-bottom: 10px;
+    cursor: pointer;
+}
 #wizard-pandoc-upload-progress{
     width: 100%;
 }
@@ -516,4 +602,103 @@ customstyle{
 }
 .dropdown:hover .dropdown-content{
     display: block;
+}
+.templates_list{
+    background-color: white;
+    border-radius: 5px;
+    padding: 10px 20px;
+}
+.templates_list a{
+    text-decoration: none;
+}
+#template_editor_sidebar{
+    background-color: white;
+    height: calc(100vh - 47px);
+    border-right: 1px solid var(--silver);
+    padding-top: 5px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+#template_editor_sidebar_title{
+    border-bottom: 1px solid var(--silver);
+    cursor: pointer;
+    padding: 5px 0px 5px 0px;
+}
+.template_editor_sidebar_entry{
+    padding: 5px 0px 5px 0px;
+    background-color: var(--light-gray);
+    margin-top: 10px;
+    cursor: pointer;
+}
+.template_editor_assets_menu{
+    border-bottom: 1px solid var(--silver);
+}
+#template_editor_assets_menu_new_folder_dialog{
+    width: 400px;
+    padding: 10px;
+    background-color: white;
+    opacity: 0.95;
+}
+#template_editor_asset_rows_before{
+    height: 10px;
+}
+#template_editor_asset_rows_after{
+    height: 20px;
+}
+.file_row{
+    cursor: pointer !important;
+}
+.file_row > div > div > label{
+    cursor: pointer !important;
+}
+#template_editor_asset_edit{
+    padding-top: 10px;
+    border-left: 1px solid var(--silver);
+}
+.template_editor_asset_edit_col{
+    height: calc(100vh - 110px);
+    overflow: auto;
+}
+#template_editor_assets_contextmenu{
+    position: fixed;
+    border: 1px solid var(--silver);
+    background-color: white;
+    min-width: 200px;
+    padding: 5px;
+    border-radius: 5px;
+}
+.contextmenu_entry{
+    cursor: pointer;
+}
+.card-collapse-or-expand-sign{
+    font-size: 15pt;
+    margin: 2px 10px 2px 0px;
+}
+.card-collapse-or-expand{
+    cursor: pointer;
+}
+.wizard-card{
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    max-height: 100%;
+    overflow: auto;
+}
+.overlay-bottom-row{
+    margin-top: auto;
+}
+#wizard-show-error-log-pane{
+    border: 1px solid var(--light-gray);
+    background-color: var(--light-gray);
+    padding: 10px;
+    height: 100%;
+    overflow: scroll;
+    font-family: monospace;
+    font-size: 10px;
+}
+#test {
+    position: relative;
+    height: 100vh; /* Oder eine andere feste Höhe */
+    overflow-y: scroll; /* Ermöglicht vertikales Scrollen */
 }

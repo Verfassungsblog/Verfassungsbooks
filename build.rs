@@ -81,4 +81,8 @@ fn main() {
     if !res1.status.success() || !res2.status.success() || !res3.status.success() || !res4.status.success() {
         panic!("Failed to compile typescript to javascript with tsc:\n{}\n{}\n{}\n{}", String::from_utf8_lossy(&res1.stdout), String::from_utf8_lossy(&res2.stdout),String::from_utf8_lossy(&res3.stdout), String::from_utf8_lossy(&res4.stdout));
     }
+
+    // Copy pdf.worker.mjs to static/js to make sure the worker version is always up to date
+    fs::copy("typescript/node_modules/pdfjs-dist/build/pdf.worker.mjs", "static/js/pdf.worker.mjs").expect("Failed to copy pdf.worker.mjs to static/js");
+    println!("cargo:rerun-if-changed=node_modules/pdfjs-dist/build/pdf.worker.mjs");
 }

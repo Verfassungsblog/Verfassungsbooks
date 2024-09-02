@@ -40,3 +40,14 @@ namespace Tools{
         }, 5000);
     }
 }
+
+// Add click listener for mobile navbar
+document.getElementById("show_mobile_navbar")?.addEventListener("click", function(){
+    console.log("Adding click listener for mobile navbar")
+    let navbar = document.getElementById("mobile_navbar");
+    if(navbar !== null){
+        navbar.classList.toggle("hide");
+    }else{
+        console.log("Navbar is null")
+    }
+});

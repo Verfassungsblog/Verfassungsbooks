@@ -1,15 +1,43 @@
 app_title = "Verfassungsbooks"
 project_cache_time = 1800
+#WARNING: CURRENTLY NOT USED IN ALL PLACES, leave it on data for now
 data_path = "data"
 # Time until data storage write fails in ms
 file_lock_timeout = 1000
 # Time until in-memory database is written to file in seconds
 backup_to_file_interval = 20
 # Maximum number of concurrent rendering threads
-max_rendering_threads = 10
+max_connections_to_rendering_server = 10
 # Maximum number of concurrent import processing threads
 max_import_threads = 4
 # Optional: Path to chromium executable, set to empty string to use included chromium, but it doesn't work for alpine.
 chromium_path = "/usr/bin/chromium-browser"
 # URL to the zotero translation server (https://github.com/zotero/translation-server) for importing zotero items.
 zotero_translation_server = "https://translation-server.anghenfil.de"
+
+# Export Server Settings
+
+# listening port for communication with export servers
+mtls_port = "6868"
+# listening address for communication with export servers
+mtls_host = "127.0.0.1"
+# mTLS CA Cert
+ca_cert_path = "certs/root.crt"
+# mTLS Cert
+client_cert_path = "certs/client2.crt"
+# mTLS Cert key
+client_key_path = "certs/client2.key"
+# mTLS revocation list
+revocation_list_path = "certs/crl.der"
+
+# List of Export servers.
+[[export_servers]]
+hostname = "127.0.0.1"
+port = 6969
+domain_name = "localhost"
+
+# Example second export server:
+# [[export_servers]]
+# hostname = "1.2.3.4"
+# port = 5050
+# domain_name = "example.com"
