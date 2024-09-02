@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use std::sync::Arc;
 use rocket_dyn_templates::Template;
 use rocket::State;

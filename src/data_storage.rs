@@ -1983,9 +1983,6 @@ impl From<MyDurationRange> for DurationRange {
 
 #[cfg(test)]
 mod tests {
-    use std::thread;
-    use rocket::serde::json::Json;
-    use crate::projects::{Paragraph, TextElement, TextFormat};
     use super::*;
 
     #[test]
@@ -2005,6 +2002,7 @@ mod tests {
             max_import_threads: 2,
             chromium_path: None,
             zotero_translation_server: "https://translation-server.anghenfil.de".to_string(),
+            version: "".to_string(),
         }
     }
 
@@ -2022,7 +2020,7 @@ mod tests {
             bibliography: Default::default(),
         };
         let settings = generate_settings();
-        let mut project_storage = ProjectStorage::new();
+        let project_storage = ProjectStorage::new();
         let id = project_storage.insert_project(test_project, &settings).await.unwrap();
         assert!(std::path::Path::new(&format!("test_data/projects/{}.bincode", id)).exists());
     }

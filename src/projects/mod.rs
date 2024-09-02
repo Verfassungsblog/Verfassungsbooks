@@ -80,6 +80,7 @@ pub struct Keyword{
 }
 
 /// Holds all different (CC) licenses or a custom license
+#[allow(non_camel_case_types)]
 #[derive(Deserialize, Serialize, Debug, Encode, Decode, Clone, PartialEq)]
 pub enum License{
     CC0,

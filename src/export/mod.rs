@@ -53,6 +53,7 @@ pub struct PreparedMetadata{
 }
 
 #[derive(Serialize, Deserialize)]
+#[allow(non_camel_case_types)]
 pub struct PreparedLicense{
     CC0: bool,
     CC_BY_4: bool,
