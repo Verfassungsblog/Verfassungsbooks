@@ -454,16 +454,16 @@ export type NewLocalRenderingRequest = {
 }
 
 export type APIRenderingStatus =
-    | { QueuedOnLocal: null }
-    | { PreparingOnLocal: null }
-    | { PreparedOnLocal: null }
-    | { SendToRenderingServer: null }
-    | { RequestingTemplate: null }
-    | { TransmittingTemplate: null }
-    | { QueuedOnRendering: null }
-    | { Running: null }
-    | { SavedOnLocal: null }
-    | { Failed: string };
+    | "QueuedOnLocal"
+    | "PreparingOnLocal"
+    | "PreparedOnLocal"
+    | "SendToRenderingServer"
+    | "RequestingTemplate"
+    | "TransmittingTemplate"
+    | "QueuedOnRendering"
+    | "Running"
+    | "SavedOnLocal"
+    | { Failed: string};
 
 export function ExportAPI(){
     async function send_new_rendering_request(rendering_request: NewLocalRenderingRequest){
@@ -502,7 +502,7 @@ export function ExportAPI(){
             throw new Error(`Failed to fetch rendering request status: ${response.status}`);
         }
 
-        const response_data: ApiResult<any> = await response.json();
+        const response_data: ApiResult<APIRenderingStatus> = await response.json();
 
         if (response_data.error) {
             throw new Error(`Failed to fetch rendering request status: ${apiErrorToString(response_data.error)}`);
@@ -540,7 +540,7 @@ export function TemplateAPI() {
         }
 
         return response_data.data;
-    };
+    }
 
     async function update_template(template: ProjectTemplateV2) {
         const response = await fetch(`/api/templates/${template.id}`, {

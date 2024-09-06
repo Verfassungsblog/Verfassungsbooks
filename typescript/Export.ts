@@ -5,7 +5,6 @@ import {
     NewLocalRenderingRequest,
     ProjectTemplateV2,
     SectionOrToc,
-    APIRenderingStatus,
     ExportAPI
 } from "./api_requests";
 import * as Tools from "./tools";
@@ -60,6 +59,7 @@ async function preview_project_listener(){
     try {
         request_id = await export_api.send_new_rendering_request(local_rendering_request);
         console.log("Request has id "+request_id+".");
+        Tools.show_alert("Started preview rendering.", "success");
     }catch(e){
         console.error(e);
         Tools.show_alert("Couldn't send rendering request to server :(", "danger");
@@ -71,11 +71,13 @@ async function preview_project_listener(){
             let status = await export_api.get_request_status(request_id);
             console.log(status);
 
-            if("SavedOnLocal" === status){
-                clearInterval(waiter)
-                console.log("/export/"+request_id+"/"+preview_pdf_path);
-                show_pdf("/export/"+request_id+"/"+preview_pdf_path)
-            }else if("Failed" === status){
+            if(typeof status === "string"){
+                if(status === "SavedOnLocal"){
+                    clearInterval(waiter)
+                    console.log("/export/"+request_id+"/"+preview_pdf_path);
+                    await show_pdf("/export/" + request_id + "/" + preview_pdf_path);
+                }
+            }else if("Failed" in status){
                 clearInterval(waiter)
                 console.error("Couldn't render preview: "+status.Failed);
                 Tools.show_alert("Couldn't render preview. Check export log.", "danger");

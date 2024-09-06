@@ -81,6 +81,8 @@ impl RenderingManager{
                         if let Some(status) = rendering_manager_cpy.requests_archive.write().unwrap().get_mut(&request.request_id){
                             *status = RenderingStatus::PreparingOnLocal
                         }
+                        
+                        let request_id_cpy = request.request_id.clone();
 
                         let rendering_manager_cpy2 = rendering_manager_cpy.clone();
 
@@ -89,10 +91,14 @@ impl RenderingManager{
 
                         // Start rendering in a new thread
                         tokio::spawn(async move {
-                            match Self::prepare_and_send_to_server(rendering_manager_cpy2, request).await{
+                            match Self::prepare_and_send_to_server(Arc::clone(&rendering_manager_cpy2), request).await{
                                 Ok(_) => {}
                                 Err(e) => {
                                     eprintln!("Couldn't render project: {:?}", e);
+                                    // Update status:
+                                    if let Some(status) = rendering_manager_cpy2.requests_archive.write().unwrap().get_mut(&request_id_cpy){
+                                        *status = RenderingStatus::Failed(e)
+                                    }
                                 }
 
                             }
@@ -291,7 +297,6 @@ impl RenderingManager{
                         return Err(RenderingError::CommunicationError)
                     },
                     Message::RenderingRequestStatus(status) => {
-                        println!("Debug: Current status: {:?}", status);
                         match status{
                             RenderingStatus::Finished(mut res) => {
                                 // Finished, update status and save files to file system, generate zip if necessary
