@@ -10,29 +10,23 @@ backup_to_file_interval = 20
 max_connections_to_rendering_server = 10
 # Maximum number of concurrent import processing threads
 max_import_threads = 4
-# Optional: Path to chromium executable, set to empty string to use included chromium, but it doesn't work for alpine.
-chromium_path = "/usr/bin/chromium-browser"
 # URL to the zotero translation server (https://github.com/zotero/translation-server) for importing zotero items.
 zotero_translation_server = "https://translation-server.anghenfil.de"
 
 # Export Server Settings
 
-# listening port for communication with export servers
-mtls_port = "6868"
-# listening address for communication with export servers
-mtls_host = "127.0.0.1"
 # mTLS CA Cert
 ca_cert_path = "certs/root.crt"
 # mTLS Cert
-client_cert_path = "certs/client2.crt"
+client_cert_path = "certs/client.crt"
 # mTLS Cert key
-client_key_path = "certs/client2.key"
+client_key_path = "certs/client.key"
 # mTLS revocation list
 revocation_list_path = "certs/crl.der"
 
 # List of Export servers.
 [[export_servers]]
-hostname = "127.0.0.1"
+hostname = "[::1]"
 port = 6969
 domain_name = "localhost"
 
