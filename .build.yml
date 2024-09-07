@@ -5,7 +5,7 @@ packages:
   - npm
   - tar
 sources:
-  - https://git.sr.ht/~verfassungsblog/Verfassungsbooks
+  - https://github.com/Verfassungsblog/Verfassungsbooks
 secrets:
   - e0cce48a-4ebb-406d-886b-a5d1c6bcf234
 environment:
