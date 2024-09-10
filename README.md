@@ -14,7 +14,7 @@ General inquires and feedback: [oa@verfassungsblog.de](mailto:oa@verfassungsblog
 
 ## Architecture
 You will need the main server (this repository) at least one instance of the
-[rendering server](https://git.sr.ht/~verfassungsblog/Verfassungsbooks-Rendering-Server).
+[rendering server](https://github.com/Verfassungsblog/Verfassungsbooks-Rendering-Server).
 For the main server you should use an nginx proxy to avoid running this application as root.
 
 ## Installation
