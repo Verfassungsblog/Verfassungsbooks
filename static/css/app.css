@@ -447,6 +447,9 @@ label{
 .ce-toolbar__content {
     max-width: unset !important;
 }
+.ce-inline-tool{
+    font-size: 10pt;
+}
 #section_content_blocks_inner{
     padding-left: 50px;
     padding-right: 50px;
