@@ -1,3 +1,5 @@
+import {save_changes} from "./editor";
+
 export class CustomStyleTool{
     private button: HTMLButtonElement;
     private state: boolean;
@@ -64,6 +66,7 @@ export class CustomStyleTool{
             settings_dialog.remove();
 
             this.api.selection.expandToTag(custom_style);
+            save_changes().then();
         });
     }
 

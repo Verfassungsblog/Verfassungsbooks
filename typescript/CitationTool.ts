@@ -1,3 +1,5 @@
+import {save_changes} from "./editor";
+
 export class CitationTool{
     private button: HTMLButtonElement;
     private state: boolean;
@@ -55,6 +57,7 @@ export class CitationTool{
         document.getElementById('citation-delete').addEventListener('click', async () => {
             citation.remove();
             settings_dialog.remove();
+            save_changes().then();
         });
     }
 
@@ -116,6 +119,7 @@ export class CitationTool{
                     range.collapse(false);
                     range.insertNode(citeentry);
                     settings_dialog.remove();
+                    save_changes().then();
                 });
             }
         }

@@ -91,6 +91,8 @@ export async function save_changes(){
     let data = await editor.save();
     console.log(data);
 
+    //TODO: only update content blocks that changed
+
     try {
         // @ts-ignore
         await API.send_update_content_blocks(globalThis.project_id, globalThis.section_path, data.blocks);

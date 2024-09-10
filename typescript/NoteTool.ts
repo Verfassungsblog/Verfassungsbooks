@@ -1,3 +1,5 @@
+import {save_changes} from "./editor";
+
 export class NoteTool{
     private button: HTMLButtonElement;
     private state: boolean;
@@ -80,6 +82,7 @@ export class NoteTool{
             }
 
             settings_dialog.remove();
+            save_changes().then();
         });
 
         document.getElementById('note-abort').addEventListener('click', () => {
@@ -89,6 +92,7 @@ export class NoteTool{
         document.getElementById('note-delete').addEventListener('click', async () => {
             note.remove();
             settings_dialog.remove();
+            save_changes().then();
         });
     }
 
