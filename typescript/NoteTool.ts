@@ -1,4 +1,4 @@
-import {save_changes} from "./editor";
+import {save_changes} from "./Editor";
 
 export class NoteTool{
     private button: HTMLButtonElement;

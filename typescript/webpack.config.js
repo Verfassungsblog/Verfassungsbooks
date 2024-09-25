@@ -1,14 +1,16 @@
 const path = require('path');
 
 module.exports = {
+    mode: 'production',
     entry: {
-        neditor: './editor.ts',
+        neditor: './Editor.ts',
         settings: './Settings.ts',
         import: './Import.ts',
         bibliography_editor: './BibliographyEditor.ts',
         user_tools: './UserTools.ts',
         template_editor: './TemplateEditor.ts',
-        export: './Export.ts'
+        export: './Export.ts',
+        section_editor: './SectionEditor.ts'
     },
     devtool: 'inline-source-map',
     module: {

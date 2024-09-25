@@ -354,6 +354,68 @@ export interface Section {
     metadata: SectionMetadata;
 }
 
+export interface APISectionResult {
+    id: string; // UUID represented as a string in JavaScript/TypeScript
+    css_classes: string[];
+    sub_sections?: Section[];
+    children: NewContentBlock[];
+    visible_in_toc: boolean;
+    metadata: APISectionMetadataResult;
+}
+
+export interface PatchSection{
+    id?: string|null;
+    css_classes?: string[];
+    visible_in_toc?: boolean;
+    metadata?: PatchSectionMetadata;
+}
+
+export interface PatchSectionMetadata{
+    title?: string;
+    subtitle?: string|null;
+    authors?: string[];
+    editors?: string[];
+    web_url?: string|null;
+    identifiers?: Identifier[];
+    published?: string|null;
+    last_changed?: string|null;
+    lang?: string|null;
+}
+
+export interface Person {
+    id?: string; // UUID represented as a string in JavaScript/TypeScript
+    first_names?: string | null;
+    last_names: string;
+    orcid?: Identifier | null;
+    gnd?: Identifier | null;
+    bios?: Biography[] | null;
+    ror?: Identifier | null;
+}
+
+export interface Biography {
+    content: string;
+    lang?: Language | null;
+}
+
+enum Language {
+    DE,
+    EN
+}
+
+type APISectionMetadataResult = {
+    title: string,
+    subtitle: string | null,
+    authors: string[],
+    authors_expanded?: Person[],
+    editors: string[],
+    editors_expanded?: Person[],
+    web_url: string | null,
+    identifiers: Identifier[],
+    published: Date | null,
+    last_changed: Date | null,
+    lang: string | null,
+};
+
 export type NewContentBlock = {
     id: string;
     block_type: BlockType;
@@ -464,6 +526,74 @@ export type APIRenderingStatus =
     | "Running"
     | "SavedOnLocal"
     | { Failed: string};
+
+export function PersonsAPI(){
+    async function send_search_person_request(search_term: string){
+        const response = await fetch(`/api/persons?query=${search_term}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        if(!response.ok){
+            throw new Error(`Failed to search for persons: ${response.status}`);
+        }
+        const response_data: ApiResult<Person[]> = await response.json();
+
+        if(response_data.error){
+            throw new Error(`Failed to search for persons: ${apiErrorToString(response_data.error)}`);
+        }
+
+        if(!response_data.data){
+            throw new Error('No data received');
+        }
+        return response_data.data;
+    }
+    async function send_get_person_request(person_id: string){
+        const response = await fetch(`/api/persons/${person_id}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        if(!response.ok){
+            throw new Error(`Failed to get person: ${response.status}`);
+        }
+        const response_data: ApiResult<Person> = await response.json();
+
+        if(response_data.error){
+            throw new Error(`Failed to get person: ${apiErrorToString(response_data.error)}`);
+        }
+
+        if(!response_data.data){
+            throw new Error('No data received');
+        }
+        return response_data.data;
+    }
+    async function send_delete_person_request(person_id: string){
+        const response = await fetch(`/api/persons/${person_id}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        if(!response.ok){
+            throw new Error(`Failed to delete person: ${response.status}`);
+        }
+        const response_data: ApiResult<null> = await response.json();
+
+        if(response_data.error){
+            throw new Error(`Failed to delete person: ${apiErrorToString(response_data.error)}`);
+        }
+
+        return response_data.data;
+    }
+    return{
+        send_search_person_request,
+        send_get_person_request,
+        send_delete_person_request
+    }
+}
 
 export function ExportAPI(){
     async function send_new_rendering_request(rendering_request: NewLocalRenderingRequest){
@@ -1127,6 +1257,100 @@ export function TemplateAPI() {
         move_export_step_after,
         list_export_steps,
         change_export_format_metadata
+    }
+}
+
+export function SectionAPI(){
+    /**
+     * Requests the data for a section
+     *
+     * @param project_id
+     * @param section_path
+     * @param expand_authors boolean, if true also adds details for authors
+     * @param expand_editors boolean, if true also adds details for editors
+     * @param expand_subsections boolean, if true also adds subsections
+     */
+    async function read_section(project_id: string, section_path: string, expand_authors: boolean, expand_editors: boolean, expand_subsections: boolean) {
+        let expand_query = "expand=";
+
+        if(expand_authors){
+            expand_query += "authors,"
+        }
+        if(expand_editors){
+            expand_query += "editors,"
+        }
+        if(expand_subsections){
+            expand_query += "subsections,"
+        }
+        expand_query = expand_query.substring(0, expand_query.length -1);
+
+        const response = await fetch(`/api/projects/${project_id}/sections/${section_path}?${expand_query}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to get sections: ${response.status}`);
+        }
+
+        const response_data: ApiResult<APISectionResult> = await response.json();
+
+        if (response_data.error) {
+            throw new Error(`Failed to get template: ${apiErrorToString(response_data.error)}`);
+        }
+        if (!response_data.data) {
+            throw new Error('No data received');
+        }
+
+        return response_data.data;
+    }
+    async function patch_section(project_id: string, section_path: string, data: PatchSection){
+        const response = await fetch(`/api/projects/${project_id}/sections/${section_path}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to update section: ${response.status}`);
+        }
+
+        const response_data: ApiResult<any> = await response.json();
+
+        if (response_data.error) {
+            throw new Error(`Failed to update section: ${apiErrorToString(response_data.error)}`);
+        }
+
+        return response_data.data;
+    }
+    async function delete_section(project_id: string, section_path: string){
+        const response = await fetch(`/api/projects/${project_id}/sections/${section_path}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to delete section: ${response.status}`);
+        }
+
+        const response_data: ApiResult<any> = await response.json();
+
+        if (response_data.error) {
+            throw new Error(`Failed to delete section: ${apiErrorToString(response_data.error)}`);
+        }
+
+        return response_data.data;
+    }
+    return{
+        read_section,
+        patch_section,
+        delete_section
     }
 }
 

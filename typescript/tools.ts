@@ -38,3 +38,71 @@ export function show_alert(message: string, type: string = "danger|warning|succe
         }
     }, 5000);
 }
+
+interface SearchAPIHandler{
+    (search_query: string): Promise<any[]>;
+}
+
+interface SearchResultClickHandler{
+    (entry: HTMLElement): void;
+}
+
+/**
+ * Add a new searchbar
+ * @param searchbar - The searchbar as an HTMLInputElement
+ * @param search_result_overlay - A div/ul/etc that will be filled with the rendered search results
+ * @param search_api_handler - A function that retrieves the search results and returns them as an array of objects
+ * @param search_result_entry_template - A handlebars template function that parses a single search result object
+ * @param on_search_result_click - A function that is called when a search result is clicked
+ */
+export function add_search(searchbar: HTMLInputElement, search_result_overlay: HTMLElement, search_api_handler: SearchAPIHandler, search_result_entry_template: Function, on_search_result_click: SearchResultClickHandler){
+    let hide_result_overlay = function(e: Event){
+        let target = e.target as HTMLElement;
+
+        if(target !== search_result_overlay && target !== searchbar){
+            if(target != null){
+                if(target.parentElement === search_result_overlay){
+                    return;
+                }
+            }
+            search_result_overlay.classList.add("hide");
+            window.removeEventListener("click", hide_result_overlay);
+            window.removeEventListener("focusin", hide_result_overlay);
+        }
+    }
+
+    let show_result_overlay = function(){
+        search_result_overlay.classList.remove("hide");
+        window.addEventListener("click", hide_result_overlay);
+        window.addEventListener("focusin", hide_result_overlay);
+    }
+
+    searchbar.addEventListener("click", show_result_overlay);
+    searchbar.addEventListener("focus", show_result_overlay);
+
+    searchbar.addEventListener("input", async function () {
+        try {
+            let res: any[] = await search_api_handler(searchbar.value);
+            search_result_overlay.innerHTML = "";
+            show_result_overlay();
+
+            window.addEventListener("click", hide_result_overlay);
+            window.addEventListener("focusin", hide_result_overlay);
+
+            for(let entry of res){
+                let rendered : string = search_result_entry_template(entry);
+                search_result_overlay.insertAdjacentHTML("beforeend", rendered);
+                let added_entry = search_result_overlay.lastElementChild as HTMLElement;
+                added_entry.addEventListener("click", function(){
+                    search_result_overlay.classList.add("hide");
+                    searchbar.value = "";
+                    on_search_result_click(added_entry);
+                });
+            }
+        } catch (e) {
+            console.error(e);
+            show_alert("Couldn't fetch search results: " + e);
+        }
+
+    });
+}

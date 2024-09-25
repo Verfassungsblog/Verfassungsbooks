@@ -1,5 +1,4 @@
 /// <reference path="ProjectOverview.ts" />
-/// <reference path="SectionView.ts" />
 /// <reference path="./ContentBlockParser.ts" />
 /// <reference path="Sidebar.ts" />
 /// <reference path="./General.ts" />

@@ -1,0 +1,3 @@
+<li data-person-id="{{id}}">
+    {{first_names}} {{last_names}}
+</li>

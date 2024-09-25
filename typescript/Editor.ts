@@ -114,8 +114,3 @@ function typing_handler(){
         await save_changes();
     }, 500);
 }
-
-window.addEventListener("load", async function(){
-    // @ts-ignore
-    window.show_new_editor = () => {show_editor()};
-});

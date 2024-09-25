@@ -205,7 +205,9 @@ namespace Editor{
 
             globalThis.section_id = section_id;
             globalThis.section_path = path;
-            await Editor.SectionView.show_section_view();
+
+            // @ts-ignore
+            window.show_section_view();
         }
         function add_draggables(){
             let dragstart = function(ev){

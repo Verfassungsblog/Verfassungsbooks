@@ -702,6 +702,45 @@ customstyle{
 }
 #test {
     position: relative;
-    height: 100vh; /* Oder eine andere feste Höhe */
-    overflow-y: scroll; /* Ermöglicht vertikales Scrollen */
+    height: 100vh;
+    overflow-y: scroll;
+}
+#section_metadata_authors_div{
+    display: flex;
+}
+#section_metadata_editors_div{
+    display: flex;
+}
+.section_metadata_persons_div{
+    cursor: grab;
+    display: flex;
+}
+.section_metadata_person_div_name{
+    border: 1px solid var(--light-gray);
+    padding: 5px;
+    margin-right: 2px;
+    margin-bottom: 3px;
+}
+.section_metadata_person_div_after{
+    width: 10px;
+}
+.section_metadata_person_div_after.dragover{
+    width: 40px;
+    background-color: var(--light-blue);
+}
+#section_metadata_authors_first_dropzone{
+    width: 10px;
+    margin-left: -10px;
+}
+#section_metadata_authors_first_dropzone.dragover{
+    width: 40px;
+    background-color: var(--light-blue);
+}
+#section_metadata_editors_first_dropzone{
+    width: 10px;
+    margin-left: -10px;
+}
+#section_metadata_editors_first_dropzone.dragover{
+    width: 40px;
+    background-color: var(--light-blue);
 }

@@ -14,22 +14,26 @@
     <label>Subtitle</label>
     <h2 contenteditable="true" id="section_metadata_subtitle"  class="quickchange">{{metadata.subtitle}}</h2>
     <label>Authors</label>
-    <ul id="section_metadata_authors_ul">
-        {{#each metadata.authors_with_details}}
+    <div id="section_metadata_authors_div">
+        <div id="section_metadata_authors_first_dropzone" class="first_dropzone">
+        </div>
+        {{#each metadata.authors_expanded}}
         {{> editor_section_authors_li}}
         {{/each}}
-    </ul>
+    </div>
     <div class="m-0 align-items-baseline">
         <input type="text" style="width: 300px;" class="form-control form-control-sm" id="section_metadata_search_authors" placeholder="Add Author">
         <ul class="list-group search_result_list hide" tabindex="0" id="section_metadata_search_authors_results">
         </ul>
     </div>
     <label>Editors</label>
-    <ul id="section_metadata_editors_ul">
-        {{#each metadata.editors_with_details}}
+    <div id="section_metadata_editors_div">
+        <div id="section_metadata_editors_first_dropzone" class="first_dropzone">
+        </div>
+        {{#each metadata.editors_expanded}}
         {{> editor_section_editors_li}}
         {{/each}}
-    </ul>
+    </div>
     <div class="m-0 align-items-baseline">
         <input type="text" style="width: 300px;" class="form-control form-control-sm" id="section_metadata_search_editors" placeholder="Add Editor">
         <ul class="list-group search_result_list hide" tabindex="0" id="section_metadata_search_editors_results">
@@ -65,14 +69,7 @@
         <option value="EN" {{#if metadata.langval.EN}}selected{{/if}}>English</option>
     </select>
     <label>Danger Zone: Delete Section & all Contents</label><br>
-    <button class="btn btn-sm btn-danger" id="section_delete_first_stage">Delete Section</button>
-    <div class="alert alert-danger mt-2 hide" id="section_delete_warning">
-        <h4 class="alert-heading">Warning!</h4>
-        <p>Are you sure you want to delete this section, all subsections and all other content? This action cannot be undone!</p>
-        <hr>
-        <button class="btn btn-sm btn-danger" id="section_delete_confirm">Yes, Delete Section</button>
-        <button class="btn btn-sm btn-secondary" id="section_delete_cancel">Cancel</button>
-    </div>
+    <button class="btn btn-sm btn-danger" id="section_delete">Delete Section</button>
     <div class="section_metadata_panel_ctl">
         <button class="img-btn" title="Hide Section Metadata" id="section_hide_metadata"><svg xmlns="http://www.w3.org/2000/svg" height="36" viewBox="0 -960 960 960" width="36"><path d="M480-528 296-344l-56-56 240-240 240 240-56 56-184-184Z"/></svg></button>
     </div>
