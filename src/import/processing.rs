@@ -2556,6 +2556,7 @@ mod tests {
     fn dummy_settings() -> Settings {
         Settings {
             app_title: "test".to_string(),
+            instance_url: "".to_string(),
             project_cache_time: 0,
             data_path: "/tmp".to_string(),
             database_url: "".to_string(),
@@ -2577,6 +2578,13 @@ mod tests {
             version: "test".to_string(),
             max_login_attempts: 5,
             lockout_window_minutes: 15,
+            smtp_connection_url: "".to_string(),
+            mail_from_address: "".to_string(),
+            smtp_pool_min_idle: 0,
+            smtp_pool_max_size: 0,
+            smtp_pool_idle_timeout: 0,
+            mail_max_retries: 0,
+            mail_base_retry_delay_seconds: 0,
         }
     }
 
